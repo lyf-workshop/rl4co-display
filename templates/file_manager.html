@@ -166,10 +166,144 @@
             font-weight: 600;
         }
 
+        /* 训练会话卡片容器 */
+        .sessions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(800px, 1fr));
+            gap: 30px;
+        }
+
+        /* 训练会话卡片 */
+        .session-card {
+            background: white;
+            border: 3px solid #e9ecef;
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .session-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 10px 35px rgba(102, 126, 234, 0.25);
+            transform: translateY(-5px);
+        }
+
+        /* 会话头部 */
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+        }
+
+        .session-info {
+            flex: 1;
+        }
+
+        .session-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .session-meta {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .session-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-completed {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-running {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .status-failed {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* 文件网格（在会话卡片内） */
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
+            margin-top: 20px;
+        }
+
+        .file-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .file-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 文件预览图 */
+        .file-preview-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .file-preview-img:hover {
+            transform: scale(1.05);
+        }
+
+        /* 文件信息区域 */
+        .file-item-info {
+            padding: 15px;
+            text-align: center;
+        }
+
+        /* 占位图（文件不存在时） */
+        .file-placeholder {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            opacity: 0.5;
+        }
+
+        .file-placeholder-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
         }
 
         .file-card {
@@ -188,14 +322,13 @@
         }
 
         .file-type-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
+            display: inline-block;
             padding: 4px 12px;
             border-radius: 12px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             text-transform: uppercase;
+            margin-bottom: 10px;
         }
 
         .badge-comparison {
@@ -208,7 +341,7 @@
             color: white;
         }
 
-        .badge-training {
+        .badge-curve {
             background: #ffc107;
             color: #333;
         }
@@ -216,6 +349,11 @@
         .badge-checkpoint {
             background: #dc3545;
             color: white;
+        }
+
+        .file-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
         }
 
         .file-name {
@@ -380,16 +518,12 @@
             <!-- 统计信息 -->
             <div class="stats">
                 <div class="stat-card">
+                    <div class="stat-value" id="totalSessions">-</div>
+                    <div class="stat-label">训练会话数</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-value" id="totalFiles">-</div>
                     <div class="stat-label">总文件数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalPlots">-</div>
-                    <div class="stat-label">可视化文件</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalCheckpoints">-</div>
-                    <div class="stat-label">模型检查点</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="totalSize">-</div>
@@ -407,24 +541,12 @@
                 </button>
             </div>
 
-            <!-- 可视化文件列表 -->
+            <!-- 训练会话列表（按会话分组） -->
             <div class="section">
                 <h2 class="section-title">
-                    <span>📊</span> 可视化文件
+                    <span>📦</span> 训练会话文件
                 </h2>
-                <div id="plotsList" class="file-grid">
-                    <div class="loading">
-                        <span class="spinner">⏳</span> 加载中...
-                    </div>
-                </div>
-            </div>
-
-            <!-- 检查点文件列表 -->
-            <div class="section">
-                <h2 class="section-title">
-                    <span>💾</span> 模型检查点
-                </h2>
-                <div id="checkpointsList" class="file-grid">
+                <div id="sessionsList" class="sessions-grid">
                     <div class="loading">
                         <span class="spinner">⏳</span> 加载中...
                     </div>
@@ -447,24 +569,23 @@
     </div>
 
     <script>
-        let filesData = null;
+        let sessionsData = null;
 
         // 页面加载时获取文件列表
         document.addEventListener('DOMContentLoaded', () => {
             loadFiles();
         });
 
-        // 加载文件列表
+        // 加载文件列表（按会话分组）
         async function loadFiles() {
             try {
                 const response = await fetch('/api/list_files');
                 const data = await response.json();
 
                 if (data.success) {
-                    filesData = data.files;
-                    updateStats(data.files);
-                    renderPlots(data.files.plots);
-                    renderCheckpoints(data.files.checkpoints);
+                    sessionsData = data.sessions;
+                    updateStats(data);
+                    renderSessions(data.sessions);
                 } else {
                     alert('加载文件列表失败: ' + data.message);
                 }
@@ -475,96 +596,144 @@
         }
 
         // 更新统计信息
-        function updateStats(files) {
-            document.getElementById('totalFiles').textContent = files.total_count;
-            document.getElementById('totalPlots').textContent = files.plots.length;
-            document.getElementById('totalCheckpoints').textContent = files.checkpoints.length;
-            document.getElementById('totalSize').textContent = files.total_size_mb;
+        function updateStats(data) {
+            document.getElementById('totalSessions').textContent = data.total_sessions || 0;
+            document.getElementById('totalFiles').textContent = data.total_files || 0;
+            document.getElementById('totalSize').textContent = data.total_size_mb || 0;
         }
 
-        // 渲染可视化文件列表
-        function renderPlots(plots) {
-            const container = document.getElementById('plotsList');
+        // 渲染训练会话列表（分组展示）
+        function renderSessions(sessions) {
+            const container = document.getElementById('sessionsList');
             
-            if (plots.length === 0) {
+            if (!sessions || sessions.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📭</div>
-                        <div>暂无可视化文件</div>
+                        <div>暂无训练记录</div>
+                        <p style="margin-top: 10px; color: #999;">开始一次训练后，相关文件会在这里显示</p>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = plots.map(file => {
-                const fileId = file.id || '';
-                const createTime = file.create_time || new Date(file.modified * 1000).toLocaleString('zh-CN');
+            container.innerHTML = sessions.map(session => {
+                const files = session.files;
+                const statusClass = `status-${session.status}`;
+                const statusText = {
+                    'completed': '✅ 已完成',
+                    'running': '⏳ 进行中',
+                    'failed': '❌ 失败'
+                }[session.status] || session.status;
+                
                 return `
-                <div class="file-card">
-                    <span class="file-type-badge badge-${file.type}">
-                        ${file.type === 'comparison' || file.type === 'plot' ? '对比图' : 
-                          file.type === 'animation' ? '动画' : 
-                          file.type === 'curve' ? '训练曲线' : '图片'}
-                    </span>
-                    ${file.name.endsWith('.png') || file.name.endsWith('.gif') ? 
-                        `<img src="${file.path}" class="file-preview" alt="${file.name}">` : 
-                        `<img src="${file.path}" class="file-preview" alt="${file.name}">`
+                <div class="session-card">
+                    <!-- 会话头部 -->
+                    <div class="session-header">
+                        <div class="session-info">
+                            <div class="session-title">
+                                🤖 ${session.model_type} 
+                                <span style="color: #667eea;">|</span> 
+                                🎯 ${session.problem_type.toUpperCase()}
+                            </div>
+                            <div class="session-meta">
+                                <span>🕒 ${session.start_time}</span>
+                                <span>📦 ${session.file_count} 个文件</span>
+                                <span>💾 ${session.total_size_mb} MB</span>
+                            </div>
+                        </div>
+                        <span class="session-status ${statusClass}">${statusText}</span>
+                    </div>
+                    
+                    <!-- 文件网格 -->
+                    <div class="file-grid">
+                        ${renderFileItem(files.comparison, 'comparison', '📊 对比图', session.session_id)}
+                        ${renderFileItem(files.animation, 'animation', '🎬 动态GIF', session.session_id)}
+                        ${renderFileItem(files.curve, 'curve', '📈 训练曲线', session.session_id)}
+                        ${renderFileItem(files.checkpoint, 'checkpoint', '💾 检查点', session.session_id)}
+                    </div>
+                    
+                    <!-- 会话操作 -->
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button class="btn btn-small btn-danger" onclick="confirmDeleteSession('${session.session_id}', ${session.file_count})">
+                            🗑️ 删除整个训练
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 渲染单个文件项（带图片预览）
+        function renderFileItem(file, type, label, sessionId) {
+            // 文件不存在时显示占位符
+            if (!file) {
+                const placeholderIcon = {
+                    'comparison': '📊',
+                    'animation': '🎬',
+                    'curve': '📈',
+                    'checkpoint': '💾'
+                }[type] || '📄';
+
+                return `
+                    <div class="file-item" style="opacity: 0.6;">
+                        <div class="file-placeholder">
+                            <div class="file-placeholder-icon">${placeholderIcon}</div>
+                            <div style="color: #999; font-weight: bold;">未生成</div>
+                        </div>
+                        <div class="file-item-info">
+                            <div class="file-type-badge badge-${type}">${label}</div>
+                            <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                                此文件尚未生成
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 文件存在时显示预览图或图标
+            const isImage = type !== 'checkpoint';
+            
+            return `
+                <div class="file-item">
+                    ${isImage ? 
+                        // 图片类型：显示预览图
+                        `<img src="${file.path}" 
+                             class="file-preview-img" 
+                             alt="${label}"
+                             onclick="viewFile('${file.path}')"
+                             onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2260%22%3E📊%3C/text%3E%3C/svg%3E';"
+                             title="点击查看大图">` :
+                        // 检查点：显示图标占位
+                        `<div class="file-placeholder" style="opacity: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div class="file-placeholder-icon" style="font-size: 80px;">💾</div>
+                        </div>`
                     }
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-info">
-                        📦 大小: ${file.size_mb} MB<br>
-                        🕒 创建时间: ${createTime}
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn btn-small btn-view" onclick="viewFile('${file.path}')">
-                            👁️ 查看
-                        </button>
-                        <button class="btn btn-small" style="background: #28a745; color: white;" onclick="downloadFile('${file.path}', '${file.name}')">
-                            📥 下载
-                        </button>
-                        <button class="btn btn-small btn-delete" onclick="confirmDelete('${fileId}', '${file.name}', 'plot')">
-                            🗑️ 删除
-                        </button>
-                    </div>
-                </div>
-            `}).join('');
-        }
-
-        // 渲染检查点文件列表
-        function renderCheckpoints(checkpoints) {
-            const container = document.getElementById('checkpointsList');
-            
-            if (checkpoints.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📭</div>
-                        <div>暂无检查点文件</div>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = checkpoints.map(file => {
-                const fileId = file.id || '';
-                const createTime = file.create_time || new Date(file.modified * 1000).toLocaleString('zh-CN');
-                return `
-                <div class="file-card">
-                    <span class="file-type-badge badge-checkpoint">检查点</span>
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-info">
-                        📦 大小: ${file.size_mb} MB<br>
-                        🕒 创建时间: ${createTime}
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn btn-small" style="background: #28a745; color: white;" onclick="downloadCheckpoint('${file.name}')">
-                            📥 下载
-                        </button>
-                        <button class="btn btn-small btn-delete" onclick="confirmDelete('${fileId}', '${file.name}', 'checkpoint')">
-                            🗑️ 删除
-                        </button>
+                    
+                    <div class="file-item-info">
+                        <div class="file-type-badge badge-${type}">${label}</div>
+                        <div style="font-size: 13px; color: #666; margin: 8px 0; font-weight: 500;">
+                            ${file.size_mb} MB
+                        </div>
+                        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px;">
+                            ${isImage ? 
+                                `<button class="btn btn-small btn-view" onclick="viewFile('${file.path}')" title="在新标签页查看">
+                                    👁️ 查看
+                                </button>` : ''}
+                            ${type === 'checkpoint' ? 
+                                `<button class="btn btn-small" style="background: #28a745; color: white;" onclick="downloadCheckpoint('${file.name}')" title="下载检查点文件">
+                                    📥 下载
+                                </button>` :
+                                `<button class="btn btn-small" style="background: #28a745; color: white;" onclick="downloadFile('${file.path}', '${file.name}')" title="下载文件">
+                                    📥 下载
+                                </button>`}
+                            <button class="btn btn-small btn-delete" onclick="confirmDelete('${file.id}', '${file.name}', '${type}')" title="删除此文件">
+                                🗑️ 删除
+                            </button>
+                        </div>
                     </div>
                 </div>
-            `}).join('');
+            `;
         }
 
         // 查看文件
@@ -650,16 +819,51 @@
             }
         }
 
+        // 确认删除整个训练会话
+        function confirmDeleteSession(sessionId, fileCount) {
+            showModal(
+                '⚠️ 删除训练会话',
+                `确定要删除这次训练的所有 ${fileCount} 个文件吗？此操作不可撤销！`,
+                () => deleteSession(sessionId)
+            );
+        }
+
+        // 删除整个训练会话
+        async function deleteSession(sessionId) {
+            try {
+                const response = await fetch('/api/delete_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    loadFiles(); // 重新加载列表
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            } catch (error) {
+                console.error('删除会话出错:', error);
+                alert('删除会话失败');
+            }
+            closeModal();
+        }
+
         // 确认清空所有文件
         function confirmClearAll() {
-            if (!filesData || filesData.total_count === 0) {
+            if (!sessionsData || sessionsData.length === 0) {
                 alert('当前没有文件可以清空');
                 return;
             }
 
+            const totalFiles = sessionsData.reduce((sum, s) => sum + s.file_count, 0);
+
             showModal(
                 '⚠️ 危险操作',
-                `确定要清空所有 ${filesData.total_count} 个文件吗？此操作不可撤销！`,
+                `确定要清空所有 ${sessionsData.length} 次训练的 ${totalFiles} 个文件吗？此操作不可撤销！`,
                 clearAllFiles
             );
         }

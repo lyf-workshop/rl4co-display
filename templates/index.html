@@ -441,6 +441,61 @@
                   </form>
               </div>
 
+              <div class="config-card">
+                <h3><span class="icon">📁</span> 数据集上传 (TSP)</h3>
+                <div class="form-group">
+                    <label for="dataset-mode">数据集模式</label>
+                    <select id="dataset-mode" name="dataset_mode" onchange="toggleDatasetUpload()">
+                        <option value="random">随机生成数据集</option>
+                        <option value="upload">上传自定义数据集</option>
+                    </select>
+                    <p class="description">选择使用随机生成或上传自己的TSP数据集</p>
+                </div>
+
+                <div id="dataset-upload-section" style="display: none;">
+                    <div class="form-group">
+                        <label for="dataset-file">选择数据集文件</label>
+                        <input type="file" id="dataset-file" accept=".txt,.json,.tsp" style="padding: 0.5rem;">
+                        <p class="description">
+                            支持格式：<br>
+                            • <strong>TXT</strong>: 每行一个坐标对 (x y)<br>
+                            • <strong>JSON</strong>: {"coordinates": [[x1,y1], [x2,y2], ...]}<br>
+                            • <strong>TSP</strong>: TSPLIB格式文件
+                        </p>
+                    </div>
+                    
+                    <button type="button" class="start-button" onclick="uploadDataset()" style="margin-top: 0.5rem; font-size: 1rem; padding: 0.8rem;">
+                        📤 上传数据集
+                    </button>
+                    
+                    <div id="upload-status" class="status-message" style="margin-top: 1rem;"></div>
+                    
+                    <div id="dataset-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                        <h4 style="color: #667eea; margin-bottom: 0.5rem;">✅ 数据集已上传</h4>
+                        <p style="margin: 0.3rem 0;"><strong>文件名:</strong> <span id="dataset-filename"></span></p>
+                        <p style="margin: 0.3rem 0;"><strong>城市数量:</strong> <span id="dataset-size"></span></p>
+                        <p style="margin: 0.3rem 0;"><strong>坐标范围:</strong> <span id="dataset-range"></span></p>
+                    </div>
+                    
+                    <button type="button" class="start-button" onclick="showDatasetManager()" style="margin-top: 1rem; font-size: 0.9rem; padding: 0.6rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                        📂 管理已上传数据集
+                    </button>
+                    
+                    <!-- 数据集管理弹窗 -->
+                    <div id="dataset-manager-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;">
+                        <div style="max-width: 800px; margin: 50px auto; background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 50px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                <h3 style="color: #667eea; margin: 0;">📂 我的数据集</h3>
+                                <button onclick="closeDatasetManager()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✖</button>
+                            </div>
+                            
+                            <div id="datasets-list" style="max-height: 400px; overflow-y: auto;">
+                                <p style="text-align: center; color: #999;">正在加载...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              </div>
 
         </section>
 
@@ -605,7 +660,9 @@
                 decoder: decoder,
                 epochs: parseInt(epochs),
                 batch_size: parseInt(batchSize),
-                learning_rate: parseFloat(learningRate)
+                learning_rate: parseFloat(learningRate),
+                dataset_mode: document.getElementById('dataset-mode').value,
+                dataset_id: window.uploadedDatasetId || null
             };
 
             try {
@@ -904,6 +961,193 @@
             if (this.value < 1) this.value = 1;
             if (this.value > 2048) this.value = 2048;
         });
+
+        // 切换数据集上传区域显示
+        function toggleDatasetUpload() {
+            const mode = document.getElementById('dataset-mode').value;
+            const uploadSection = document.getElementById('dataset-upload-section');
+            
+            if (mode === 'upload') {
+                uploadSection.style.display = 'block';
+            } else {
+                uploadSection.style.display = 'none';
+            }
+        }
+
+        // 上传数据集
+        async function uploadDataset() {
+            const fileInput = document.getElementById('dataset-file');
+            const uploadStatus = document.getElementById('upload-status');
+            const datasetInfo = document.getElementById('dataset-info');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                uploadStatus.className = 'status-message show error';
+                uploadStatus.textContent = '❌ 请先选择一个数据集文件';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('dataset', file);
+            
+            // 显示上传中状态
+            uploadStatus.className = 'status-message show';
+            uploadStatus.style.background = '#fff3cd';
+            uploadStatus.style.color = '#856404';
+            uploadStatus.textContent = '⏳ 正在上传和解析数据集...';
+            
+            try {
+                const response = await fetch('/api/upload_dataset', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploadStatus.className = 'status-message show success';
+                    uploadStatus.textContent = '✅ ' + result.message;
+                    
+                    // 显示数据集信息
+                    datasetInfo.style.display = 'block';
+                    document.getElementById('dataset-filename').textContent = result.dataset_info.filename;
+                    document.getElementById('dataset-size').textContent = result.dataset_info.num_cities + ' 个城市';
+                    document.getElementById('dataset-range').textContent = result.dataset_info.coord_range;
+                    
+                    // 保存数据集ID到全局变量
+                    window.uploadedDatasetId = result.dataset_id;
+                } else {
+                    uploadStatus.className = 'status-message show error';
+                    uploadStatus.textContent = '❌ ' + result.message;
+                    datasetInfo.style.display = 'none';
+                }
+            } catch (error) {
+                uploadStatus.className = 'status-message show error';
+                uploadStatus.textContent = '❌ 上传失败: ' + error.message;
+                datasetInfo.style.display = 'none';
+            }
+        }
+
+        // 显示数据集管理器
+        async function showDatasetManager() {
+            const modal = document.getElementById('dataset-manager-modal');
+            const listDiv = document.getElementById('datasets-list');
+            
+            modal.style.display = 'block';
+            listDiv.innerHTML = '<p style="text-align: center; color: #999;">正在加载...</p>';
+            
+            try {
+                const response = await fetch('/api/list_datasets');
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.datasets.length === 0) {
+                        listDiv.innerHTML = '<p style="text-align: center; color: #999;">还没有上传任何数据集</p>';
+                    } else {
+                        let html = '<div style="display: grid; gap: 1rem;">';
+                        result.datasets.forEach(dataset => {
+                            const uploadTime = new Date(dataset.upload_time).toLocaleString('zh-CN');
+                            html += `
+                                <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 1rem; background: #f8f9fa;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="flex: 1;">
+                                            <h4 style="margin: 0 0 0.5rem 0; color: #333;">📁 ${dataset.filename}</h4>
+                                            <p style="margin: 0.3rem 0; color: #666; font-size: 0.9rem;">
+                                                <strong>城市数量:</strong> ${dataset.num_cities}
+                                            </p>
+                                            <p style="margin: 0.3rem 0; color: #999; font-size: 0.85rem;">
+                                                上传时间: ${uploadTime}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <button onclick="selectDataset('${dataset.dataset_id}', '${dataset.filename}', ${dataset.num_cities})" 
+                                                    style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 0.5rem;">
+                                                选择
+                                            </button>
+                                            <button onclick="deleteDataset('${dataset.dataset_id}')" 
+                                                    style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                                删除
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        listDiv.innerHTML = html;
+                    }
+                } else {
+                    listDiv.innerHTML = `<p style="text-align: center; color: #dc3545;">加载失败: ${result.message}</p>`;
+                }
+            } catch (error) {
+                listDiv.innerHTML = `<p style="text-align: center; color: #dc3545;">加载失败: ${error.message}</p>`;
+            }
+        }
+        
+        // 关闭数据集管理器
+        function closeDatasetManager() {
+            document.getElementById('dataset-manager-modal').style.display = 'none';
+        }
+        
+        // 选择数据集
+        function selectDataset(datasetId, filename, numCities) {
+            window.uploadedDatasetId = datasetId;
+            
+            // 切换到上传模式
+            document.getElementById('dataset-mode').value = 'upload';
+            toggleDatasetUpload();
+            
+            // 显示数据集信息
+            const datasetInfo = document.getElementById('dataset-info');
+            datasetInfo.style.display = 'block';
+            document.getElementById('dataset-filename').textContent = filename;
+            document.getElementById('dataset-size').textContent = numCities + ' 个城市';
+            document.getElementById('dataset-range').textContent = '已选择';
+            
+            // 关闭弹窗
+            closeDatasetManager();
+            
+            // 显示提示
+            const uploadStatus = document.getElementById('upload-status');
+            uploadStatus.className = 'status-message show success';
+            uploadStatus.textContent = '✅ 已选择数据集: ' + filename;
+        }
+        
+        // 删除数据集
+        async function deleteDataset(datasetId) {
+            if (!confirm('确定要删除这个数据集吗？此操作无法撤销。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/delete_dataset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ dataset_id: datasetId })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ ' + result.message);
+                    // 刷新数据集列表
+                    showDatasetManager();
+                    
+                    // 如果删除的是当前选中的数据集，清除选择
+                    if (window.uploadedDatasetId === datasetId) {
+                        window.uploadedDatasetId = null;
+                        document.getElementById('dataset-info').style.display = 'none';
+                        document.getElementById('upload-status').className = 'status-message';
+                    }
+                } else {
+                    alert('❌ ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ 删除失败: ' + error.message);
+            }
+        }
 
         // 查看模型详情
     </script>
