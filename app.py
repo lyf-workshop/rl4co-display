@@ -1849,8 +1849,13 @@ def list_training_files():
                         
                         # 按类型归类（每种类型只保留第一个）
                         file_type = file_record['file_type']
-                        if file_type in ['comparison', 'animation', 'curve', 'checkpoint', 'plot']:
-                            if files_by_type[file_type] is None:
+                        
+                        # 将 'plot' 类型映射到 'comparison' (都是对比图)
+                        if file_type == 'plot':
+                            file_type = 'comparison'
+                        
+                        if file_type in ['comparison', 'animation', 'curve', 'checkpoint']:
+                            if files_by_type.get(file_type) is None:
                                 files_by_type[file_type] = file_info
                         else:
                             files_by_type['other'].append(file_info)

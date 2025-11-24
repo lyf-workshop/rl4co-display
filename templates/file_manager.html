@@ -694,7 +694,7 @@
             // 文件存在时显示预览图或图标
             const isImage = type !== 'checkpoint';
             
-            return `
+                return `
                 <div class="file-item">
                     ${isImage ? 
                         // 图片类型：显示预览图
@@ -714,7 +714,7 @@
                         <div class="file-type-badge badge-${type}">${label}</div>
                         <div style="font-size: 13px; color: #666; margin: 8px 0; font-weight: 500;">
                             ${file.size_mb} MB
-                        </div>
+                    </div>
                         <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px;">
                             ${isImage ? 
                                 `<button class="btn btn-small btn-view" onclick="viewFile('${file.path}')" title="在新标签页查看">
@@ -722,14 +722,14 @@
                                 </button>` : ''}
                             ${type === 'checkpoint' ? 
                                 `<button class="btn btn-small" style="background: #28a745; color: white;" onclick="downloadCheckpoint('${file.name}')" title="下载检查点文件">
-                                    📥 下载
+                            📥 下载
                                 </button>` :
                                 `<button class="btn btn-small" style="background: #28a745; color: white;" onclick="downloadFile('${file.path}', '${file.name}')" title="下载文件">
                                     📥 下载
                                 </button>`}
                             <button class="btn btn-small btn-delete" onclick="confirmDelete('${file.id}', '${file.name}', '${type}')" title="删除此文件">
-                                🗑️ 删除
-                            </button>
+                            🗑️ 删除
+                        </button>
                         </div>
                     </div>
                 </div>
