@@ -22,7 +22,7 @@ button {
 
 /* 基本样式 */
 a {
-    color: #3498db; /* 链接的颜色 */
+    color: #188754; /* 链接的颜色 */
     text-decoration: none; /* 去掉下划线 */
     font-weight: bold; /* 字体加粗 */
     transition: color 0.3s, background-color 0.3s; /* 添加颜色和背景颜色的过渡效果 */
@@ -30,19 +30,19 @@ a {
 
 /* 鼠标悬停时的样式 */
 a:hover {
-    color: #2980b9; /* 鼠标悬停时的颜色变化 */
+    color: #156b43; /* 鼠标悬停时的颜色变化 */
     text-decoration: underline; /* 鼠标悬停时显示下划线 */
 }
 
 /* 点击时的样式 */
 a:active {
-    color: #1abc9c; /* 点击时的颜色变化 */
+    color: #125c35; /* 点击时的颜色变化 */
     background-color: #e0e0e0; /* 点击时的背景颜色变化 */
 }
 
 /* 已访问链接的样式 */
 a:visited {
-    color: #446ead; /* 已访问链接的颜色 */
+    color: #156b43; /* 已访问链接的颜色 */
 }
 
 
@@ -257,7 +257,7 @@ input {
 .submit {
     margin-top: 40px;
     margin-bottom: 20px;
-    background: #d4af7a;
+    background: linear-gradient(135deg, #188754 0%, #156b43 100%);
     text-transform: uppercase;
 }
 

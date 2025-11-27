@@ -15,7 +15,7 @@
 
         body {
             font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             color: #333;
             min-height: 100vh;
         }
@@ -37,9 +37,9 @@
 
         .hero-section h1 {
             font-size: 3rem;
-            color: #667eea;
+            color: #188754;
             margin-bottom: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -53,7 +53,7 @@
 
         .hero-section .university-info {
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             color: white;
             padding: 0.5rem 2rem;
             border-radius: 50px;
@@ -83,7 +83,7 @@
         }
 
         .config-card h3 {
-            color: #667eea;
+            color: #188754;
             font-size: 1.5rem;
             margin-bottom: 1.5rem;
             display: flex;
@@ -121,7 +121,7 @@
         .form-group select:focus,
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #188754;
         }
 
         .form-group select {
@@ -143,7 +143,7 @@
         }
 
         .training-panel h3 {
-            color: #667eea;
+            color: #188754;
             font-size: 1.5rem;
             margin-bottom: 1.5rem;
             text-align: center;
@@ -152,7 +152,7 @@
         .start-button {
             width: 100%;
             padding: 1.2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             color: white;
             border: none;
             border-radius: 10px;
@@ -165,7 +165,7 @@
 
         .start-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 25px rgba(24, 135, 84, 0.4);
         }
 
         .start-button:active {
@@ -188,7 +188,7 @@
         }
 
         .feature-item h4 {
-            color: #667eea;
+            color: #188754;
             margin-bottom: 0.5rem;
         }
 
@@ -258,7 +258,7 @@
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #188754 0%, #156b43 100%);
             width: 0%;
             transition: width 0.3s ease;
             display: flex;
@@ -289,7 +289,7 @@
         }
 
         .metric-value {
-            color: #667eea;
+            color: #188754;
             font-size: 1.5rem;
             font-weight: bold;
         }
@@ -318,7 +318,7 @@
             display: none;
             margin-top: 2rem;
             padding: 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             border-radius: 15px;
             color: white;
         }
@@ -470,8 +470,8 @@
                     
                     <div id="upload-status" class="status-message" style="margin-top: 1rem;"></div>
                     
-                    <div id="dataset-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #667eea;">
-                        <h4 style="color: #667eea; margin-bottom: 0.5rem;">✅ 数据集已上传</h4>
+                    <div id="dataset-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #188754;">
+                        <h4 style="color: #188754; margin-bottom: 0.5rem;">✅ 数据集已上传</h4>
                         <p style="margin: 0.3rem 0;"><strong>文件名:</strong> <span id="dataset-filename"></span></p>
                         <p style="margin: 0.3rem 0;"><strong>城市数量:</strong> <span id="dataset-size"></span></p>
                         <p style="margin: 0.3rem 0;"><strong>坐标范围:</strong> <span id="dataset-range"></span></p>
@@ -485,7 +485,7 @@
                     <div id="dataset-manager-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;">
                         <div style="max-width: 800px; margin: 50px auto; background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 50px rgba(0,0,0,0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                                <h3 style="color: #667eea; margin: 0;">📂 我的数据集</h3>
+                                <h3 style="color: #188754; margin: 0;">📂 我的数据集</h3>
                                 <button onclick="closeDatasetManager()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✖</button>
                             </div>
                             
@@ -558,7 +558,7 @@
 
             <!-- 训练进度显示 -->
             <div id="progress-container" class="progress-container">
-                <h4 style="color: #667eea; margin-bottom: 1rem;">⏳ 训练进度</h4>
+                <h4 style="color: #188754; margin-bottom: 1rem;">⏳ 训练进度</h4>
                 <div class="progress-bar-container">
                     <div id="progress-bar" class="progress-bar">0%</div>
                 </div>
@@ -585,7 +585,7 @@
 
             <!-- 训练曲线显示 -->
             <div id="training-curves-container" class="progress-container" style="display: none;">
-                <h4 style="color: #667eea; margin-bottom: 1rem;">📈 训练曲线（实时更新）</h4>
+                <h4 style="color: #188754; margin-bottom: 1rem;">📈 训练曲线（实时更新）</h4>
                 <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
                     <img id="training-curve-img" 
                          src="" 
@@ -1061,7 +1061,7 @@
                                         </div>
                                         <div>
                                             <button onclick="selectDataset('${dataset.dataset_id}', '${dataset.filename}', ${dataset.num_cities})" 
-                                                    style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 0.5rem;">
+                                                    style="padding: 0.5rem 1rem; background: #188754; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 0.5rem;">
                                                 选择
                                             </button>
                                             <button onclick="deleteDataset('${dataset.dataset_id}')" 

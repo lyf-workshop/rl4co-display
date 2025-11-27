@@ -15,7 +15,7 @@
 
         body {
             font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             color: #333;
             min-height: 100vh;
         }
@@ -42,9 +42,9 @@
 
         .profile-header h1 {
             font-size: 2.5rem;
-            color: #667eea;
+            color: #188754;
             margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -54,7 +54,7 @@
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -81,7 +81,7 @@
 
         .stat-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 10px 25px rgba(24, 135, 84, 0.2);
         }
 
         .stat-icon {
@@ -92,7 +92,7 @@
         .stat-value {
             font-size: 2rem;
             font-weight: bold;
-            color: #667eea;
+            color: #188754;
             margin-bottom: 0.5rem;
         }
 
@@ -109,7 +109,7 @@
         }
 
         .info-section h2 {
-            color: #667eea;
+            color: #188754;
             margin-bottom: 1.5rem;
             font-size: 1.5rem;
             display: flex;
@@ -160,18 +160,18 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #188754 0%, #156b43 100%);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 25px rgba(24, 135, 84, 0.3);
         }
 
         .btn-secondary {
             background: #f0f2ff;
-            color: #667eea;
+            color: #188754;
         }
 
         .btn-secondary:hover {
@@ -194,7 +194,7 @@
         .activity-item {
             padding: 1rem;
             background: white;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #188754;
             border-radius: 8px;
             margin-bottom: 1rem;
         }
@@ -424,7 +424,7 @@
                     
                     const activityHTML = activities.map(activity => {
                         // 根据状态设置颜色
-                        let borderColor = '#667eea';
+                        let borderColor = '#188754';
                         if (activity.status === 'completed') {
                             borderColor = '#48bb78'; // 绿色
                         } else if (activity.status === 'failed') {

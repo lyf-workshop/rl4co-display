@@ -48,16 +48,16 @@
 .university-badge {
     font-size: 1.3rem;
     font-weight: bold;
-    color: #667eea;
-    border-left: 4px solid #667eea;
+    color: #188754;
+    border-left: 4px solid #188754;
     padding-left: 1rem;
     transition: color 0.2s ease, border-left-color 0.2s ease;
     white-space: nowrap;
 }
 
 .university-badge:hover {
-    color: #764ba2;
-    border-left-color: #764ba2;
+    color: #156b43;
+    border-left-color: #156b43;
 }
 
 /* ============================================
@@ -91,14 +91,14 @@
     transform-origin: center;
     width: 80%;
     height: 2px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #188754 0%, #156b43 100%);
     transition: transform 0.2s ease;
     will-change: transform;
 }
 
 .nav-links a:hover {
-    color: #667eea;
-    background-color: rgba(102, 126, 234, 0.1);
+    color: #188754;
+    background-color: rgba(24, 135, 84, 0.1);
 }
 
 .nav-links a:hover::before {
@@ -107,8 +107,8 @@
 
 /* 当前激活的导航项 */
 .nav-links a.active {
-    color: #667eea;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    color: #188754;
+    background: linear-gradient(135deg, rgba(24, 135, 84, 0.1) 0%, rgba(21, 107, 67, 0.1) 100%);
     font-weight: 600;
 }
 
@@ -134,12 +134,12 @@
 }
 
 .mobile-menu-btn:hover {
-    color: #667eea;
+    color: #188754;
     transform: scale(1.1);
 }
 
 .mobile-menu-btn.active {
-    color: #667eea;
+    color: #188754;
 }
 
 /* ============================================
@@ -153,12 +153,12 @@
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #188754 0%, #156b43 100%);
     color: white;
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 15px rgba(24, 135, 84, 0.4);
     transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
     z-index: 999;
     display: flex;
@@ -170,7 +170,7 @@
 
 .back-to-top:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    box-shadow: 0 6px 20px rgba(24, 135, 84, 0.6);
 }
 
 .back-to-top:active {
@@ -207,7 +207,7 @@
     width: 50px;
     height: 50px;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
+    border-top: 4px solid #188754;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     will-change: transform;
@@ -220,7 +220,7 @@
 
 .page-loading p {
     margin-top: 1rem;
-    color: #667eea;
+    color: #188754;
     font-size: 1.1rem;
     font-weight: 500;
     animation: fadeIn 0.3s ease;
@@ -251,13 +251,13 @@
 }
 
 .breadcrumb a {
-    color: #667eea;
+    color: #188754;
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
 .breadcrumb a:hover {
-    color: #764ba2;
+    color: #156b43;
     text-decoration: underline;
 }
 
@@ -281,8 +281,8 @@
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
     background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
+    color: #188754;
+    border: 2px solid #188754;
     border-radius: 8px;
     text-decoration: none;
     font-weight: 500;
@@ -293,7 +293,7 @@
 }
 
 .back-btn:hover {
-    background-color: #667eea;
+    background-color: #188754;
     color: white;
     transform: translateX(-5px);
 }
@@ -363,7 +363,7 @@
     }
     
     .nav-links a:hover {
-        background-color: rgba(102, 126, 234, 0.15);
+        background-color: rgba(24, 135, 84, 0.15);
     }
     
     /* 返回顶部按钮 */
