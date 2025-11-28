@@ -5,8 +5,7 @@
     <title>RL4CO - 强化学习优化平台 | 山西大学</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 统一导航样式 -->
-<link rel="stylesheet" href="/static/css/navigation.css">
-    <!-- Ollama智能助手样式 - 嵌入式版本 -->
+<!-- Ollama智能助手样式 - 嵌入式版本 -->
 <link rel="stylesheet" href="/static/css/ollama-chat-embedded.css">
     <style>
         * {
@@ -22,7 +21,11 @@
             min-height: 100vh;
         }
 
-        /* 原main-container样式已移至ollama-chat-embedded.css中的main-container-with-chat */
+        .main-container {
+            max-width: 1400px;
+            margin: 100px auto 50px;
+            padding: 0 2rem;
+        }
 
         .hero-section {
             background: white;
@@ -380,9 +383,7 @@
         </nav>
     </header>
 
-    <div class="main-container-with-chat">
-        <!-- 左侧：主内容区域 -->
-        <div class="main-content-area">
+    <div class="main-container">
         <section class="hero-section" id="home">
             <h1>🚀 RL4CO 强化学习优化平台</h1>
             <p class="subtitle">基于深度强化学习的组合优化问题求解平台</p>
@@ -604,61 +605,12 @@
         </div>
     </section>
 
-        </div><!-- main-content-area结束 -->
-
-        <!-- 右侧：AI智能助手面板（嵌入式） -->
-        <aside class="ai-chat-panel-embedded">
-            <div class="ai-chat-header">
-                <div class="ai-chat-header-title">
-                    <span class="icon">🤖</span>
-                    <span>AI智能助手</span>
-                </div>
-                <div class="ai-chat-controls">
-                    <button class="ai-chat-btn" id="ai-clear-btn" title="清空对话">🗑️</button>
-                </div>
-            </div>
-
-            <div class="ai-model-selector">
-                <label for="ai-model-select">选择模型</label>
-                <select id="ai-model-select">
-                    <option value="">加载中...</option>
-                </select>
-                <div class="ai-model-status" id="ai-model-status">
-                    <span class="status-dot"></span>
-                    <span class="status-text">正在连接...</span>
-                </div>
-            </div>
-
-            <div class="ai-chat-messages" id="ai-chat-messages">
-                <div class="ai-chat-empty">
-                    <div class="ai-chat-empty-icon">💬</div>
-                    <div class="ai-chat-empty-text">有什么可以帮助您的？</div>
-                    <div class="ai-chat-empty-hint">试试问我关于RL4CO的问题</div>
-                </div>
-            </div>
-
-            <div class="ai-chat-input-container">
-                <div class="ai-chat-input-wrapper">
-                    <textarea 
-                        class="ai-chat-input" 
-                        id="ai-chat-input" 
-                        placeholder="输入您的问题..."
-                        rows="1"
-                    ></textarea>
-                    <button class="ai-chat-send-btn" id="ai-send-btn" title="发送 (Enter)">
-                        ➤
-                    </button>
-                </div>
-                <div class="ai-chat-hint">按 Enter 发送，Shift+Enter 换行</div>
-            </div>
-        </aside>
-    </div><!-- main-container-with-chat结束 -->
-
     <footer>
             <p><strong>山西大学 计算机科学与技术学院</strong></p>
             <p>RL4CO - Reinforcement Learning for Combinatorial Optimization Platform</p>
             <p style="margin-top: 1rem; color: #999;">© 2025 Shanxi University. All Rights Reserved.</p>
     </footer>
+    </div>
 
     <script>
         // 平滑滚动效果
@@ -1232,7 +1184,6 @@
     </script>
     
 <!-- 统一导航逻辑 -->
-<script src="/static/js/navigation.js"></script>
 <!-- Ollama智能助手脚本 - 嵌入式版本 -->
 <script src="/static/js/ollama-chat-embedded.js"></script>
 </body>
