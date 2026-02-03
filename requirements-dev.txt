@@ -1,0 +1,17 @@
+# 开发和测试依赖
+
+# 测试框架
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# 代码质量
+flake8>=6.0.0
+black>=23.0.0
+mypy>=1.0.0
+
+# 类型注解
+types-Flask>=1.1.6
+types-requests>=2.28.0
+
+

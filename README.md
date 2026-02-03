@@ -106,11 +106,29 @@ python app.py
 
 ```
 rl4co-display/
-├── app.py                    # 主应用文件
-├── auth_module.py            # 用户认证模块
-├── config.py                 # 配置文件
-├── requirements.txt          # Python 依赖
+├── app.py                    # 主应用入口（重构后约370行）
+├── app_auth.py               # 认证路由模块
+├── app_pages.py              # 页面路由模块
+├── app_stats.py              # 统计API模块
+├── app_compat.py             # 兼容性API模块
+├── app_training.py           # 训练API模块
+├── app_files.py              # 文件管理API模块
+├── auth_module.py            # 用户认证核心模块
+├── logging_config.py         # 日志配置（新增）
+├── config.py                 # 应用配置
+├── requirements.txt          # Python 生产依赖
+├── requirements-dev.txt      # 开发和测试依赖（新增）
+├── pytest.ini                # Pytest配置（新增）
 ├── database_init_with_auth.sql  # 数据库初始化脚本
+│
+├── modules/                  # 业务逻辑模块
+│   ├── algorithms/           # 强化学习算法
+│   ├── policies/             # 策略模型
+│   ├── problems/             # 问题定义（TSP/CVRP/VRPTW/SDVRP等）
+│   ├── rl_training/          # 训练核心逻辑
+│   │   ├── training_functions.py
+│   │   └── visualizations/   # 可视化模块
+│   └── compatibility.py      # 配置兼容性检查
 │
 ├── templates/                # HTML 模板
 │   ├── index.html           # 训练主页面
@@ -120,16 +138,42 @@ rl4co-display/
 │
 ├── static/                   # 静态资源
 │   ├── css/                 # 样式文件
+│   │   ├── navigation.css
+│   │   ├── layout.css       # 全局布局（新增）
+│   │   └── training.css     # 训练样式（新增）
 │   ├── js/                  # JavaScript
 │   └── model_plots/         # 训练结果（自动生成）
 │
+├── tests/                    # 测试目录（新增）
+│   ├── __init__.py
+│   ├── conftest.py           # Pytest配置
+│   ├── test_parse_dataset.py  # 数据集解析测试
+│   └── test_compatibility_api.py  # 兼容性API测试
+│
+├── logs/                     # 日志文件（运行时生成）
 ├── checkpoints/              # 模型检查点（自动生成）
+├── datasets/                 # 用户上传的数据集
 ├── lightning_logs/           # 训练日志（自动生成）
 │
 └── docs/                     # 完整文档
     ├── README.md            # 文档索引
+    ├── ARCHITECTURE.md      # 系统架构文档（新增）
     └── ...
 ```
+
+### 架构改进（2026-01重构）
+
+本项目在 2026-01-19 完成了大规模重构，主要改进包括：
+
+1. **模块化路由**：将 `app.py`（1644行）拆分为 6 个 Blueprint 模块
+2. **日志系统**：引入统一的日志配置和错误码体系
+3. **样式分离**：抽离 CSS 到独立文件（`layout.css`, `training.css`）
+4. **测试框架**：添加 Pytest 单元测试和集成测试
+5. **文档完善**：新增架构文档和重构进度报告
+
+详细信息请查看：
+- [系统架构文档](docs/ARCHITECTURE.md)
+- [重构进度报告](REFACTORING_PROGRESS.md)
 
 ---
 
@@ -148,9 +192,12 @@ rl4co-display/
 ### 支持的问题
 
 - **TSP** - 旅行商问题
+- **ATSP** - 非对称旅行商问题 ⭐新增
 - **CVRP** - 带容量约束的车辆路径问题
-- **OP** - 定向问题
-- **PCTSP** - 带奖励的旅行商问题
+- **SDVRP** - 分割配送车辆路径问题
+- **VRPTW** - 带时间窗的车辆路径问题
+- **PCTSP** - 带奖励的旅行商问题（计划中）
+- **OP** - 定向问题（计划中）
 - 等多种组合优化问题
 
 ### 可视化功能

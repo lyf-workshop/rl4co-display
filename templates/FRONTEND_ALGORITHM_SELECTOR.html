@@ -1,0 +1,435 @@
+<!-- 
+    前端算法选择器 - 添加到 index.html
+    
+    将此代码添加到训练配置表单中
+-->
+
+<!-- ============================================ -->
+<!-- 第1步：在HTML中添加策略和算法选择器 -->
+<!-- ============================================ -->
+
+<!-- 在问题类型选择后添加 -->
+<div class="form-group">
+    <label for="model-select">
+        <i class="fas fa-brain"></i> 策略模型:
+        <span class="info-tooltip" title="选择用于构建解决方案的神经网络架构">
+            <i class="fas fa-info-circle"></i>
+        </span>
+    </label>
+    <select id="model-select" name="model" class="form-control">
+        <option value="attention" selected>Attention Model (经典方法)</option>
+        <option value="pomo">POMO (高质量，多起点)</option>
+    </select>
+    <small class="form-text text-muted" id="model-description">
+        经典的基于Transformer的构造式模型，速度快，适合入门
+    </small>
+</div>
+
+<div class="form-group">
+    <label for="algorithm-select">
+        <i class="fas fa-cogs"></i> 训练算法:
+        <span class="info-tooltip" title="选择强化学习训练算法">
+            <i class="fas fa-info-circle"></i>
+        </span>
+    </label>
+    <select id="algorithm-select" name="algorithm" class="form-control">
+        <option value="reinforce" selected>REINFORCE (入门推荐)</option>
+        <option value="ppo">PPO (生产推荐)</option>
+        <option value="a2c">A2C (平衡选择)</option>
+    </select>
+    <small class="form-text text-muted" id="algorithm-description">
+        最基础的策略梯度算法，简单易懂，适合学习
+    </small>
+</div>
+
+<!-- 推荐配置按钮 -->
+<div class="form-group">
+    <button type="button" class="btn btn-info btn-sm" id="use-recommended-btn">
+        <i class="fas fa-magic"></i> 使用推荐配置
+    </button>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="use-fast-btn">
+        <i class="fas fa-bolt"></i> 快速原型
+    </button>
+</div>
+
+<!-- 配置验证提示 -->
+<div id="config-validation-alert" class="alert" style="display: none;" role="alert">
+    <!-- 动态显示验证结果 -->
+</div>
+
+<!-- POMO特有参数（条件显示） -->
+<div id="pomo-params" class="form-group" style="display: none;">
+    <label for="num-starts">
+        <i class="fas fa-flag"></i> 起点数量 (num_starts):
+    </label>
+    <input type="number" id="num-starts" name="num_starts" class="form-control" 
+           value="50" min="10" max="100">
+    <small class="form-text text-muted">
+        POMO同时从多个起点构建路径，起点越多质量越高但计算量越大
+    </small>
+</div>
+
+<!-- PPO特有参数（条件显示） -->
+<div id="ppo-params" class="param-group" style="display: none;">
+    <h5 class="param-group-title">PPO算法参数</h5>
+    <div class="row">
+        <div class="col-md-6">
+            <label for="clip-ratio">Clip Ratio:</label>
+            <input type="number" id="clip-ratio" name="clip_ratio" 
+                   class="form-control" value="0.2" min="0.1" max="0.3" step="0.05">
+        </div>
+        <div class="col-md-6">
+            <label for="entropy-coef">Entropy Coefficient:</label>
+            <input type="number" id="entropy-coef" name="entropy_coef" 
+                   class="form-control" value="0.01" min="0" max="0.1" step="0.01">
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- 第2步：在页面底部添加JavaScript逻辑 -->
+<!-- ============================================ -->
+
+<script>
+// ============================================
+// 兼容性管理器
+// ============================================
+
+class CompatibilityManager {
+    constructor() {
+        this.compatibilityData = null;
+        this.currentProblem = 'tsp';
+        this.currentPolicy = 'attention';
+        this.currentAlgorithm = 'reinforce';
+        
+        this.init();
+    }
+    
+    async init() {
+        // 获取兼容性数据
+        await this.loadCompatibilityData();
+        
+        // 绑定事件监听器
+        this.bindEvents();
+        
+        // 初始化选项
+        this.updateAvailableOptions();
+    }
+    
+    async loadCompatibilityData() {
+        try {
+            const response = await fetch('/api/compatibility/info');
+            const result = await response.json();
+            if (result.success) {
+                this.compatibilityData = result.data;
+                console.log('✅ 兼容性数据加载成功');
+            }
+        } catch (error) {
+            console.error('❌ 加载兼容性数据失败:', error);
+        }
+    }
+    
+    bindEvents() {
+        // 问题类型改变
+        document.getElementById('problem-select').addEventListener('change', (e) => {
+            this.currentProblem = e.target.value;
+            this.updateAvailableOptions();
+            this.validateConfiguration();
+        });
+        
+        // 策略模型改变
+        document.getElementById('model-select').addEventListener('change', (e) => {
+            this.currentPolicy = e.target.value;
+            this.updatePolicyDescription();
+            this.showPolicySpecificParams();
+            this.updateAvailableAlgorithms();
+            this.validateConfiguration();
+        });
+        
+        // 算法改变
+        document.getElementById('algorithm-select').addEventListener('change', (e) => {
+            this.currentAlgorithm = e.target.value;
+            this.updateAlgorithmDescription();
+            this.showAlgorithmSpecificParams();
+            this.validateConfiguration();
+        });
+        
+        // 推荐配置按钮
+        document.getElementById('use-recommended-btn').addEventListener('click', () => {
+            this.applyRecommendedConfig('best');
+        });
+        
+        document.getElementById('use-fast-btn').addEventListener('click', () => {
+            this.applyRecommendedConfig('fast');
+        });
+    }
+    
+    async updateAvailableOptions() {
+        try {
+            // 获取当前问题的约束
+            const response = await fetch(`/api/compatibility/constraints/${this.currentProblem}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const { available_policies, available_algorithms } = result.data;
+                
+                // 更新策略选项
+                this.updateSelectOptions('model-select', available_policies, this.getPolicyDisplayName);
+                
+                // 更新算法选项
+                this.updateSelectOptions('algorithm-select', available_algorithms, this.getAlgorithmDisplayName);
+            }
+        } catch (error) {
+            console.error('更新可用选项失败:', error);
+        }
+    }
+    
+    async updateAvailableAlgorithms() {
+        try {
+            const response = await fetch(
+                `/api/compatibility/available_algorithms?problem=${this.currentProblem}&policy=${this.currentPolicy}`
+            );
+            const result = await response.json();
+            
+            if (result.success) {
+                this.updateSelectOptions('algorithm-select', result.algorithms, this.getAlgorithmDisplayName);
+            }
+        } catch (error) {
+            console.error('更新算法选项失败:', error);
+        }
+    }
+    
+    updateSelectOptions(selectId, options, displayNameFunc) {
+        const select = document.getElementById(selectId);
+        const currentValue = select.value;
+        
+        // 清空选项
+        select.innerHTML = '';
+        
+        // 添加新选项
+        options.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option;
+            optionElement.textContent = displayNameFunc(option);
+            select.appendChild(optionElement);
+        });
+        
+        // 恢复之前的选择（如果仍然可用）
+        if (options.includes(currentValue)) {
+            select.value = currentValue;
+        } else if (options.length > 0) {
+            select.value = options[0];
+        }
+    }
+    
+    async validateConfiguration() {
+        try {
+            const response = await fetch('/api/compatibility/validate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    problem: this.currentProblem,
+                    model: this.currentPolicy,
+                    algorithm: this.currentAlgorithm
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showValidationMessage(result.valid, result.message, result.level);
+            }
+        } catch (error) {
+            console.error('验证配置失败:', error);
+        }
+    }
+    
+    showValidationMessage(valid, message, level) {
+        const alert = document.getElementById('config-validation-alert');
+        
+        // 清除旧的样式
+        alert.className = 'alert';
+        
+        // 添加新样式
+        if (level === 'success') {
+            alert.classList.add('alert-success');
+        } else if (level === 'warning') {
+            alert.classList.add('alert-warning');
+        } else if (level === 'error') {
+            alert.classList.add('alert-danger');
+        }
+        
+        alert.innerHTML = message;
+        alert.style.display = 'block';
+        
+        // 如果是成功消息，3秒后隐藏
+        if (level === 'success') {
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+    }
+    
+    async applyRecommendedConfig(preference = 'best') {
+        try {
+            const response = await fetch(
+                `/api/compatibility/recommend?problem=${this.currentProblem}&preference=${preference}`
+            );
+            const result = await response.json();
+            
+            if (result.success) {
+                const { policy, algorithm } = result.recommended;
+                
+                // 更新选择
+                document.getElementById('model-select').value = policy;
+                document.getElementById('algorithm-select').value = algorithm;
+                
+                // 触发更新
+                this.currentPolicy = policy;
+                this.currentAlgorithm = algorithm;
+                
+                this.updatePolicyDescription();
+                this.updateAlgorithmDescription();
+                this.showPolicySpecificParams();
+                this.showAlgorithmSpecificParams();
+                this.validateConfiguration();
+                
+                // 显示提示
+                this.showValidationMessage(
+                    true,
+                    `✅ 已应用${preference === 'best' ? '最佳' : '快速'}推荐配置`,
+                    'success'
+                );
+            }
+        } catch (error) {
+            console.error('应用推荐配置失败:', error);
+        }
+    }
+    
+    updatePolicyDescription() {
+        const descriptions = {
+            'attention': '经典的基于Transformer的构造式模型，速度快，适合入门',
+            'pomo': '同时从多个起点构建路径，利用问题对称性，质量高但计算量大'
+        };
+        
+        document.getElementById('model-description').textContent = 
+            descriptions[this.currentPolicy] || '';
+    }
+    
+    updateAlgorithmDescription() {
+        const descriptions = {
+            'reinforce': '最基础的策略梯度算法，简单易懂，适合学习',
+            'ppo': '工业界首选算法，训练稳定，超参数不敏感，推荐用于生产',
+            'a2c': 'Actor-Critic方法，方差小，收敛快，性能介于REINFORCE和PPO之间'
+        };
+        
+        document.getElementById('algorithm-description').textContent = 
+            descriptions[this.currentAlgorithm] || '';
+    }
+    
+    showPolicySpecificParams() {
+        // 显示/隐藏POMO特有参数
+        const pomoParams = document.getElementById('pomo-params');
+        if (this.currentPolicy === 'pomo') {
+            pomoParams.style.display = 'block';
+        } else {
+            pomoParams.style.display = 'none';
+        }
+    }
+    
+    showAlgorithmSpecificParams() {
+        // 显示/隐藏PPO特有参数
+        const ppoParams = document.getElementById('ppo-params');
+        if (this.currentAlgorithm === 'ppo') {
+            ppoParams.style.display = 'block';
+        } else {
+            ppoParams.style.display = 'none';
+        }
+    }
+    
+    getPolicyDisplayName(policy) {
+        const names = {
+            'attention': 'Attention Model (经典)',
+            'am': 'Attention Model (经典)',
+            'pomo': 'POMO (高质量)'
+        };
+        return names[policy] || policy.toUpperCase();
+    }
+    
+    getAlgorithmDisplayName(algorithm) {
+        const names = {
+            'reinforce': 'REINFORCE (入门)',
+            'ppo': 'PPO (生产推荐)',
+            'a2c': 'A2C (平衡)'
+        };
+        return names[algorithm] || algorithm.toUpperCase();
+    }
+}
+
+// 初始化兼容性管理器
+document.addEventListener('DOMContentLoaded', () => {
+    window.compatibilityManager = new CompatibilityManager();
+});
+</script>
+
+
+<!-- ============================================ -->
+<!-- 第3步：添加CSS样式 -->
+<!-- ============================================ -->
+
+<style>
+/* 参数组样式 */
+.param-group {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.param-group-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+/* 信息提示图标 */
+.info-tooltip {
+    cursor: help;
+    color: #6c757d;
+    margin-left: 5px;
+}
+
+.info-tooltip:hover {
+    color: #007bff;
+}
+
+/* 验证提示框动画 */
+#config-validation-alert {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 按钮样式 */
+.btn-sm {
+    margin-right: 5px;
+}
+</style>
+
+
+
+
+
+

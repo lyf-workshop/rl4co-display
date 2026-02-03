@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 统一导航样式 -->
 <link rel="stylesheet" href="/static/css/navigation.css">
-    <!-- Ollama智能助手样式 - 嵌入式版本 -->
-<link rel="stylesheet" href="/static/css/ollama-chat-embedded.css">
+    <!-- Ollama智能助手样式 - 增强版嵌入式 -->
+<link rel="stylesheet" href="/static/css/ollama-chat-embedded-enhanced.css">
     <style>
         * {
             margin: 0;
@@ -168,6 +168,92 @@
 
         .start-button:active {
             transform: translateY(0);
+        }
+
+        /* 新增：大号开始训练按钮 */
+        .start-button-large {
+            padding: 1.5rem 4rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .start-button-large:hover {
+            background: white;
+            color: #667eea;
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.3);
+        }
+
+        /* 推荐配置按钮 */
+        .btn-recommend {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 0 5px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-recommend:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-recommend.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 3px 10px rgba(245, 87, 108, 0.3);
+        }
+
+        .btn-recommend.secondary:hover {
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.5);
+        }
+
+        /* 参数网格布局 */
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* 高级参数样式 */
+        .advanced-params {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            margin-top: 1rem;
+        }
+
+        /* 信息提示图标 */
+        .info-tooltip {
+            cursor: help;
+            color: #6c757d;
+            margin-left: 5px;
+            font-size: 0.9rem;
+        }
+
+        .info-tooltip:hover {
+            color: #667eea;
+        }
+
+        /* 步骤标题样式 */
+        .config-card h3 .icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .features-grid {
@@ -405,81 +491,200 @@
             </div>
         </div>
 
+        <!-- ========== 训练配置区域（重新设计） ========== -->
+        <form id="rl-config-form">
         <section class="config-section" id="config">
+                
+                <!-- 第1步：问题配置 -->
             <div class="config-card">
-                <h3><span class="icon">🤖</span> 模型选择</h3>
-                <form id="rl-config-form">
+                    <h3><span class="icon">📋</span> 第1步：问题配置</h3>
+                    
                     <div class="form-group">
-                        <label for="model-select">选择强化学习模型</label>
-                        <select id="model-select" name="model">
-                            <option value="attention">Attention Model (AM)</option>
-                            <option value="pomo">POMO (Policy Optimization with Multiple Optima)</option>
-                            <option value="symncco">SymNCO (Symmetric Neural Combinatorial Optimization)</option>
-                            <option value="matnet">MatNet (Matrix Network)</option>
-                            <option value="mdam">MDAM (Multi-Decoder Attention Model)</option>
-                            <option value="deepaco">DeepACO (Deep Ant Colony Optimization)</option>
-                        </select>
-                        <p class="description">选择用于求解组合优化问题的深度强化学习模型</p>
-                    </div>
-                </form>
-            </div>
-            <div class="config-card">
-                <h3><span class="icon">⁉️</span> 问题类型选择</h3>
-                <form id="rl-config-form">
-                    <div class="form-group">
-                        <label for="problem-select">选择问题类型</label>
+                        <label for="problem-select">🎯 问题类型</label>
                         <select id="problem-select" name="problem">
-                            <option value="tsp">TSP (Traveling Salesman Problem)</option>
-                            <option value="cvrp">CVRP (Capacitated Vehicle Routing Problem)（敬请期待）</option>
-                            <option value="sdvrp">SDVRP (Split Delivery VRP)（敬请期待）</option>
-                            <option value="pctsp">PCTSP (Prize Collecting TSP)（敬请期待）</option>
-                            <option value="op">OP (Orienteering Problem)（敬请期待）</option>
-                            <option value="mdpp">MDPP (Multiple Depot Pickup Problem)（敬请期待）</option>
+                            <option value="tsp">TSP - 旅行商问题</option>
+                            <option value="atsp">ATSP - 非对称旅行商问题 ⭐新增</option>
+                            <option value="cvrp">CVRP - 车辆路径问题</option>
+                            <option value="sdvrp">SDVRP - 分割配送VRP</option>
+                            <option value="vrptw">VRPTW - 带时间窗VRP</option>
+                            <option value="pctsp" disabled>PCTSP - 奖励收集TSP（敬请期待）</option>
+                            <option value="op" disabled>OP - 定向问题（敬请期待）</option>
                         </select>
                         <p class="description">选择要解决的组合优化问题类型</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="num-loc">🏙️ 问题规模</label>
+                        <input type="number" id="num-loc" name="num_loc" value="50" min="5" max="200">
+                        <p class="description">城市/客户数量（TSP: 5-200, CVRP: 5-100）</p>
+            </div>
+
+                    <!-- CVRP/VRPTW特有参数 -->
+                    <div id="cvrp-params" class="form-group" style="display: none;">
+                        <label for="vehicle-capacity">🚚 车辆容量</label>
+                        <input type="number" id="vehicle-capacity" name="vehicle_capacity" value="1.0" min="0.1" max="10" step="0.1">
+                        <p class="description">车辆的最大载货容量</p>
+                    </div>
+                    
+                    <!-- VRPTW特有参数：时间窗参数 -->
+                    <div id="vrptw-params" class="form-group" style="display: none;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">⏰ 时间窗约束参数</h4>
+                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置客户访问的时间窗口约束</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div>
+                                <label for="time-window-width">📏 时间窗宽度</label>
+                                <input type="number" id="time-window-width" name="time_window_width" value="100" min="10" max="500" step="10">
+                                <p class="description" style="font-size: 0.8rem;">每个客户的可访问时间范围</p>
+                            </div>
+                            
+                            <div>
+                                <label for="service-time">🔧 服务时间</label>
+                                <input type="number" id="service-time" name="service_time" value="10" min="0" max="60" step="1">
+                                <p class="description" style="font-size: 0.8rem;">每个客户的服务时长</p>
+                            </div>
+                            
+                            <div>
+                                <label for="max-time">⏱️ 最大配送时间</label>
+                                <input type="number" id="max-time" name="max_time" value="480" min="60" max="1440" step="30">
+                                <p class="description" style="font-size: 0.8rem;">总配送时间上限（分钟）</p>
+                            </div>
+                            
+                            <div>
+                                <label for="hard-time-windows">⚡ 时间窗类型</label>
+                                <select id="hard-time-windows" name="hard_time_windows">
+                                    <option value="true">硬时间窗（必须遵守）</option>
+                                    <option value="false">软时间窗（可违反但有惩罚）</option>
+                                </select>
+                                <p class="description" style="font-size: 0.8rem;">约束严格程度</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第2步：模型配置 -->
+            <div class="config-card">
+                    <h3><span class="icon">🧠</span> 第2步：模型配置</h3>
+                    
+                    <div class="form-group">
+                        <label for="model-select">
+                            🏗️ 策略模型
+                            <span class="info-tooltip" title="神经网络架构，用于构建解决方案">ℹ️</span>
+                        </label>
+                        <select id="model-select" name="model" class="form-control">
+                            <option value="attention" selected>Attention Model（经典，快速）</option>
+                            <option value="pomo">POMO（高质量，多起点）</option>
+                        </select>
+                        <p class="description" id="model-description">经典的基于Transformer的构造式模型，速度快，适合入门</p>
                   </div>
-                  </form>
+
+                    <div class="form-group">
+                        <label for="algorithm-select">
+                            ⚙️ 训练算法
+                            <span class="info-tooltip" title="强化学习训练算法">ℹ️</span>
+                        </label>
+                        <select id="algorithm-select" name="algorithm" class="form-control">
+                            <option value="reinforce" selected>REINFORCE（入门推荐）</option>
+                            <option value="ppo">PPO（生产推荐）</option>
+                            <option value="a2c">A2C（平衡选择）</option>
+                        </select>
+                        <p class="description" id="algorithm-description">最基础的策略梯度算法，简单易懂，适合学习</p>
               </div>
 
+                    <!-- 推荐配置按钮 -->
+                    <div class="form-group" style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd;">
+                        <button type="button" class="btn-recommend" id="use-recommended-btn">
+                            ✨ 使用推荐配置
+                        </button>
+                        <button type="button" class="btn-recommend secondary" id="use-fast-btn">
+                            ⚡ 快速原型
+                        </button>
+                    </div>
+
+                    <!-- 配置验证提示 -->
+                    <div id="config-validation-alert" class="alert" style="display: none; margin-top: 15px;" role="alert"></div>
+
+                    <!-- POMO特有参数（条件显示） -->
+                    <div id="pomo-params" class="form-group advanced-params" style="display: none;">
+                        <label for="num-starts">🚩 POMO起点数量</label>
+                        <input type="number" id="num-starts" name="num_starts" class="form-control" 
+                               value="50" min="10" max="100">
+                        <p class="description">同时从多个起点构建路径（10-100，推荐50）</p>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- 第3步：训练参数 -->
+            <section class="config-section" style="grid-template-columns: 1fr;">
               <div class="config-card">
-                <h3><span class="icon">📁</span> 数据集上传 (TSP)</h3>
+                    <h3><span class="icon">⚙️</span> 第3步：训练参数</h3>
+                    
+                    <div class="params-grid">
+                        <div class="form-group">
+                            <label for="epochs">📊 训练轮数（Epochs）</label>
+                            <input type="number" id="epochs" name="epochs" value="10" min="1" max="1000">
+                            <p class="description">建议：小规模5-10轮，大规模20-50轮</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="batch-size">📦 批次大小（Batch Size）</label>
+                            <input type="number" id="batch-size" name="batch_size" value="512" min="32" max="2048" step="32">
+                            <p class="description">建议：512（默认），显存不足时减小</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="learning-rate">📈 学习率（Learning Rate）</label>
+                            <input type="number" id="learning-rate" name="learning_rate" value="0.0001" min="0.00001" max="0.01" step="0.00001">
+                            <p class="description">建议：1e-4（默认），可微调</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 第4步：数据集（可选，仅TSP） -->
+            <section class="config-section" style="grid-template-columns: 1fr;">
+              <div class="config-card" style="background: #f8f9fa;">
+                <h3><span class="icon">📁</span> 第4步：数据集（可选）</h3>
+                <p style="color: #666; margin-bottom: 1rem; font-size: 0.95rem;">
+                    💡 默认使用随机生成数据集。如需使用自定义TSP数据集，请在此上传。
+                </p>
+                
                 <div class="form-group">
                     <label for="dataset-mode">数据集模式</label>
                     <select id="dataset-mode" name="dataset_mode" onchange="toggleDatasetUpload()">
-                        <option value="random">随机生成数据集</option>
-                        <option value="upload">上传自定义数据集</option>
+                        <option value="random" selected>🎲 随机生成（推荐）</option>
+                        <option value="upload">📤 上传自定义数据集</option>
                     </select>
-                    <p class="description">选择使用随机生成或上传自己的TSP数据集</p>
                 </div>
 
                 <div id="dataset-upload-section" style="display: none;">
                     <div class="form-group">
-                        <label for="dataset-file">选择数据集文件</label>
+                        <label for="dataset-file">选择文件</label>
                         <input type="file" id="dataset-file" accept=".txt,.json,.tsp" style="padding: 0.5rem;">
-                        <p class="description">
-                            支持格式：<br>
-                            • <strong>TXT</strong>: 每行一个坐标对 (x y)<br>
-                            • <strong>JSON</strong>: {"coordinates": [[x1,y1], [x2,y2], ...]}<br>
-                            • <strong>TSP</strong>: TSPLIB格式文件
+                        <p class="description" style="font-size: 0.85rem;">
+                            支持格式：TXT、JSON、TSP（TSPLIB格式）
                         </p>
                     </div>
                     
-                    <button type="button" class="start-button" onclick="uploadDataset()" style="margin-top: 0.5rem; font-size: 1rem; padding: 0.8rem;">
+                    <button type="button" class="start-button" onclick="uploadDataset()" style="font-size: 1rem; padding: 0.8rem;">
                         📤 上传数据集
                     </button>
                     
                     <div id="upload-status" class="status-message" style="margin-top: 1rem;"></div>
                     
-                    <div id="dataset-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #667eea;">
-                        <h4 style="color: #667eea; margin-bottom: 0.5rem;">✅ 数据集已上传</h4>
-                        <p style="margin: 0.3rem 0;"><strong>文件名:</strong> <span id="dataset-filename"></span></p>
-                        <p style="margin: 0.3rem 0;"><strong>城市数量:</strong> <span id="dataset-size"></span></p>
-                        <p style="margin: 0.3rem 0;"><strong>坐标范围:</strong> <span id="dataset-range"></span></p>
+                    <div id="dataset-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                        <h4 style="color: #667eea; margin-bottom: 0.5rem; font-size: 1rem;">✅ 数据集已上传</h4>
+                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>文件名:</strong> <span id="dataset-filename"></span></p>
+                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>城市数量:</strong> <span id="dataset-size"></span></p>
                     </div>
                     
                     <button type="button" class="start-button" onclick="showDatasetManager()" style="margin-top: 1rem; font-size: 0.9rem; padding: 0.6rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
                         📂 管理已上传数据集
                     </button>
+                </div>
                     
                     <!-- 数据集管理弹窗 -->
                     <div id="dataset-manager-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;">
@@ -488,10 +693,8 @@
                                 <h3 style="color: #667eea; margin: 0;">📂 我的数据集</h3>
                                 <button onclick="closeDatasetManager()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✖</button>
                             </div>
-                            
                             <div id="datasets-list" style="max-height: 400px; overflow-y: auto;">
                                 <p style="text-align: center; color: #999;">正在加载...</p>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -499,60 +702,22 @@
 
         </section>
 
-            <div class="config-card">
-                <h3><span class="icon">⚙️</span> 策略配置</h3>
-                <div class="form-group">
-                    <label for="strategy-select">训练策略</label>
-                    <select id="strategy-select" name="strategy">
-                        <option value="reinforce">REINFORCE</option>
-                        <option value="a2c">A2C (Advantage Actor-Critic)（敬请期待）</option>
-                        <option value="ppo">PPO (Proximal Policy Optimization)（敬请期待）</option>
-                        <option value="actor-critic">Actor-Critic（敬请期待）</option>
-                        <option value="dqn">DQN (Deep Q-Network)（敬请期待）</option>
-                    </select>
-                    <p class="description">选择强化学习训练策略和算法</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="decoder-select">解码策略</label>
-                    <select id="decoder-select" name="decoder">
-                        <option value="greedy">Greedy Decoding</option>
-                        <option value="sampling">Sampling（敬请期待）</option>
-                        <option value="beam-search">Beam Search（敬请期待）</option>
-                        <option value="augmentation">Data Augmentation（敬请期待）</option>
-                    </select>
-                    <p class="description">选择解码和推理策略</p>
-            </div>
-
-                <div class="form-group">
-                    <label for="epochs">训练轮数 (Epochs)</label>
-                    <input type="number" id="epochs" name="epochs" value="100" min="1" max="10000" step="1">
-                    <p class="description">设置模型训练的迭代次数</p>
-            </div>
+            <!-- 第5步：开始训练 -->
+            <section class="config-section" style="grid-template-columns: 1fr;">
+                <div class="config-card" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h3 style="color: white; margin-bottom: 1.5rem;"><span class="icon">🚀</span> 第5步：开始训练</h3>
+                    <button type="button" class="start-button-large" id="start-button" onclick="startTraining()">
+                        🚀 开始训练
+                    </button>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
+                        点击后将启动强化学习训练，实时显示进度和结果
+                    </p>
         </div>
     </section>
+        </form>
 
-        <!-- 增加间距 -->
-        <section class="training-panel" id="about" style="margin-top: 4rem;">
-            <h3>🎓 关于项目</h3>
-            <p style="color: #666; line-height: 1.8; margin-bottom: 1.5rem; text-align: center;">
-                本平台基于 <strong>RL4CO</strong> 开源库开发，旨在为组合优化问题提供先进的深度强化学习求解方案。
-                <br>该项目由<strong>山西大学</strong>团队维护，用于学术研究和教学实践。
-            </p>
-            
-            <div class="form-group">
-                <label for="batch-size">批次大小 (Batch Size)</label>
-                <input type="number" id="batch-size" name="batch_size" value="512" min="1" max="2048" step="1">
-            </div>
-
-            <div class="form-group">
-                <label for="learning-rate">学习率 (Learning Rate)</label>
-                <input type="number" id="learning-rate" name="learning_rate" value="0.0001" min="0.00001" max="0.1" step="0.00001">
-            </div>
-
-            <button type="submit" class="start-button" id="start-button" onclick="startTraining()">
-                🚀 开始训练
-            </button>
+        <!-- 训练状态和结果区域 -->
+        <section class="training-panel" id="training-section" style="margin-top: 2rem;">
 
             <div id="status-message" class="status-message"></div>
 
@@ -680,10 +845,11 @@
 
         // 开始训练功能
         async function startTraining() {
-            const model = document.getElementById('model-select').value;
+            // 获取所有配置参数
             const problem = document.getElementById('problem-select').value;
-            const strategy = document.getElementById('strategy-select').value;
-            const decoder = document.getElementById('decoder-select').value;
+            const model = document.getElementById('model-select').value;
+            const algorithm = document.getElementById('algorithm-select').value;
+            const numLoc = document.getElementById('num-loc').value;
             const epochs = document.getElementById('epochs').value;
             const batchSize = document.getElementById('batch-size').value;
             const learningRate = document.getElementById('learning-rate').value;
@@ -703,16 +869,45 @@
 
             // 准备训练配置
             const config = {
-                model: model,
                 problem: problem,
-                strategy: strategy,
-                decoder: decoder,
+                model: model,
+                algorithm: algorithm,
+                num_loc: parseInt(numLoc),
                 epochs: parseInt(epochs),
                 batch_size: parseInt(batchSize),
                 learning_rate: parseFloat(learningRate),
                 dataset_mode: document.getElementById('dataset-mode').value,
                 dataset_id: window.uploadedDatasetId || null
             };
+
+            // 添加CVRP特有参数
+            if (problem === 'cvrp' || problem === 'sdvrp' || problem === 'vrptw') {
+                const vehicleCapacity = document.getElementById('vehicle-capacity');
+                if (vehicleCapacity) {
+                    config.vehicle_capacity = parseFloat(vehicleCapacity.value);
+                }
+            }
+
+            // 添加VRPTW特有参数
+            if (problem === 'vrptw') {
+                const timeWindowWidth = document.getElementById('time-window-width');
+                const serviceTime = document.getElementById('service-time');
+                const maxTime = document.getElementById('max-time');
+                const hardTimeWindows = document.getElementById('hard-time-windows');
+                
+                if (timeWindowWidth) config.time_window_width = parseFloat(timeWindowWidth.value);
+                if (serviceTime) config.service_time = parseFloat(serviceTime.value);
+                if (maxTime) config.max_time = parseFloat(maxTime.value);
+                if (hardTimeWindows) config.hard_time_windows = hardTimeWindows.value === 'true';
+            }
+
+            // 添加POMO特有参数
+            if (model === 'pomo') {
+                const numStarts = document.getElementById('num-starts');
+                if (numStarts) {
+                    config.num_starts = parseInt(numStarts.value);
+                }
+            }
 
             try {
                 // 发送训练请求到后端
@@ -1199,6 +1394,251 @@
         }
 
         // 查看模型详情
+        
+        // ============================================
+        // 兼容性管理器
+        // ============================================
+        class CompatibilityManager {
+            constructor() {
+                this.compatibilityData = null;
+                this.currentProblem = 'tsp';
+                this.currentPolicy = 'attention';
+                this.currentAlgorithm = 'reinforce';
+                
+                this.init();
+            }
+            
+            async init() {
+                await this.loadCompatibilityData();
+                this.bindEvents();
+                this.updateAvailableOptions();
+                // 初始化时显示当前问题的特定参数
+                this.showProblemSpecificParams();
+                this.showPolicySpecificParams();
+                this.updatePolicyDescription();
+                this.updateAlgorithmDescription();
+            }
+            
+            async loadCompatibilityData() {
+                try {
+                    const response = await fetch('/api/compatibility/info');
+                    const result = await response.json();
+                    if (result.success) {
+                        this.compatibilityData = result.data;
+                        console.log('✅ 兼容性数据加载成功');
+                    }
+                } catch (error) {
+                    console.error('❌ 加载兼容性数据失败:', error);
+                }
+            }
+            
+            bindEvents() {
+                document.getElementById('problem-select').addEventListener('change', (e) => {
+                    this.currentProblem = e.target.value;
+                    this.showProblemSpecificParams();
+                    this.updateAvailableOptions();
+                    this.validateConfiguration();
+                });
+                
+                document.getElementById('model-select').addEventListener('change', (e) => {
+                    this.currentPolicy = e.target.value;
+                    this.updatePolicyDescription();
+                    this.showPolicySpecificParams();
+                    this.validateConfiguration();
+                });
+                
+                document.getElementById('algorithm-select').addEventListener('change', (e) => {
+                    this.currentAlgorithm = e.target.value;
+                    this.updateAlgorithmDescription();
+                    this.validateConfiguration();
+                });
+                
+                document.getElementById('use-recommended-btn').addEventListener('click', () => {
+                    this.applyRecommendedConfig('best');
+                });
+                
+                document.getElementById('use-fast-btn').addEventListener('click', () => {
+                    this.applyRecommendedConfig('fast');
+                });
+            }
+            
+            async updateAvailableOptions() {
+                try {
+                    const response = await fetch(`/api/compatibility/constraints/${this.currentProblem}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const { available_policies, available_algorithms } = result.data;
+                        this.updateSelectOptions('model-select', available_policies, this.getPolicyDisplayName);
+                        this.updateSelectOptions('algorithm-select', available_algorithms, this.getAlgorithmDisplayName);
+                    }
+                } catch (error) {
+                    console.error('更新可用选项失败:', error);
+                }
+            }
+            
+            updateSelectOptions(selectId, options, displayNameFunc) {
+                const select = document.getElementById(selectId);
+                const currentValue = select.value;
+                select.innerHTML = '';
+                
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = displayNameFunc(option);
+                    select.appendChild(optionElement);
+                });
+                
+                if (options.includes(currentValue)) {
+                    select.value = currentValue;
+                } else if (options.length > 0) {
+                    select.value = options[0];
+                }
+            }
+            
+            async validateConfiguration() {
+                try {
+                    const response = await fetch('/api/compatibility/validate', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            problem: this.currentProblem,
+                            model: this.currentPolicy,
+                            algorithm: this.currentAlgorithm
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        this.showValidationMessage(result.valid, result.message, result.level);
+                    }
+                } catch (error) {
+                    console.error('验证配置失败:', error);
+                }
+            }
+            
+            showValidationMessage(valid, message, level) {
+                const alert = document.getElementById('config-validation-alert');
+                alert.className = 'alert';
+                
+                if (level === 'success') {
+                    alert.style.backgroundColor = '#d4edda';
+                    alert.style.color = '#155724';
+                } else if (level === 'warning') {
+                    alert.style.backgroundColor = '#fff3cd';
+                    alert.style.color = '#856404';
+                } else {
+                    alert.style.backgroundColor = '#f8d7da';
+                    alert.style.color = '#721c24';
+                }
+                
+                alert.innerHTML = message;
+                alert.style.display = 'block';
+                alert.style.padding = '10px';
+                alert.style.borderRadius = '4px';
+                
+                if (level === 'success') {
+                    setTimeout(() => { alert.style.display = 'none'; }, 3000);
+                }
+            }
+            
+            async applyRecommendedConfig(preference = 'best') {
+                try {
+                    const response = await fetch(`/api/compatibility/recommend?problem=${this.currentProblem}&preference=${preference}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const { policy, algorithm } = result.recommended;
+                        document.getElementById('model-select').value = policy;
+                        document.getElementById('algorithm-select').value = algorithm;
+                        
+                        this.currentPolicy = policy;
+                        this.currentAlgorithm = algorithm;
+                        
+                        this.updatePolicyDescription();
+                        this.updateAlgorithmDescription();
+                        this.showPolicySpecificParams();
+                        this.validateConfiguration();
+                        
+                        // 显示成功提示
+                        this.showValidationMessage(
+                            true,
+                            `✅ 已应用${preference === 'best' ? '最佳' : '快速'}推荐配置`,
+                            'success'
+                        );
+                    }
+                } catch (error) {
+                    console.error('应用推荐配置失败:', error);
+                }
+            }
+            
+            updatePolicyDescription() {
+                const descriptions = {
+                    'attention': '经典的基于Transformer的构造式模型，速度快，适合入门',
+                    'pomo': '同时从多个起点构建路径，利用问题对称性，质量高但计算量大'
+                };
+                const desc = document.getElementById('model-description');
+                if (desc) desc.textContent = descriptions[this.currentPolicy] || '';
+            }
+            
+            updateAlgorithmDescription() {
+                const descriptions = {
+                    'reinforce': '最基础的策略梯度算法，简单易懂，适合学习',
+                    'ppo': '工业界首选算法，训练稳定，超参数不敏感，推荐用于生产',
+                    'a2c': 'Actor-Critic方法，方差小，收敛快，性能介于REINFORCE和PPO之间'
+                };
+                const desc = document.getElementById('algorithm-description');
+                if (desc) desc.textContent = descriptions[this.currentAlgorithm] || '';
+            }
+            
+            showPolicySpecificParams() {
+                const pomoParams = document.getElementById('pomo-params');
+                if (pomoParams) {
+                    pomoParams.style.display = this.currentPolicy === 'pomo' ? 'block' : 'none';
+                }
+            }
+            
+            showProblemSpecificParams() {
+                // 显示/隐藏CVRP特有参数
+                const cvrpParams = document.getElementById('cvrp-params');
+                const vrptwParams = document.getElementById('vrptw-params');
+                
+                if (cvrpParams) {
+                    const isCVRP = this.currentProblem === 'cvrp' || this.currentProblem === 'sdvrp' || this.currentProblem === 'vrptw';
+                    cvrpParams.style.display = isCVRP ? 'block' : 'none';
+                }
+                
+                // 显示/隐藏VRPTW特有参数
+                if (vrptwParams) {
+                    const isVRPTW = this.currentProblem === 'vrptw';
+                    vrptwParams.style.display = isVRPTW ? 'block' : 'none';
+                }
+            }
+            
+            getPolicyDisplayName(policy) {
+                const names = {
+                    'attention': 'Attention Model (经典)',
+                    'pomo': 'POMO (高质量)'
+                };
+                return names[policy] || policy.toUpperCase();
+            }
+            
+            getAlgorithmDisplayName(algorithm) {
+                const names = {
+                    'reinforce': 'REINFORCE (入门)',
+                    'ppo': 'PPO (生产推荐)',
+                    'a2c': 'A2C (平衡)'
+                };
+                return names[algorithm] || algorithm.toUpperCase();
+            }
+        }
+
+        // 初始化兼容性管理器
+        let compatibilityManager;
+        document.addEventListener('DOMContentLoaded', () => {
+            compatibilityManager = new CompatibilityManager();
+        });
+        
     </script>
     
     <!-- 退出登录功能 -->
