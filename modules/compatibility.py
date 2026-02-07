@@ -11,16 +11,16 @@ from typing import Tuple, Dict, List
 
 # 策略 → 问题兼容性
 POLICY_PROBLEM_COMPATIBILITY = {
-    'attention': ['tsp', 'atsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],  # AM通用
-    'am': ['tsp', 'atsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],         # AM别名
-    'pomo': ['tsp', 'cvrp'],                                                 # POMO只适用对称问题（不支持ATSP）
+    'attention': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],  # AM通用
+    'am': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],         # AM别名
+    'pomo': ['tsp', 'mtsp', 'cvrp'],                                                 # POMO只适用对称问题（不支持ATSP）
 }
 
 # 算法 → 问题兼容性 (大部分算法通用)
 ALGORITHM_PROBLEM_COMPATIBILITY = {
-    'reinforce': ['tsp', 'atsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
-    'ppo': ['tsp', 'atsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
-    'a2c': ['tsp', 'atsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
+    'reinforce': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
+    'ppo': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
+    'a2c': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
 }
 
 # 策略 → 算法兼容性
@@ -75,6 +75,11 @@ RECOMMENDED_COMBINATIONS = {
         'best': {'policy': 'attention', 'algorithm': 'ppo'},      # ATSP只能用AM（POMO不支持非对称）
         'fast': {'policy': 'attention', 'algorithm': 'a2c'},
         'simple': {'policy': 'attention', 'algorithm': 'ppo'},     # ATSP不建议用REINFORCE
+    },
+    'mtsp': {
+        'best': {'policy': 'pomo', 'algorithm': 'ppo'},           # mTSP支持POMO（对称问题）
+        'fast': {'policy': 'attention', 'algorithm': 'ppo'},
+        'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
     'cvrp': {
         'best': {'policy': 'pomo', 'algorithm': 'ppo'},

@@ -162,3 +162,25 @@ cython_debug/
 #.idea/
 start.sh
 DEPLOYMENT_MACOS.md
+
+# ========== 项目特定配置 ==========
+
+# 训练输出文件
+static/model_plots/*.png
+static/model_plots/*.gif
+data/checkpoints/*.ckpt
+data/logs/
+
+# 用户数据集
+data/datasets/user_*/
+
+# 归档文件
+archive/
+
+# 临时文件
+*.bak
+.DS_Store
+.cleanup_plan.md
+
+# 配置文件（可选，如包含敏感信息）
+# config/config.py

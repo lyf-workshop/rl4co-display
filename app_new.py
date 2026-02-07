@@ -4,7 +4,7 @@ RL4CO Display - 主应用入口
 """
 from flask import Flask, g
 from flask_mysqldb import MySQL
-from config import Config
+from config.config import Config
 import json
 import time
 import os

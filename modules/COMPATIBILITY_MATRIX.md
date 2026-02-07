@@ -17,6 +17,7 @@
 ```yaml
 适用问题: 
   - TSP ✅ (经典应用)
+  - mTSP ✅ (完全支持)
   - CVRP ✅ (经典应用)
   - SDVRP ✅ (支持)
   - PCTSP ✅ (支持)
@@ -37,6 +38,7 @@
 ```yaml
 适用问题:
   - TSP ✅ (最佳选择)
+  - mTSP ✅ (优秀效果)
   - CVRP ✅ (优秀效果)
   - SDVRP ⚠️ (理论支持，效果待验证)
   - PCTSP ❌ (不适用 - 不是对称问题)
@@ -179,6 +181,25 @@ DQN:       ❌ 不兼容
 
 ---
 
+### mTSP (多旅行商问题)
+
+| 策略 \ 算法 | REINFORCE | PPO | A2C |
+|------------|-----------|-----|-----|
+| **Attention Model** | ✅ 推荐 | ✅ 最佳 | ✅ 良好 |
+| **POMO** | ✅ 高质量 | ✅ 最佳组合 | ✅ 良好 |
+
+**推荐组合**:
+1. 🥇 POMO + PPO (最佳质量+均衡性)
+2. 🥈 Attention Model + PPO (通用选择)
+3. 🥉 POMO + REINFORCE (高质量基准)
+
+**特别说明**:
+- mTSP有两种优化目标: `minmax`（最小化最大路径）和`sum`（最小化总路径）
+- minmax目标更难优化，建议增加训练轮数
+- 代理数量建议设置为城市数的10%-20%
+
+---
+
 ### CVRP (车辆路径问题)
 
 | 策略 \ 算法 | REINFORCE | PPO | A2C |
@@ -238,6 +259,7 @@ DQN:       ❌ 不兼容
 ```javascript
 const policyConstraints = {
     'tsp': ['attention', 'pomo'],           // TSP支持所有策略
+    'mtsp': ['attention', 'pomo'],          // mTSP支持AM和POMO
     'cvrp': ['attention', 'pomo'],          // CVRP支持所有策略
     'sdvrp': ['attention'],                 // SDVRP只推荐AM
     'pctsp': ['attention'],                 // PCTSP只能用AM
@@ -250,6 +272,7 @@ const policyConstraints = {
 ```javascript
 const algorithmConstraints = {
     'tsp': ['reinforce', 'ppo', 'a2c'],     // TSP支持所有算法
+    'mtsp': ['reinforce', 'ppo', 'a2c'],    // mTSP支持所有算法
     'cvrp': ['reinforce', 'ppo', 'a2c'],    // CVRP支持所有算法
     'sdvrp': ['reinforce', 'ppo', 'a2c'],   // SDVRP支持所有算法
     'pctsp': ['reinforce', 'ppo', 'a2c'],   // PCTSP支持所有算法

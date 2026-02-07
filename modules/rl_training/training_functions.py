@@ -361,7 +361,7 @@ class ProgressCallback(Callback):
             # 保存文件记录到数据库
             if self.file_manager is None:
                 # 为后台线程创建独立的数据库连接
-                from config import Config
+                from config.config import Config
                 import mysql.connector as mysql_connector
                 try:
                     self.db = mysql_connector.connect(

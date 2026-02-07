@@ -17,6 +17,7 @@ RL4CO 训练模块 - 模块化重构版
 import json
 from .base_trainer import BaseTrainer, ProgressCallback
 from .tsp_trainer import TSPTrainer, train_tsp
+from .mtsp_trainer import MTSPTrainer, train_mtsp
 from .cvrp_trainer import CVRPTrainer, train_cvrp
 from .sdvrp_trainer import SDVRPTrainer, train_sdvrp
 from .vrptw_trainer import VRPTWTrainer, train_vrptw
@@ -42,6 +43,9 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
     elif problem_type == 'atsp':
         # ATSP使用TSP训练器（距离矩阵不对称，但训练流程相同）
         train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+    elif problem_type == 'mtsp':
+        # mTSP - 多旅行商问题
+        train_mtsp(config, session_id, user_id, queue, training_status, get_background_db_func)
     elif problem_type == 'cvrp':
         train_cvrp(config, session_id, user_id, queue, training_status, get_background_db_func)
     elif problem_type == 'sdvrp':
@@ -59,7 +63,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         }
         queue.put(json.dumps({
             'type': 'error',
-            'message': f'暂不支持的问题类型: {problem_type}，请选择 TSP、ATSP、CVRP、SDVRP 或 VRPTW'
+            'message': f'暂不支持的问题类型: {problem_type}，请选择 TSP、ATSP、mTSP、CVRP、SDVRP 或 VRPTW'
         }))
 
 
@@ -73,6 +77,7 @@ __all__ = [
     
     # 具体问题训练器
     'TSPTrainer',
+    'MTSPTrainer',
     'CVRPTrainer',
     'SDVRPTrainer',
     'VRPTWTrainer',
@@ -80,6 +85,7 @@ __all__ = [
     # 训练入口函数
     'real_rl4co_training',
     'train_tsp',
+    'train_mtsp',
     'train_cvrp',
     'train_sdvrp',
     'train_vrptw',

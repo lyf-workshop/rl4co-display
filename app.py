@@ -2,61 +2,32 @@
 RL4CO Display - 主应用入口
 重构后的Flask应用，路由分离到各个Blueprint模块
 """
-from flask import Flask, g
-from flask_mysqldb import MySQL
-from config import Config
 import json
-import time
+from flask import Flask, g
+from config.config import Config
 import os
+import time
 from datetime import timedelta
-from queue import Queue
-import mysql.connector as mysql_connector
 from functools import wraps
+import mysql.connector as mysql_connector
 import logging
 
 # ========== 导入日志配置 ==========
-from logging_config import setup_logging, ErrorCode, error_response, success_response
+from logging_config import setup_logging
 
-# ========== 导入模型数据库 ==========
-from model_database import MODEL_DATABASE
-
-# ========== 导入认证模块 ==========
+# ========== 导入认证模块（需要的函数）==========
 from auth_module import (
-    login_required, 
     UserManager, 
     TrainingSessionManager,
     FileManager,
-    get_current_user_id,
-    get_current_username,
-    set_user_session,
-    clear_user_session,
-    get_user_plot_dir,
-    get_user_checkpoint_dir,
-    safe_join_path
+    get_current_user_id
 )
 
-# ========== 导入训练模块 ==========
-from modules.rl_training import real_rl4co_training, ProgressCallback, create_route_animation
-
-# ========== 配置matplotlib ==========
+# ========== 配置matplotlib（必须在导入pyplot之前）==========
 import matplotlib
 matplotlib.use('Agg')  # 使用非GUI后端
-import matplotlib.pyplot as plt
 matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
 matplotlib.rcParams['axes.unicode_minus'] = False
-
-# ========== 导入 RL4CO 相关模块 ==========
-try:
-    from rl4co.envs import TSPEnv, CVRPEnv
-    from rl4co.models import AttentionModelPolicy, REINFORCE
-    from rl4co.utils.trainer import RL4COTrainer
-    from lightning.pytorch.callbacks import Callback
-    from tensordict import TensorDict
-    RL4CO_AVAILABLE = True
-except ImportError:
-    RL4CO_AVAILABLE = False
-    TensorDict = None
-    logger.warning("RL4CO 库未安装，将使用模拟训练模式")
 
 # ============================================
 # Flask应用创建与配置
@@ -67,12 +38,25 @@ app.config.from_object(Config)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'rl4co-display-secret-key-2024-change-in-production'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
-mysql = MySQL(app)
-
 # ============================================
-# 配置日志系统
+# 配置日志系统（必须在其他日志调用之前）
 # ============================================
 logger = setup_logging('rl4co_display', logging.INFO)
+
+# ========== 导入 RL4CO 相关模块 ==========
+# tensordict 是 rl4co 的依赖包，会随 rl4co 一起安装
+try:
+    from rl4co.envs import TSPEnv, CVRPEnv
+    from rl4co.models import AttentionModelPolicy, REINFORCE
+    from rl4co.utils.trainer import RL4COTrainer
+    from lightning.pytorch.callbacks import Callback
+    from tensordict import TensorDict  # rl4co 依赖
+    RL4CO_AVAILABLE = True
+    logger.info("✓ RL4CO 库加载成功")
+except ImportError as e:
+    RL4CO_AVAILABLE = False
+    TensorDict = None
+    logger.warning(f"RL4CO 库未安装，将使用模拟训练模式: {e}")
 logger.info("=" * 60)
 logger.info("RL4CO Display 应用启动")
 logger.info("=" * 60)
@@ -82,7 +66,12 @@ logger.info("=" * 60)
 # ============================================
 
 def get_db():
-    """获取当前请求的数据库连接（线程安全）"""
+    """
+    获取当前请求的数据库连接（线程安全）
+    
+    返回:
+        数据库连接对象，连接失败时返回 None
+    """
     if 'db' not in g:
         try:
             g.db = mysql_connector.connect(
@@ -92,6 +81,7 @@ def get_db():
                 database=Config.MYSQL_DB,
                 autocommit=True
             )
+            logger.debug("数据库连接创建成功")
         except Exception as e:
             logger.error(f"数据库连接失败: {str(e)}", exc_info=True)
             g.db = None
@@ -99,18 +89,31 @@ def get_db():
 
 
 @app.teardown_appcontext
-def close_db(error):
-    """在请求结束时关闭数据库连接"""
+def close_db(error=None):
+    """
+    在请求结束时关闭数据库连接
+    
+    参数:
+        error: Flask传递的错误对象（如果有）
+    """
+    if error:
+        logger.error(f"请求处理出错: {error}")
+    
     db = g.pop('db', None)
     if db is not None:
         try:
             db.close()
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"关闭数据库连接时出错: {e}")
 
 
 def get_user_manager():
-    """获取当前请求的 UserManager 实例"""
+    """
+    获取当前请求的 UserManager 实例
+    
+    返回:
+        UserManager 实例，数据库连接失败时返回 None
+    """
     db = get_db()
     if db is None:
         return None
@@ -120,7 +123,12 @@ def get_user_manager():
 
 
 def get_session_manager():
-    """获取当前请求的 TrainingSessionManager 实例"""
+    """
+    获取当前请求的 TrainingSessionManager 实例
+    
+    返回:
+        TrainingSessionManager 实例，数据库连接失败时返回 None
+    """
     db = get_db()
     if db is None:
         return None
@@ -130,7 +138,12 @@ def get_session_manager():
 
 
 def get_file_manager():
-    """获取当前请求的 FileManager 实例"""
+    """
+    获取当前请求的 FileManager 实例
+    
+    返回:
+        FileManager 实例，数据库连接失败时返回 None
+    """
     db = get_db()
     if db is None:
         return None
@@ -140,7 +153,15 @@ def get_file_manager():
 
 
 def get_background_db():
-    """为后台任务创建独立的数据库连接（不使用 Flask g 对象）"""
+    """
+    为后台任务创建独立的数据库连接（不使用 Flask g 对象）
+    
+    注意:
+        此函数用于后台线程，不依赖 Flask 请求上下文
+    
+    返回:
+        数据库连接对象，连接失败时返回 None
+    """
     try:
         db = mysql_connector.connect(
             host=Config.MYSQL_HOST,
@@ -149,6 +170,7 @@ def get_background_db():
             database=Config.MYSQL_DB,
             autocommit=True
         )
+        logger.debug("后台数据库连接创建成功")
         return db
     except Exception as e:
         logger.error(f"后台数据库连接失败: {str(e)}", exc_info=True)
@@ -318,6 +340,15 @@ def simulate_training(config, session_id, user_id):
             'message': f'训练出错: {str(e)}'
         }))
 
+
+# ============================================
+# 导入训练模块（需要在注册Blueprint之前）
+# ============================================
+try:
+    from modules.rl_training import real_rl4co_training
+except ImportError:
+    logger.warning("无法导入 real_rl4co_training，将仅使用模拟训练")
+    real_rl4co_training = None
 
 # ============================================
 # 注册 Blueprint 模块

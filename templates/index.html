@@ -504,6 +504,7 @@
                         <select id="problem-select" name="problem">
                             <option value="tsp">TSP - 旅行商问题</option>
                             <option value="atsp">ATSP - 非对称旅行商问题 ⭐新增</option>
+                            <option value="mtsp">mTSP - 多旅行商问题 ⭐新增</option>
                             <option value="cvrp">CVRP - 车辆路径问题</option>
                             <option value="sdvrp">SDVRP - 分割配送VRP</option>
                             <option value="vrptw">VRPTW - 带时间窗VRP</option>
@@ -560,6 +561,39 @@
                                 </select>
                                 <p class="description" style="font-size: 0.8rem;">约束严格程度</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- mTSP特有参数：多代理参数 -->
+                    <div id="mtsp-params" class="form-group" style="display: none;">
+                        <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">👥 多代理参数</h4>
+                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置多个旅行商协同工作的参数</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div>
+                                <label for="num-agents">👥 代理数量</label>
+                                <input type="number" id="num-agents" name="num_agents" value="5" min="2" max="10" step="1">
+                                <p class="description" style="font-size: 0.8rem;">同时工作的旅行商数量（2-10，推荐5）</p>
+                            </div>
+                            
+                            <div>
+                                <label for="cost-type">🎯 优化目标</label>
+                                <select id="cost-type" name="cost_type">
+                                    <option value="minmax">MinMax - 最小化最长路径</option>
+                                    <option value="sum">Sum - 最小化总路径长度</option>
+                                </select>
+                                <p class="description" style="font-size: 0.8rem;">选择优化策略</p>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #e7f3ff; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #333;">
+                            <strong>💡 提示：</strong>
+                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                                <li><strong>MinMax</strong>：均衡各代理负载，适合公平分配任务</li>
+                                <li><strong>Sum</strong>：总成本最优，适合追求整体效率</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -901,6 +935,15 @@
                 if (hardTimeWindows) config.hard_time_windows = hardTimeWindows.value === 'true';
             }
 
+            // 添加mTSP特有参数
+            if (problem === 'mtsp') {
+                const numAgents = document.getElementById('num-agents');
+                const costType = document.getElementById('cost-type');
+                
+                if (numAgents) config.num_agents = parseInt(numAgents.value);
+                if (costType) config.cost_type = costType.value;
+            }
+
             // 添加POMO特有参数
             if (model === 'pomo') {
                 const numStarts = document.getElementById('num-starts');
@@ -1051,6 +1094,24 @@
 
         // 处理训练完成
         function handleTrainingComplete(data) {
+            // ========== 调试信息 ==========
+            console.log('='.repeat(80));
+            console.log('训练完成！接收到 complete 消息');
+            console.log('='.repeat(80));
+            console.log('完整 data 对象:', JSON.stringify(data, null, 2));
+            console.log('data.results 存在?', 'results' in data);
+            if (data.results) {
+                console.log('results 对象:', JSON.stringify(data.results, null, 2));
+                console.log('plot_paths 存在?', 'plot_paths' in data.results);
+                console.log('animation_paths 存在?', 'animation_paths' in data.results);
+                console.log('plot_paths 长度:', data.results.plot_paths ? data.results.plot_paths.length : 0);
+                console.log('animation_paths 长度:', data.results.animation_paths ? data.results.animation_paths.length : 0);
+            } else {
+                console.error('❌ data.results 不存在！');
+            }
+            console.log('='.repeat(80));
+            // ========== 调试信息结束 ==========
+            
             const statusMsg = document.getElementById('status-message');
             const startButton = document.getElementById('start-button');
             const resultsPanel = document.getElementById('results-panel');
@@ -1120,11 +1181,17 @@
             }
 
             // 如果有可视化图片，添加图片展示
+            console.log('检查可视化图片...');
+            console.log('plot_paths:', results.plot_paths);
+            console.log('animation_paths:', results.animation_paths);
+            
             if (results.plot_paths && results.plot_paths.length > 0) {
+                console.log('✅ 将显示', results.plot_paths.length, '个可视化图片');
                 resultsHTML += '<div style="grid-column: 1 / -1; margin-top: 1rem;">';
                 resultsHTML += '<div class="result-label" style="margin-bottom: 1rem;">📊 路径可视化对比</div>';
                 resultsHTML += '<div style="display: grid; gap: 1.5rem;">';
                 results.plot_paths.forEach((path, index) => {
+                    console.log(`添加图片 ${index + 1}:`, path);
                     resultsHTML += `
                         <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 12px;">
                             <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">问题 ${index + 1} - 静态对比图</h4>
@@ -1143,6 +1210,11 @@
                     `;
                 });
                 resultsHTML += '</div></div>';
+            } else {
+                console.log('❌ 没有可视化图片可显示');
+                console.log('  - plot_paths 是否存在:', 'plot_paths' in results);
+                console.log('  - plot_paths 值:', results.plot_paths);
+                console.log('  - plot_paths 长度:', results.plot_paths ? results.plot_paths.length : 'N/A');
             }
 
             // 如果有 checkpoint 路径，显示
@@ -1602,6 +1674,7 @@
                 // 显示/隐藏CVRP特有参数
                 const cvrpParams = document.getElementById('cvrp-params');
                 const vrptwParams = document.getElementById('vrptw-params');
+                const mtspParams = document.getElementById('mtsp-params');
                 
                 if (cvrpParams) {
                     const isCVRP = this.currentProblem === 'cvrp' || this.currentProblem === 'sdvrp' || this.currentProblem === 'vrptw';
@@ -1612,6 +1685,12 @@
                 if (vrptwParams) {
                     const isVRPTW = this.currentProblem === 'vrptw';
                     vrptwParams.style.display = isVRPTW ? 'block' : 'none';
+                }
+                
+                // 显示/隐藏mTSP特有参数
+                if (mtspParams) {
+                    const isMTSP = this.currentProblem === 'mtsp';
+                    mtspParams.style.display = isMTSP ? 'block' : 'none';
                 }
             }
             

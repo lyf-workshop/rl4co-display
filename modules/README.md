@@ -1,5 +1,15 @@
 # Modules 文件夹架构说明
 
+## 📚 **文档导航**
+
+- 📖 [**新增问题类型完整指南**](./ADD_NEW_PROBLEM_GUIDE.md) ⭐ **推荐首读**
+- 📖 [问题兼容性说明](./PROBLEM_COMPATIBILITY.md)
+- 📖 [兼容性矩阵](./COMPATIBILITY_MATRIX.md)
+- 📖 [算法和策略指南](./ALGORITHM_AND_POLICY_GUIDE.md)
+- 📖 [RL训练使用指南](./rl_training/USAGE_GUIDE.md)
+
+---
+
 ## 📊 **整体架构（更新后）**
 
 ```
@@ -9,16 +19,19 @@ modules/
 │   ├── __init__.py       # 问题注册表
 │   ├── base_problem.py   # 问题基类
 │   ├── tsp.py            # TSP问题
+│   ├── atsp.py           # ATSP问题
+│   ├── mtsp.py           # mTSP问题（多旅行商）
 │   ├── cvrp.py           # CVRP问题
-│   └── sdvrp.py          # SDVRP问题
+│   ├── sdvrp.py          # SDVRP问题
+│   └── vrptw.py          # VRPTW问题
 │
-├── policies/              # ✨ 新增：策略模型层（What Network - 用什么网络）
+├── policies/              # ✨ 策略模型层（What Network - 用什么网络）
 │   ├── __init__.py       # 策略注册表
 │   ├── base_policy.py    # 策略基类
 │   ├── attention_model_policy.py  # Attention Model
 │   └── pomo_policy.py    # POMO
 │
-├── algorithms/            # ✨ 新增：RL算法层（How - 怎么训练）
+├── algorithms/            # ✨ RL算法层（How - 怎么训练）
 │   ├── __init__.py       # 算法注册表
 │   ├── base_algorithm.py # 算法基类
 │   ├── reinforce_algo.py # REINFORCE
@@ -29,10 +42,16 @@ modules/
     ├── __init__.py
     ├── base_trainer.py   # 基础训练器（组合 problems + policies + algorithms）
     ├── tsp_trainer.py    # TSP训练器
+    ├── mtsp_trainer.py   # mTSP训练器
     ├── cvrp_trainer.py   # CVRP训练器
+    ├── sdvrp_trainer.py  # SDVRP训练器
+    ├── vrptw_trainer.py  # VRPTW训练器
     └── visualizations/   # 可视化函数
         ├── tsp_viz.py
-        └── cvrp_viz.py
+        ├── mtsp_viz.py
+        ├── cvrp_viz.py
+        ├── sdvrp_viz.py
+        └── vrptw_viz.py
 ```
 
 ---
@@ -299,7 +318,22 @@ config = {
 }
 ```
 
-### 示例3: TSP + Attention Model + A2C
+### 示例3: mTSP + POMO + PPO（多旅行商问题）
+
+```python
+config = {
+    'problem': 'mtsp',
+    'model': 'pomo',
+    'algorithm': 'ppo',
+    'num_loc': 50,
+    'num_agents': 5,        # 代理数量
+    'cost_type': 'minmax',  # 优化目标：minmax 或 sum
+    'num_starts': 50,
+    'epochs': 10,
+}
+```
+
+### 示例4: TSP + Attention Model + A2C
 
 ```python
 config = {
@@ -318,6 +352,8 @@ config = {
 ## 📚 **相关文档**
 
 - [算法和策略管理指南](./ALGORITHM_AND_POLICY_GUIDE.md) - 详细使用说明
+- [问题兼容性说明](./PROBLEM_COMPATIBILITY.md) - 各问题支持的策略和算法
+- [完整兼容性矩阵](./COMPATIBILITY_MATRIX.md) - 详细的兼容性规则和警告
 - [问题模块文档](./problems/README.md) - 如何添加新问题
 - [训练模块文档](./rl_training/README.md) - 训练器使用指南
 
@@ -378,14 +414,46 @@ real_rl4co_training(
 - [ ] DeepACO (Deep Ant Colony Optimization)
 
 ### 问题层
-- [ ] PCTSP (Prize Collecting TSP)
-- [ ] OP (Orienteering Problem)
-- [ ] VRPTW (VRP with Time Windows)
-- [ ] MDVRP (Multi-Depot VRP)
+- [x] TSP (Traveling Salesman Problem) ✅
+- [x] ATSP (Asymmetric TSP) ✅
+- [x] mTSP (Multiple TSP) ✅
+- [x] CVRP (Capacitated VRP) ✅
+- [x] SDVRP (Split Delivery VRP) ✅
+- [x] VRPTW (VRP with Time Windows) ✅
+- [ ] PCTSP (Prize Collecting TSP) - 计划中
+- [ ] OP (Orienteering Problem) - 计划中
+- [ ] MDVRP (Multi-Depot VRP) - 计划中
+
+---
+
+## 🔗 **兼容性约束**
+
+### 策略和算法兼容性
+
+不同问题类型支持不同的策略和算法组合。详细信息请查看：
+
+📖 **[问题兼容性说明文档](./PROBLEM_COMPATIBILITY.md)**
+
+### 快速参考
+
+| 问题类型 | 支持的策略 | 支持的算法 |
+|---------|-----------|-----------|
+| **TSP** | Attention, POMO | REINFORCE, PPO, A2C |
+| **ATSP** | Attention only | REINFORCE, PPO, A2C |
+| **mTSP** ⭐ | Attention, POMO | REINFORCE, PPO, A2C |
+| **CVRP** | Attention, POMO | REINFORCE, PPO, A2C |
+| **SDVRP** | Attention (推荐) | REINFORCE, PPO, A2C |
+| **VRPTW** | Attention (推荐) | PPO (推荐), A2C |
+
+**重要提示**：
+- ❌ POMO 不支持 ATSP（非对称问题）
+- ⚠️ POMO 在 SDVRP/VRPTW 上效果未验证
+- ⚠️ REINFORCE 在 ATSP/VRPTW 上收敛困难，建议使用 PPO 或 A2C
 
 ---
 
 **创建日期**: 2024年12月16日  
+**最后更新**: 2026年02月04日（添加 mTSP 支持）  
 **维护者**: RL4CO Display Team  
 **状态**: ✅ **活跃维护**
 

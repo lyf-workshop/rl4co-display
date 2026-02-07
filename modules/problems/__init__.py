@@ -30,11 +30,13 @@ from .cvrp import CVRProblem
 from .sdvrp import SDVRProblem
 from .vrptw import VRPTWProblem
 from .atsp import ATSProblem
+from .mtsp import MTSProblem
 
 # 问题类型注册表
 PROBLEM_REGISTRY = {
     'tsp': TSProblem,
     'atsp': ATSProblem,
+    'mtsp': MTSProblem,
     'cvrp': CVRProblem,
     'sdvrp': SDVRProblem,
     'vrptw': VRPTWProblem,
@@ -57,6 +59,17 @@ PROBLEM_INFO = {
         'description': '寻找访问所有城市的最短路径',
         'params': ['num_loc'],
         'features': ['无容量约束', '单条路径', '经典NP-hard'],
+    },
+    'mtsp': {
+        'name': 'mTSP',
+        'full_name': 'Multiple Traveling Salesman Problem',
+        'cn_name': '多旅行商问题',
+        'category': 'routing',
+        'difficulty': 'hard',
+        'status': 'active',
+        'description': '使用多个代理访问所有城市并返回起点',
+        'params': ['num_loc', 'num_agents', 'cost_type'],
+        'features': ['多代理协同', '共享起点', 'TSP推广', '多车辆调度'],
     },
     'atsp': {
         'name': 'ATSP',
@@ -209,6 +222,7 @@ __all__ = [
     'BaseProblem',
     'TSProblem',
     'ATSProblem',
+    'MTSProblem',
     'CVRProblem',
     'SDVRProblem',
     'VRPTWProblem',

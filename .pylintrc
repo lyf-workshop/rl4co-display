@@ -1,0 +1,32 @@
+[MASTER]
+# 忽略某些警告
+disable=
+    # 常见的误报
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    # 导入相关
+    import-error,
+    no-name-in-module,
+    # 文档字符串
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    # Flask 特定
+    no-member,
+    invalid-name
+
+[MESSAGES CONTROL]
+# 忽略特定的消息
+# E1101: no-member (Flask的g对象等)
+# C0103: invalid-name (变量命名)
+# W0613: unused-argument (Flask装饰器常见)
+
+[DESIGN]
+# 增加一些限制的阈值
+max-args=7
+max-locals=20
+max-returns=6
+max-branches=15

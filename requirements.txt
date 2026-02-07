@@ -1,6 +1,6 @@
 # Flask 核心依赖
 Flask==3.0.0
-flask-mysqldb==2.0.0
+mysql-connector-python>=8.0.0
 Flask-Login==0.6.3
 Werkzeug==3.0.1
 

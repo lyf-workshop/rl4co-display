@@ -70,12 +70,12 @@ EXIT;
 **2. 初始化数据表**
 
 ```bash
-mysql -u root -p flaskdemo_user < database_init_with_auth.sql
+mysql -u root -p flaskdemo_user < config/database_init_with_auth.sql
 ```
 
 **3. 修改配置文件**
 
-编辑 `config.py`：
+编辑 `config/config.py`：
 
 ```python
 MYSQL_HOST = 'localhost'
@@ -87,6 +87,10 @@ MYSQL_DB = 'flaskdemo_user'
 ### 第 4 步：启动应用
 
 ```bash
+# 方式1: 使用快速启动脚本（推荐，macOS/Linux）
+bash scripts/start.sh
+
+# 方式2: 直接运行
 python app.py
 ```
 

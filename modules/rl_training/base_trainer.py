@@ -226,7 +226,7 @@ class ProgressCallback(Callback):
             # 保存文件记录到数据库
             if self.file_manager is None:
                 # 为后台线程创建独立的数据库连接
-                from config import Config
+                from config.config import Config
                 import mysql.connector as mysql_connector
                 try:
                     self.db = mysql_connector.connect(
@@ -488,6 +488,23 @@ class BaseTrainer:
             # 生成可视化
             results = self.generate_visualizations(env, model, trainer, checkpoint_path)
             
+            # ========== 调试信息 ==========
+            print("=" * 80)
+            print("BaseTrainer.train() - 生成可视化完成")
+            print("=" * 80)
+            print(f"generate_visualizations 返回类型: {type(results)}")
+            print(f"返回内容: {results}")
+            if isinstance(results, dict):
+                print(f"字典键: {list(results.keys())}")
+                if 'plot_paths' in results:
+                    print(f"plot_paths 长度: {len(results['plot_paths'])}")
+                    print(f"plot_paths 内容: {results['plot_paths']}")
+                if 'animation_paths' in results:
+                    print(f"animation_paths 长度: {len(results['animation_paths'])}")
+                    print(f"animation_paths 内容: {results['animation_paths']}")
+            print("=" * 80)
+            # ========== 调试信息结束 ==========
+            
             # 训练完成
             self.training_status[self.session_id]['status'] = 'completed'
             
@@ -509,13 +526,25 @@ class BaseTrainer:
             final_results = {
                 'model': self.model_type,
                 'problem': self.problem_type,
-                'strategy': 'REINFORCE',
+                'strategy': self.algorithm_name.upper(),  # 使用实际的算法名称
                 'total_epochs': self.epochs,
                 'final_loss': self.training_status[self.session_id]['loss'],
                 'final_reward': self.training_status[self.session_id]['reward'],
                 'best_reward': self.training_status[self.session_id]['best_reward'],
                 **results
             }
+            
+            # ========== 调试信息 ==========
+            print("=" * 80)
+            print("BaseTrainer.train() - 准备发送 complete 消息")
+            print("=" * 80)
+            print(f"final_results 类型: {type(final_results)}")
+            print(f"final_results 键: {list(final_results.keys())}")
+            print(f"final_results 完整内容:")
+            import json as json_module
+            print(json_module.dumps(final_results, indent=2, ensure_ascii=False))
+            print("=" * 80)
+            # ========== 调试信息结束 ==========
             
             self.send_message('complete', '训练完成！', results=final_results)
             

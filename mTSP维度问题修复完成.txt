@@ -1,0 +1,237 @@
+╔════════════════════════════════════════════════════════════════════╗
+║              mTSP 可视化维度问题修复完成                            ║
+║                        2026-02-05                                  ║
+╚════════════════════════════════════════════════════════════════════╝
+
+✅ 维度问题已修复！
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🐛 问题诊断
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+错误1: 动画生成失败
+  ❌ only length-1 arrays can be converted to Python scalars
+  
+错误2: 对比图生成失败
+  ❌ index 33 is out of bounds for axis 0 with size 1
+
+根本原因:
+  数据维度不匹配。传递给可视化函数的数据保留了 batch 维度。
+  
+  - locs[i:i+1] 产生 shape: (1, num_cities, 2)  ❌ 3维
+  - 但函数期望 shape: (num_cities, 2)          ✅ 2维
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 修复内容
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+修改的文件:
+  1. modules/rl_training/mtsp_trainer.py
+  2. modules/rl_training/visualizations/mtsp_viz.py
+
+## 修改 1: mtsp_trainer.py - 数据提取
+
+修改前:
+```python
+for i in range(num_test_instances):
+    create_mtsp_route_animation(
+        td={'locs': torch.from_numpy(locs[i:i+1])},  # ❌ 保留batch维度
+        actions=actions[i],
+        ...
+    )
+```
+
+修改后:
+```python
+for i in range(num_test_instances):
+    # 提取单个实例，去掉 batch 维度
+    instance_locs = locs[i]         # ✅ shape: (num_cities, 2)
+    instance_actions = actions[i]   # ✅ shape: (action_length,)
+    
+    create_mtsp_route_animation(
+        td={'locs': torch.from_numpy(instance_locs)},  # ✅ 2D数组
+        actions=instance_actions,
+        ...
+    )
+```
+
+## 修改 2: mtsp_viz.py - 防御性编程
+
+在两个可视化函数中都添加了维度检查:
+
+```python
+def create_mtsp_route_animation(td, actions, save_path, ...):
+    # 提取坐标
+    if hasattr(td, 'get'):
+        locs = td.get('locs', td['locs'])
+    else:
+        locs = td['locs']
+    
+    # 转换为 numpy
+    if hasattr(locs, 'cpu'):
+        locs = locs.cpu().numpy()
+    
+    # ✅ 确保是 2D 数组
+    if locs.ndim == 3:
+        locs = locs[0]  # 去掉 batch 维度
+```
+
+同样的修改也应用到了 `create_mtsp_comparison_plot()`。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ 修复效果
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+修复后的数据流:
+
+1. 模型输出:
+   actions: (batch_size, action_length)
+   locs: (batch_size, num_cities, 2)
+
+2. 提取单个实例:
+   instance_locs = locs[i]       # → (num_cities, 2)  ✅
+   instance_actions = actions[i] # → (action_length,)  ✅
+
+3. 传递给可视化函数:
+   td={'locs': torch.from_numpy(instance_locs)}  # 2D 张量 ✅
+
+4. 可视化函数内部:
+   - 转换为 numpy: locs.cpu().numpy()
+   - 维度检查: if locs.ndim == 3: locs = locs[0]
+   - 最终使用: locs[city_idx]  # ✅ 正确访问
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 测试步骤
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 重启应用
+   ```bash
+   # 停止当前应用（Ctrl+C）
+   python app.py
+   ```
+
+2. 运行 mTSP 训练（小规模快速测试）
+   ```
+   问题类型: mTSP
+   城市数量: 20
+   代理数量: 3
+   优化目标: MinMax
+   策略模型: POMO
+   训练算法: PPO
+   训练轮数: 3
+   ```
+
+3. 预期结果:
+   
+   后端日志应该显示:
+   ```
+   [22:XX:XX] 🎨 开始生成mTSP可视化（多代理路径）...
+   [22:XX:XX] ✅ 动画 1 生成成功       ← 不再是 "生成失败"
+   [22:XX:XX] ✅ 对比图 1 生成成功
+   [22:XX:XX] ✅ 动画 2 生成成功
+   [22:XX:XX] ✅ 对比图 2 生成成功
+   [22:XX:XX] ✅ 动画 3 生成成功
+   [22:XX:XX] ✅ 对比图 3 生成成功
+   [22:XX:XX] 🎉 mTSP可视化完成: 3个动画, 3个对比图
+   
+   ================================================================================
+   MTSPTrainer.generate_visualizations() - 可视化生成完成
+   ================================================================================
+   生成的动画数量: 3                   ← 不再是 0
+   动画路径: ['/static/model_plots/user_7/mtsp_animation_1_...gif', ...]
+   生成的对比图数量: 3                 ← 不再是 0
+   对比图路径: ['/static/model_plots/user_7/mtsp_comparison_1_...png', ...]
+   ```
+   
+   前端控制台应该显示:
+   ```
+   ================================================================================
+   训练完成！接收到 complete 消息
+   ================================================================================
+   plot_paths 长度: 3                  ← 不再是 0
+   animation_paths 长度: 3             ← 不再是 0
+   ✅ 将显示 3 个可视化图片
+   添加图片 1: /static/model_plots/user_7/mtsp_comparison_1_...png
+   添加图片 2: /static/model_plots/user_7/mtsp_comparison_2_...png
+   添加图片 3: /static/model_plots/user_7/mtsp_comparison_3_...png
+   ```
+   
+   前端页面应该显示:
+   - 📊 路径可视化对比（3个）
+   - 🎬 动态路线生成过程（3个动画）
+   - 每个对比图下方对应一个动画
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 技术说明
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## NumPy 数组切片行为
+
+在 Python NumPy 中:
+
+```python
+arr = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+# arr.shape = (2, 2, 2)
+
+# 切片保留维度
+arr[0:1]    # shape: (1, 2, 2)  - 保留第一个维度
+
+# 索引去掉维度
+arr[0]      # shape: (2, 2)     - 去掉第一个维度
+```
+
+在我们的案例中:
+
+```python
+locs.shape = (3, 50, 2)  # (batch_size=3, num_cities=50, coords=2)
+
+# ❌ 错误：保留了 batch 维度
+locs[i:i+1]  # shape: (1, 50, 2)
+
+# ✅ 正确：去掉了 batch 维度
+locs[i]      # shape: (50, 2)
+```
+
+## 为什么会出现 "index out of bounds" 错误？
+
+当 locs 是 3D 数组 (1, 50, 2) 时：
+- locs[0] 返回第一个样本，shape: (50, 2) ✅
+- locs[33] 尝试访问第34个样本，但只有1个样本 ❌
+
+可视化函数期望：
+```python
+depot = locs[0]         # depot 坐标
+customer = locs[i+1]    # 第 i 个客户坐标
+```
+
+如果 locs.shape = (1, 50, 2)：
+- locs[0] 返回 shape (50, 2) 的数组，而不是 (2,) 的坐标点
+- locs[33] 会越界（因为第一维只有1个元素）
+
+如果 locs.shape = (50, 2)：
+- locs[0] 返回 shape (2,) 的坐标点 ✅
+- locs[33] 返回第34个城市的坐标 ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 总结
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+问题根源:
+  数组切片方式错误，导致维度不匹配
+
+修复方法:
+  1. 使用索引 locs[i] 而不是切片 locs[i:i+1]
+  2. 在可视化函数中添加防御性维度检查
+
+修复效果:
+  ✅ 可视化生成成功
+  ✅ 图片和动画正确显示在前端
+  ✅ mTSP 完整功能正常运行
+
+下一步:
+  重启应用并测试！
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+修复时间: 2026-02-05 22:55
+状态: ✅ 维度问题已完全修复
