@@ -13,16 +13,20 @@
 from .base_policy import BasePolicy
 from .attention_model_policy import AttentionModelPolicyWrapper
 from .pomo_policy import POMOPolicyWrapper
+from .ptrnet_policy import PtrNetPolicyWrapper
+from .matnet_policy import MatNetPolicyWrapper
 
 # 策略注册表
 POLICY_REGISTRY = {
     'attention': AttentionModelPolicyWrapper,
     'am': AttentionModelPolicyWrapper,  # 别名
     'pomo': POMOPolicyWrapper,
+    'ptrnet': PtrNetPolicyWrapper,
+    'ptr': PtrNetPolicyWrapper,  # 别名
+    'matnet': MatNetPolicyWrapper,  # MatNet - 支持ATSP和FFSP
     # 未来扩展：
     # 'symnco': SymNCOPolicyWrapper,
     # 'mdam': MDAMPolicyWrapper,
-    # 'matnet': MatNetPolicyWrapper,
 }
 
 # 策略元信息
@@ -60,6 +64,43 @@ POLICY_INFO = {
             'num_encoder_layers': {'default': 6, 'range': [3, 9]},
             'num_heads': {'default': 8, 'range': [4, 16]},
             'num_starts': {'default': 50, 'range': [10, 100]},  # POMO特有
+        }
+    },
+    'ptrnet': {
+        'name': 'PtrNet',
+        'full_name': 'Pointer Network',
+        'cn_name': '指针网络',
+        'type': 'seq2seq',
+        'year': 2015,
+        'status': 'active',
+        'description': '开创性的序列到序列模型，深度学习CO的先驱',
+        'advantages': ['开创性工作', '概念简洁', '易于理解', '历史意义重大'],
+        'disadvantages': ['性能不如现代方法', 'LSTM串行慢', '难以并行'],
+        'suitable_for': ['TSP', 'CVRP', '小规模问题', '教学演示'],
+        'params': {
+            'hidden_dim': {'default': 128, 'range': [64, 256]},
+            'num_layers': {'default': 2, 'range': [1, 4]},
+            'dropout': {'default': 0.0, 'range': [0.0, 0.5]},
+        },
+        'note': '⚠️ RL4CO 无独立 PtrNet 实现，使用简化的 AM 模拟'
+    },
+    'matnet': {
+        'name': 'MatNet',
+        'full_name': 'Matrix Encoding Network',
+        'cn_name': '矩阵编码网络',
+        'type': 'matrix-attention',
+        'year': 2021,
+        'status': 'active',
+        'description': '基于矩阵注意力的构造式模型，专为非对称和调度问题设计',
+        'advantages': ['矩阵编码', '支持非对称问题', '调度问题首选', '多阶段支持'],
+        'disadvantages': ['参数量大', '训练时间长', '实现复杂'],
+        'suitable_for': ['ATSP', 'FFSP', 'JSSP', 'FJSP'],
+        'params': {
+            'embed_dim': {'default': 256, 'range': [128, 512]},
+            'num_encoder_layers': {'default': 5, 'range': [3, 9]},
+            'num_heads': {'default': 16, 'range': [8, 32]},
+            'use_graph_context': {'default': False, 'type': 'bool'},
+            'flatten_stages': {'default': True, 'type': 'bool'},  # FFSP专用
         }
     },
 }
@@ -125,6 +166,8 @@ __all__ = [
     'BasePolicy',
     'AttentionModelPolicyWrapper',
     'POMOPolicyWrapper',
+    'PtrNetPolicyWrapper',
+    'MatNetPolicyWrapper',
     'POLICY_REGISTRY',
     'POLICY_INFO',
     'get_policy_class',

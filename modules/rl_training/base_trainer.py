@@ -385,12 +385,45 @@ class BaseTrainer:
         
         # ========== 传统模式（向后兼容） ==========
         from rl4co.models import AttentionModelPolicy
-        policy = AttentionModelPolicy(
-            env_name=env.name,
-            embed_dim=self.config.get('embed_dim', 128),
-            num_encoder_layers=self.config.get('num_encoder_layers', 3),
-            num_heads=self.config.get('num_heads', 8),
-        )
+        
+        # ========== 关键调试信息：环境名称 ==========
+        self.send_message('info', f'🔍 [DEBUG] 准备创建 AttentionModelPolicy')
+        self.send_message('info', f'🔍 [DEBUG] 环境名称 (env.name): "{env.name}"')
+        self.send_message('info', f'🔍 [DEBUG] 问题类型 (problem_type): "{self.problem_type}"')
+        
+        # ========== 环境名称处理 ==========
+        # 获取实际的环境名称（统一转小写）
+        actual_env_name = env.name.lower()
+        mapped_env_name = actual_env_name
+        
+        self.send_message('info', f'✅ [环境名称] 使用: "{mapped_env_name}"')
+        self.send_message('info', f'💡 根据问题类型选择合适的策略和embedding')
+        
+        # ========== 尝试创建策略 ==========
+        try:
+            self.send_message('info', f'🔧 正在创建 AttentionModelPolicy (env_name="{mapped_env_name}")...')
+            
+            policy = AttentionModelPolicy(
+                env_name=mapped_env_name,  # 使用映射后的名称
+                embed_dim=self.config.get('embed_dim', 128),
+                num_encoder_layers=self.config.get('num_encoder_layers', 3),
+                num_heads=self.config.get('num_heads', 8),
+            )
+            
+            self.send_message('info', '✅ AttentionModelPolicy 创建成功 (传统模式)')
+            return policy
+            
+        except KeyError as e:
+            # 环境名称不支持
+            self.send_message('info', f'❌ [ERROR] AttentionModelPolicy 不支持环境: "{mapped_env_name}"')
+            self.send_message('info', f'💡 [SOLUTION] 可能的解决方案:')
+            self.send_message('info', f'   1. 手动指定 init_embedding')
+            self.send_message('info', f'   2. 使用其他策略模型')
+            raise
+        except Exception as e:
+            self.send_message('info', f'❌ [ERROR] 创建策略失败: {str(e)}')
+            raise
+        
         self.send_message('info', '策略网络初始化完成 (传统模式)')
         return policy
     

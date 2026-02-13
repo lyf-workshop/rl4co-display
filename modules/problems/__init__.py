@@ -31,6 +31,7 @@ from .sdvrp import SDVRProblem
 from .vrptw import VRPTWProblem
 from .atsp import ATSProblem
 from .mtsp import MTSProblem
+from .ffsp import FFSProblem
 
 # 问题类型注册表
 PROBLEM_REGISTRY = {
@@ -40,10 +41,12 @@ PROBLEM_REGISTRY = {
     'cvrp': CVRProblem,
     'sdvrp': SDVRProblem,
     'vrptw': VRPTWProblem,
+    'ffsp': FFSProblem,  # 柔性流水车间调度问题
     # 未来扩展：
     # 'pctsp': PCTSProblem,
     # 'op': OProblem,
     # 'jssp': JSSProblem,
+    # 'fjsp': FJSProblem,
     # 'bpp': BPProblem,
 }
 
@@ -137,6 +140,17 @@ PROBLEM_INFO = {
         'params': ['num_loc', 'max_length'],
         'features': ['时间约束', '奖励最大化', '旅游规划'],
     },
+    'ffsp': {
+        'name': 'FFSP',
+        'full_name': 'Flexible Flow Shop Problem',
+        'cn_name': '柔性流水车间调度问题',
+        'category': 'scheduling',
+        'difficulty': 'very_hard',
+        'status': 'active',
+        'description': '最小化多阶段并行机器的作业完工时间',
+        'params': ['num_stage', 'num_machine', 'num_job', 'min_time', 'max_time', 'flatten_stages'],
+        'features': ['多阶段调度', '并行机器', '完工时间优化', '制造系统', 'NP-hard'],
+    },
 }
 
 
@@ -226,6 +240,7 @@ __all__ = [
     'CVRProblem',
     'SDVRProblem',
     'VRPTWProblem',
+    'FFSProblem',
     'PROBLEM_REGISTRY',
     'PROBLEM_INFO',
     'get_problem_class',

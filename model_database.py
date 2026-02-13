@@ -10,7 +10,8 @@ MODEL_DATABASE = {
     "AM": {
         "name": "AM",
         "full_name": "Attention Model - 注意力模型",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2019",
         "paper_url": "https://arxiv.org/abs/1803.08475",
         "paper_venue": "ICLR 2019",
@@ -106,7 +107,8 @@ MODEL_DATABASE = {
     "POMO": {
         "name": "POMO",
         "full_name": "Policy Optimization with Multiple Optima",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2021",
         "paper_url": "https://arxiv.org/abs/2010.16011",
         "paper_venue": "NeurIPS 2021",
@@ -198,7 +200,8 @@ MODEL_DATABASE = {
     "SymNCO": {
         "name": "Sym-NCO",
         "full_name": "Symmetric Neural Combinatorial Optimization",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2022",
         "paper_url": "https://arxiv.org/abs/2205.13209",
         "paper_venue": "NeurIPS 2022",
@@ -291,7 +294,8 @@ MODEL_DATABASE = {
     "REINFORCE": {
         "name": "REINFORCE",
         "full_name": "REINFORCE Algorithm",
-        "category": "强化学习算法",
+        "category": "RL Algorithms",
+        "category_zh": "强化学习算法",
         "year": "1992",
         "paper_url": "https://link.springer.com/article/10.1007/BF00992696",
         "paper_venue": "Machine Learning 1992",
@@ -342,7 +346,8 @@ MODEL_DATABASE = {
     "DeepACO": {
         "name": "DeepACO",
         "full_name": "Deep Ant Colony Optimization",
-        "category": "构造方法（非自回归）",
+        "category": "Constructive (NAR)",
+        "category_zh": "构造方法（非自回归）",
         "year": "2023",
         "paper_url": "https://arxiv.org/abs/2309.14032",
         "paper_venue": "NeurIPS 2023",
@@ -401,7 +406,8 @@ MODEL_DATABASE = {
     "MatNet": {
         "name": "MatNet",
         "full_name": "Matrix Network - 矩阵网络",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2021",
         "paper_url": "https://arxiv.org/abs/2106.11113",
         "paper_venue": "NeurIPS 2021",
@@ -449,7 +455,8 @@ MODEL_DATABASE = {
     "A2C": {
         "name": "A2C",
         "full_name": "Advantage Actor-Critic",
-        "category": "强化学习算法",
+        "category": "RL Algorithms",
+        "category_zh": "强化学习算法",
         "year": "2016",
         "paper_url": "https://arxiv.org/abs/1602.01783",
         "paper_venue": "ICML 2016",
@@ -498,7 +505,8 @@ MODEL_DATABASE = {
     "PPO": {
         "name": "PPO",
         "full_name": "Proximal Policy Optimization",
-        "category": "强化学习算法",
+        "category": "RL Algorithms",
+        "category_zh": "强化学习算法",
         "year": "2017",
         "paper_url": "https://arxiv.org/abs/1707.06347",
         "paper_venue": "ArXiv 2017",
@@ -547,7 +555,8 @@ MODEL_DATABASE = {
     "PtrNet": {
         "name": "PtrNet",
         "full_name": "Pointer Network - 指针网络",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2015",
         "paper_url": "https://arxiv.org/abs/1506.03134",
         "paper_venue": "NeurIPS 2015",
@@ -586,7 +595,8 @@ MODEL_DATABASE = {
     "HAM": {
         "name": "HAM",
         "full_name": "Hierarchical Attention Model",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2020",
         "paper_url": "https://arxiv.org/abs/2011.03227",
         "paper_venue": "AAAI 2021",
@@ -680,7 +690,8 @@ MODEL_DATABASE = {
     "PolyNet": {
         "name": "PolyNet",
         "full_name": "Polynomial Time Network",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2021",
         "paper_url": "https://arxiv.org/abs/2102.09544",
         "paper_venue": "ICML 2021",
@@ -763,7 +774,8 @@ MODEL_DATABASE = {
     "MTPOMO": {
         "name": "MTPOMO",
         "full_name": "Multi-Task Policy Optimization with Multiple Optima",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2022",
         "paper_url": "https://arxiv.org/abs/2204.03236",
         "paper_venue": "NeurIPS 2022",
@@ -854,7 +866,8 @@ MODEL_DATABASE = {
     "MVMoE": {
         "name": "MVMoE",
         "full_name": "Multi-View Mixture of Experts",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2023",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -936,7 +949,8 @@ MODEL_DATABASE = {
     "L2D": {
         "name": "L2D",
         "full_name": "Learn to Delegate",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2023",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1023,7 +1037,8 @@ MODEL_DATABASE = {
     "HGNN": {
         "name": "HGNN",
         "full_name": "Heterogeneous Graph Neural Network",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2022",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1105,7 +1120,8 @@ MODEL_DATABASE = {
     "DF": {
         "name": "DF",
         "full_name": "Distribution Fitting",
-        "category": "构造方法（自回归）",
+        "category": "Constructive (AR)",
+        "category_zh": "构造方法（自回归）",
         "year": "2023",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1187,7 +1203,8 @@ MODEL_DATABASE = {
     "GFACS": {
         "name": "GFACS",
         "full_name": "Graph-based Fast Adaptive Construction Solver",
-        "category": "构造方法（非自回归）",
+        "category": "Constructive (NAR)",
+        "category_zh": "构造方法（非自回归）",
         "year": "2023",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1274,7 +1291,8 @@ MODEL_DATABASE = {
     "GLOP": {
         "name": "GLOP",
         "full_name": "Generalized Learning for Optimization Problems",
-        "category": "构造方法（非自回归）",
+        "category": "Constructive (NAR)",
+        "category_zh": "构造方法（非自回归）",
         "year": "2023",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1361,7 +1379,8 @@ MODEL_DATABASE = {
     "DACT": {
         "name": "DACT",
         "full_name": "Dual Attention with Cross Transformation",
-        "category": "改进方法",
+        "category": "Improvement",
+        "category_zh": "改进方法",
         "year": "2022",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1443,7 +1462,8 @@ MODEL_DATABASE = {
     "N2S": {
         "name": "N2S",
         "full_name": "Neural to Symbolic",
-        "category": "改进方法",
+        "category": "Improvement",
+        "category_zh": "改进方法",
         "year": "2023",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1526,7 +1546,8 @@ MODEL_DATABASE = {
     "NeuOpt": {
         "name": "NeuOpt",
         "full_name": "Neural Optimizer",
-        "category": "改进方法",
+        "category": "Improvement",
+        "category_zh": "改进方法",
         "year": "2023",
         "paper_url": "#",
         "paper_venue": "Research Paper",
@@ -1608,7 +1629,8 @@ MODEL_DATABASE = {
     "ActiveSearch": {
         "name": "ActiveSearch",
         "full_name": "Active Search",
-        "category": "传导式强化学习",
+        "category": "Transductive RL",
+        "category_zh": "传导式强化学习",
         "year": "2020",
         "paper_url": "https://arxiv.org/abs/2012.05417",
         "paper_venue": "ICLR 2021",
@@ -1694,7 +1716,8 @@ MODEL_DATABASE = {
     "EAS": {
         "name": "EAS",
         "full_name": "Efficient Active Search",
-        "category": "传导式强化学习",
+        "category": "Transductive RL",
+        "category_zh": "传导式强化学习",
         "year": "2021",
         "paper_url": "https://arxiv.org/abs/2106.05126",
         "paper_venue": "NeurIPS 2021",

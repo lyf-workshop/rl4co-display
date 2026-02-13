@@ -502,14 +502,22 @@
                     <div class="form-group">
                         <label for="problem-select">🎯 问题类型</label>
                         <select id="problem-select" name="problem">
-                            <option value="tsp">TSP - 旅行商问题</option>
-                            <option value="atsp">ATSP - 非对称旅行商问题 ⭐新增</option>
-                            <option value="mtsp">mTSP - 多旅行商问题 ⭐新增</option>
-                            <option value="cvrp">CVRP - 车辆路径问题</option>
-                            <option value="sdvrp">SDVRP - 分割配送VRP</option>
-                            <option value="vrptw">VRPTW - 带时间窗VRP</option>
-                            <option value="pctsp" disabled>PCTSP - 奖励收集TSP（敬请期待）</option>
-                            <option value="op" disabled>OP - 定向问题（敬请期待）</option>
+                            <optgroup label="路由问题 (Routing)">
+                                <option value="tsp">TSP - 旅行商问题</option>
+                                <option value="atsp">ATSP - 非对称旅行商问题 ⭐</option>
+                                <option value="mtsp">mTSP - 多旅行商问题 ⭐</option>
+                                <option value="cvrp">CVRP - 车辆路径问题</option>
+                                <option value="sdvrp">SDVRP - 分割配送VRP</option>
+                                <option value="vrptw">VRPTW - 带时间窗VRP</option>
+                                <option value="pdp">PDP - 取送货问题 ⭐</option>
+                                <option value="op">OP - 定向问题 ⭐</option>
+                            </optgroup>
+                            <optgroup label="调度问题 (Scheduling)">
+                                <option value="ffsp">FFSP - 柔性流水车间调度 🆕</option>
+                            </optgroup>
+                            <optgroup label="计划中">
+                                <option value="pctsp" disabled>PCTSP - 奖励收集TSP（敬请期待）</option>
+                            </optgroup>
                         </select>
                         <p class="description">选择要解决的组合优化问题类型</p>
                     </div>
@@ -549,7 +557,7 @@
                             
                             <div>
                                 <label for="max-time">⏱️ 最大配送时间</label>
-                                <input type="number" id="max-time" name="max_time" value="480" min="60" max="1440" step="30">
+                                <input type="number" id="max-time" name="max_processing_time" value="480" min="60" max="1440" step="30">
                                 <p class="description" style="font-size: 0.8rem;">总配送时间上限（分钟）</p>
                             </div>
                             
@@ -596,6 +604,177 @@
                             </ul>
                         </div>
                     </div>
+
+                    <!-- PDP特有参数 -->
+                    <div id="pdp-params" class="form-group" style="display: none;">
+                        <div style="background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">📦 取送货问题参数</h4>
+                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置取货点和送货点的数量（必须成对）</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                            <div>
+                                <label for="pdp-num-loc">🏙️ 地点数量（不含depot）</label>
+                                <input type="number" id="pdp-num-loc" name="pdp_num_loc" value="20" min="4" max="40" step="2">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    取送货地点总数，必须是偶数<br>
+                                    <strong>num_loc/2</strong> 个取货点 + <strong>num_loc/2</strong> 个送货点
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label for="force-start-depot">🏁 强制从depot开始</label>
+                                <select id="force-start-depot" name="force_start_depot">
+                                    <option value="false">否（默认）</option>
+                                    <option value="true">是</option>
+                                </select>
+                                <p class="description" style="font-size: 0.8rem;">
+                                    是否强制车辆从depot出发<br>
+                                    • <strong>否</strong>：可以从任意取货点开始（推荐）<br>
+                                    • <strong>是</strong>：必须先访问depot
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #d1ecf1; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #0c5460;">
+                            <strong>💡 提示：</strong>
+                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                                <li>PDP 要求先访问<strong>取货点</strong>，再访问对应的<strong>送货点</strong></li>
+                                <li>每对取送货点在可视化中使用相同颜色标识</li>
+                                <li>推荐配置：20 地点（10对）适合快速训练</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- OP特有参数 -->
+                    <div id="op-params" class="form-group" style="display: none;">
+                        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🎯 定向问题参数</h4>
+                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">在路径长度限制内最大化收集的奖励</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div>
+                                <label for="op-num-loc">🏙️ 地点数量（不含depot）</label>
+                                <input type="number" id="op-num-loc" name="op_num_loc" value="20" min="10" max="100" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    可选择访问的地点数量（10-100）
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label for="max-length">📏 最大路径长度</label>
+                                <input type="number" id="max-length" name="max_length" value="2.0" min="1.0" max="5.0" step="0.1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    路径长度约束（1.0-5.0）<br>
+                                    建议：20地点→2.0，50地点→3.0，100地点→4.0
+                                </p>
+                            </div>
+                            
+                            <div style="grid-column: 1 / -1;">
+                                <label for="prize-type">🎁 奖励类型</label>
+                                <select id="prize-type" name="prize_type">
+                                    <option value="dist">距离奖励（dist）- 距depot越远奖励越高</option>
+                                    <option value="unif">均匀随机（unif）- 奖励随机分布</option>
+                                    <option value="const">常量奖励（const）- 所有地点奖励相同</option>
+                                </select>
+                                <p class="description" style="font-size: 0.8rem;">
+                                    • <strong>dist</strong>：奖励与距离depot的距离成正比（推荐）<br>
+                                    • <strong>unif</strong>：奖励在范围内均匀随机分布<br>
+                                    • <strong>const</strong>：所有地点奖励值相同
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #856404;">
+                            <strong>💡 提示：</strong>
+                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                                <li>OP 不需要访问所有地点，选择<strong>高价值</strong>地点在约束内最大化奖励</li>
+                                <li>可视化中，地点大小 ∝ 奖励值，便于识别高价值目标</li>
+                                <li>推荐配置：20 地点 + 最大路径 2.0 + 距离奖励</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- FFSP特有参数 -->
+                    <div id="ffsp-params" class="form-group" style="display: none;">
+                        <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🏭 柔性流水车间调度参数</h4>
+                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置多阶段并行机器的作业调度问题</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div>
+                                <label for="num-stage">📊 阶段数 (Stages)</label>
+                                <input type="number" id="num-stage" name="num_stage" value="3" min="2" max="10" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    生产流程的阶段数（2-10）
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label for="num-machine">🔧 机器数/阶段</label>
+                                <input type="number" id="num-machine" name="num_machine" value="4" min="1" max="10" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    每个阶段的并行机器数（1-10）
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label for="num-job">📦 作业数 (Jobs)</label>
+                                <input type="number" id="num-job" name="num_job" value="20" min="5" max="100" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    需要调度的作业数量（5-100）
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label for="min-time">⏱️ 最小加工时间</label>
+                                <input type="number" id="min-time" name="min_time" value="2" min="1" max="10" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    作业的最小加工时间（1-10）
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label for="max-time">⏱️ 最大加工时间</label>
+                                <input type="number" id="max-time-ffsp" name="max_time" value="10" min="2" max="50" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    作业的最大加工时间（2-50）
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label for="flatten-stages">🔄 阶段展平模式</label>
+                                <select id="flatten-stages" name="flatten_stages">
+                                    <option value="true">启用（推荐）</option>
+                                    <option value="false">禁用（多阶段策略）</option>
+                                </select>
+                                <p class="description" style="font-size: 0.8rem;">
+                                    影响模型的embedding策略
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #e7f3ff; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #004085; border-left: 4px solid #0066cc;">
+                            <strong>📌 问题规模计算：</strong>
+                            <p style="margin: 0.5rem 0;">
+                                • 总机器数 = 阶段数 × 每阶段机器数<br>
+                                • 总操作数 = 作业数 × 阶段数<br>
+                                • 当前配置：<span id="ffsp-scale-info">3阶段 × 4机器 × 20作业 = 总机器12台，总操作60个</span>
+                            </p>
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #856404;">
+                            <strong>💡 提示：</strong>
+                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                                <li>FFSP 必须使用 <strong>MatNet</strong> 策略模型</li>
+                                <li>目标：最小化所有作业的<strong>完工时间 (Makespan)</strong></li>
+                                <li>推荐配置：3阶段 + 4机器 + 20作业 + PPO算法</li>
+                                <li>训练时间较长，建议先用小规模测试（10作业）</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 第2步：模型配置 -->
@@ -610,6 +789,8 @@
                         <select id="model-select" name="model" class="form-control">
                             <option value="attention" selected>Attention Model（经典，快速）</option>
                             <option value="pomo">POMO（高质量，多起点）</option>
+                            <option value="matnet">MatNet（调度专用，矩阵注意力）🆕</option>
+                            <option value="ptrnet">Pointer Network（开创性，教学）</option>
                         </select>
                         <p class="description" id="model-description">经典的基于Transformer的构造式模型，速度快，适合入门</p>
                   </div>
@@ -931,7 +1112,7 @@
                 
                 if (timeWindowWidth) config.time_window_width = parseFloat(timeWindowWidth.value);
                 if (serviceTime) config.service_time = parseFloat(serviceTime.value);
-                if (maxTime) config.max_time = parseFloat(maxTime.value);
+                if (maxTime) config.max_processing_time = parseFloat(maxTime.value);
                 if (hardTimeWindows) config.hard_time_windows = hardTimeWindows.value === 'true';
             }
 
@@ -942,6 +1123,47 @@
                 
                 if (numAgents) config.num_agents = parseInt(numAgents.value);
                 if (costType) config.cost_type = costType.value;
+            }
+
+
+            // 添加PDP特有参数
+            if (problem === 'pdp') {
+                const pdpNumLoc = document.getElementById('pdp-num-loc');
+                const forceStartDepot = document.getElementById('force-start-depot');
+                
+                if (pdpNumLoc) config.num_loc = parseInt(pdpNumLoc.value);
+                if (forceStartDepot) config.force_start_at_depot = forceStartDepot.value === 'true';
+            }
+
+            // 添加OP特有参数
+            if (problem === 'op') {
+                const opNumLoc = document.getElementById('op-num-loc');
+                const maxLength = document.getElementById('max-length');
+                const prizeType = document.getElementById('prize-type');
+                
+                if (opNumLoc) config.num_loc = parseInt(opNumLoc.value);
+                if (maxLength) config.max_length = parseFloat(maxLength.value);
+                if (prizeType) config.prize_type = prizeType.value;
+            }
+
+            // 添加FFSP特有参数
+            if (problem === 'ffsp') {
+                const numStage = document.getElementById('num-stage');
+                const numMachine = document.getElementById('num-machine');
+                const numJob = document.getElementById('num-job');
+                const minTime = document.getElementById('min-time');
+                const maxTimeFfsp = document.getElementById('max-time-ffsp');
+                const flattenStages = document.getElementById('flatten-stages');
+                
+                if (numStage) config.num_stage = parseInt(numStage.value);
+                if (numMachine) config.num_machine = parseInt(numMachine.value);
+                if (numJob) config.num_job = parseInt(numJob.value);
+                if (minTime) config.min_time = parseInt(minTime.value);
+                if (maxTimeFfsp) config.max_time = parseInt(maxTimeFfsp.value);
+                if (flattenStages) config.flatten_stages = flattenStages.value === 'true';
+                
+                // FFSP 强制使用 MatNet
+                config.model = 'matnet';
             }
 
             // 添加POMO特有参数
@@ -1647,7 +1869,8 @@
             updatePolicyDescription() {
                 const descriptions = {
                     'attention': '经典的基于Transformer的构造式模型，速度快，适合入门',
-                    'pomo': '同时从多个起点构建路径，利用问题对称性，质量高但计算量大'
+                    'pomo': '同时从多个起点构建路径，利用问题对称性，质量高但计算量大',
+                    'ptrnet': '🏛️ 开创性的Seq2Seq模型（2015），首个深度学习CO方法，适合学习和研究'
                 };
                 const desc = document.getElementById('model-description');
                 if (desc) desc.textContent = descriptions[this.currentPolicy] || '';
@@ -1675,6 +1898,8 @@
                 const cvrpParams = document.getElementById('cvrp-params');
                 const vrptwParams = document.getElementById('vrptw-params');
                 const mtspParams = document.getElementById('mtsp-params');
+                const pdpParams = document.getElementById('pdp-params');
+                const opParams = document.getElementById('op-params');
                 
                 if (cvrpParams) {
                     const isCVRP = this.currentProblem === 'cvrp' || this.currentProblem === 'sdvrp' || this.currentProblem === 'vrptw';
@@ -1692,12 +1917,44 @@
                     const isMTSP = this.currentProblem === 'mtsp';
                     mtspParams.style.display = isMTSP ? 'block' : 'none';
                 }
+                
+                // 显示/隐藏PDP特有参数
+                if (pdpParams) {
+                    const isPDP = this.currentProblem === 'pdp';
+                    pdpParams.style.display = isPDP ? 'block' : 'none';
+                }
+                
+                // 显示/隐藏OP特有参数
+                if (opParams) {
+                    const isOP = this.currentProblem === 'op';
+                    opParams.style.display = isOP ? 'block' : 'none';
+                }
+                
+                // 显示/隐藏FFSP特有参数
+                const ffspParams = document.getElementById('ffsp-params');
+                if (ffspParams) {
+                    const isFFSP = this.currentProblem === 'ffsp';
+                    ffspParams.style.display = isFFSP ? 'block' : 'none';
+                    
+                    // FFSP 强制使用 MatNet
+                    if (isFFSP) {
+                        const modelSelect = document.getElementById('model-select');
+                        if (modelSelect && modelSelect.value !== 'matnet') {
+                            modelSelect.value = 'matnet';
+                            this.currentPolicy = 'matnet';
+                            this.updateCompatibility();
+                        }
+                    }
+                }
             }
             
             getPolicyDisplayName(policy) {
                 const names = {
                     'attention': 'Attention Model (经典)',
-                    'pomo': 'POMO (高质量)'
+                    'pomo': 'POMO (高质量)',
+                    'ptrnet': 'Pointer Network (开创性)',
+                    'ptr': 'Pointer Network (开创性)',
+                    'matnet': 'MatNet (调度专用)'
                 };
                 return names[policy] || policy.toUpperCase();
             }
@@ -1716,6 +1973,36 @@
         let compatibilityManager;
         document.addEventListener('DOMContentLoaded', () => {
             compatibilityManager = new CompatibilityManager();
+            
+            // FFSP 参数实时更新逻辑
+            const updateFFSPScale = () => {
+                const numStage = document.getElementById('num-stage');
+                const numMachine = document.getElementById('num-machine');
+                const numJob = document.getElementById('num-job');
+                const scaleInfo = document.getElementById('ffsp-scale-info');
+                
+                if (numStage && numMachine && numJob && scaleInfo) {
+                    const stages = parseInt(numStage.value) || 3;
+                    const machines = parseInt(numMachine.value) || 4;
+                    const jobs = parseInt(numJob.value) || 20;
+                    const totalMachines = stages * machines;
+                    const totalOps = jobs * stages;
+                    
+                    scaleInfo.textContent = `${stages}阶段 × ${machines}机器 × ${jobs}作业 = 总机器${totalMachines}台，总操作${totalOps}个`;
+                }
+            };
+            
+            // 监听 FFSP 参数变化
+            ['num-stage', 'num-machine', 'num-job'].forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) {
+                    elem.addEventListener('input', updateFFSPScale);
+                    elem.addEventListener('change', updateFFSPScale);
+                }
+            });
+            
+            // 初始更新一次
+            updateFFSPScale();
         });
         
     </script>

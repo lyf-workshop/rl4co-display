@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>模型知识库 - RL4CO 平台 | 山西大学</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 统一导航样式 -->
     <link rel="stylesheet" href="/static/css/navigation.css">
     
     <style>
@@ -15,7 +14,7 @@
         }
 
         body {
-            font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #333;
             min-height: 100vh;
@@ -27,6 +26,7 @@
             padding: 0 2rem;
         }
 
+        /* 页面标题 */
         .hero-section {
             background: white;
             border-radius: 20px;
@@ -51,213 +51,354 @@
             color: #666;
         }
 
-        .filter-section {
+        /* 视图切换按钮 */
+        .view-switch {
             background: white;
             border-radius: 15px;
-            padding: 1.5rem;
+            padding: 1rem;
             margin-bottom: 2rem;
             box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        .filter-tabs {
             display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
             justify-content: center;
+            gap: 1rem;
         }
 
-        .filter-tab {
-            padding: 0.8rem 1.5rem;
+        .view-btn {
+            padding: 0.8rem 2rem;
             border: 2px solid #e0e0e0;
-            border-radius: 25px;
+            border-radius: 10px;
             background: white;
             color: #666;
             cursor: pointer;
-            transition: all 0.3s;
             font-size: 1rem;
-            font-weight: 500;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .filter-tab:hover {
+        .view-btn:hover {
             border-color: #667eea;
             color: #667eea;
         }
 
-        .filter-tab.active {
+        .view-btn.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border-color: transparent;
         }
 
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ========== 卡片视图 ========== */
+        .cards-view {
+            display: block;
+        }
+
+        .category-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid #f0f0f0;
+        }
+
+        .category-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .category-title h2 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+
+        .category-title .icon {
+            font-size: 2rem;
+        }
+
+        .category-count {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
         .models-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
         }
 
         .model-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            transition: all 0.3s;
-            cursor: pointer;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
             border: 2px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .model-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .model-card:hover::before {
+            transform: scaleX(1);
         }
 
         .model-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
             border-color: #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
         }
 
         .model-card-header {
             display: flex;
             justify-content: space-between;
             align-items: start;
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
         }
 
         .model-name {
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.4rem;
+            font-weight: 700;
             color: #667eea;
-            margin-bottom: 0.5rem;
         }
 
         .model-year {
             background: #667eea;
             color: white;
-            padding: 0.3rem 0.8rem;
-            border-radius: 15px;
-            font-size: 0.85rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
             font-weight: 600;
         }
 
         .model-full-name {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: #666;
             margin-bottom: 1rem;
-        }
-
-        .model-category {
-            display: inline-block;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            color: #667eea;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 1rem;
-        }
-
-        .model-description {
-            color: #555;
-            line-height: 1.6;
-            margin-bottom: 1rem;
-            font-size: 0.95rem;
+            line-height: 1.4;
         }
 
         .model-paper {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            color: #667eea;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
+            gap: 0.4rem;
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
         }
 
-        .model-actions {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1.5rem;
+        /* ========== 表格视图 ========== */
+        .table-view {
+            display: none;
         }
 
-        .btn {
-            flex: 1;
-            padding: 0.8rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-            text-decoration: none;
+        .table-view.active {
             display: block;
         }
 
-        .btn-primary {
+        .table-section {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .table-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        .empty-state-text {
-            font-size: 1.2rem;
-            color: #666;
-        }
-
-        .stats-bar {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 1.5rem 2rem;
             display: flex;
-            justify-content: center;
-            gap: 3rem;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .stat-item {
-            text-align: center;
+        .table-header h3 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
         }
 
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
+        .methods-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .methods-table thead {
+            background: #f8f9fa;
+        }
+
+        .methods-table th {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 0.95rem;
+        }
+
+        .methods-table td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s;
+        }
+
+        .methods-table tr {
+            transition: all 0.2s;
+        }
+
+        .methods-table tbody tr:hover {
+            background: #f8f9ff;
+        }
+
+        .method-name-cell {
+            font-weight: 600;
             color: #667eea;
+            cursor: pointer;
         }
 
-        .stat-label {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 0.3rem;
+        .method-name-cell:hover {
+            color: #764ba2;
+            text-decoration: underline;
         }
 
+        .paper-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .year-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* 响应式设计 */
         @media (max-width: 768px) {
+            .main-container {
+                padding: 0 1rem;
+                margin-top: 80px;
+            }
+
             .models-grid {
                 grid-template-columns: 1fr;
             }
 
-            .filter-tabs {
+            .view-switch {
                 flex-direction: column;
             }
 
-            .stats-bar {
-                flex-direction: column;
-                gap: 1rem;
+            .view-btn {
+                width: 100%;
+                justify-content: center;
             }
+
+            .methods-table {
+                font-size: 0.85rem;
+            }
+
+            .methods-table th,
+            .methods-table td {
+                padding: 0.8rem 0.5rem;
+            }
+        }
+
+        /* 隐藏类 */
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -269,11 +410,11 @@
                 <div class="university-badge">🎓 山西大学 · RL4CO</div>
             </div>
             <div class="nav-links">
-                <a href="/" {% if active_page == 'home' %}class="active"{% endif %}>🏠 训练首页</a>
-                <a href="/benchmark" {% if active_page == 'benchmark' %}class="active"{% endif %}>📊 算法对比</a>
-                <a href="/model_info" {% if active_page == 'model_info' %}class="active"{% endif %}>📚 模型知识库</a>
-                <a href="/file_manager" {% if active_page == 'file_manager' %}class="active"{% endif %}>🗂️ 文件管理</a>
-                <a href="/profile" {% if active_page == 'profile' %}class="active"{% endif %}>👤 我的账户</a>
+                <a href="/">🏠 训练首页</a>
+                <a href="/benchmark">📊 算法对比</a>
+                <a href="/model_info" class="active">📚 模型知识库</a>
+                <a href="/file_manager">🗂️ 文件管理</a>
+                <a href="/profile">👤 我的账户</a>
             </div>
         </nav>
     </header>
@@ -282,65 +423,151 @@
         <!-- 页面标题 -->
         <div class="hero-section">
             <h1>📚 模型知识库</h1>
-            <p class="subtitle">探索 20+ 种强化学习组合优化模型，了解前沿算法</p>
+            <p class="subtitle">深度强化学习组合优化方法全景图</p>
         </div>
 
         <!-- 统计信息 -->
-        <div class="stats-bar">
-            <div class="stat-item">
-                <div class="stat-value" id="totalModels">{{ models|length }}</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value">{{ models|length }}</div>
                 <div class="stat-label">模型总数</div>
             </div>
-            <div class="stat-item">
-                <div class="stat-value" id="categoryCount">{{ categories|length }}</div>
-                <div class="stat-label">分类数量</div>
+            <div class="stat-card">
+                <div class="stat-icon">📂</div>
+                <div class="stat-value">5</div>
+                <div class="stat-label">主要分类</div>
             </div>
-            <div class="stat-item">
-                <div class="stat-value">2020+</div>
-                <div class="stat-label">最早年份</div>
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-value">2015+</div>
+                <div class="stat-label">起始年份</div>
             </div>
-        </div>
-
-        <!-- 分类过滤 -->
-        <div class="filter-section">
-            <div class="filter-tabs">
-                <button class="filter-tab active" data-category="all">🌟 全部模型</button>
-                <button class="filter-tab" data-category="构造方法（自回归）">🔄 构造方法（自回归）</button>
-                <button class="filter-tab" data-category="构造方法（非自回归）">⚡ 构造方法（非自回归）</button>
-                <button class="filter-tab" data-category="改进方法">🚀 改进方法</button>
-                <button class="filter-tab" data-category="搜索方法">🔍 搜索方法</button>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-value">Top</div>
+                <div class="stat-label">SOTA方法</div>
             </div>
         </div>
 
-        <!-- 模型卡片网格 -->
-        <div class="models-grid" id="modelsGrid">
-            {% for model_id, model in models.items() %}
-            <div class="model-card" data-category="{{ model.category }}" onclick="window.location.href='/model_info/{{ model_id }}'">
-                <div class="model-card-header">
-                    <div>
-                        <div class="model-name">{{ model.name }}</div>
-                        <div class="model-full-name">{{ model.full_name }}</div>
+        <!-- 视图切换 -->
+        <div class="view-switch">
+            <button class="view-btn active" onclick="switchView('cards')">
+                <span>🎴</span>
+                <span>卡片视图</span>
+            </button>
+            <button class="view-btn" onclick="switchView('table')">
+                <span>📋</span>
+                <span>表格概览</span>
+            </button>
+        </div>
+
+        <!-- 卡片视图 -->
+        <div id="cardsView" class="cards-view">
+            {% set category_info = {
+                'Constructive (AR)': {'icon': '🔄', 'name': '构造方法（自回归）', 'desc': 'Autoregressive constructive methods'},
+                'Constructive (NAR)': {'icon': '⚡', 'name': '构造方法（非自回归）', 'desc': 'Non-autoregressive constructive methods'},
+                'Improvement': {'icon': '🚀', 'name': '改进方法', 'desc': 'Improvement methods'},
+                'RL Algorithms': {'icon': '🧠', 'name': '强化学习算法', 'desc': 'Reinforcement learning algorithms'},
+                'Transductive RL': {'icon': '🔍', 'name': '传导式强化学习', 'desc': 'Transductive reinforcement learning'}
+            } %}
+
+            {% for category, info in category_info.items() %}
+                {% set category_models = models.items()|selectattr('1.category', 'equalto', category)|list %}
+                {% if category_models %}
+                <div class="category-section">
+                    <div class="category-header">
+                        <div class="category-title">
+                            <span class="icon">{{ info.icon }}</span>
+                            <div>
+                                <h2>{{ info.name }}</h2>
+                                <p style="font-size: 0.9rem; color: #888; margin-top: 0.3rem;">{{ info.desc }}</p>
+                            </div>
+                        </div>
+                        <div class="category-count">{{ category_models|length }} 个方法</div>
                     </div>
-                    {% if model.year %}
-                    <div class="model-year">{{ model.year }}</div>
-                    {% endif %}
-                </div>
-                
-                <div class="model-category">{{ model.category }}</div>
-                
-                {% if model.paper_venue %}
-                <div class="model-paper">
-                    <span>📄</span>
-                    <span>{{ model.paper_venue }}</span>
+                    
+                    <div class="models-grid">
+                        {% for model_id, model in category_models %}
+                        <div class="model-card" onclick="window.location.href='/model_info/{{ model_id }}'">
+                            <div class="model-card-header">
+                                <div class="model-name">{{ model.name }}</div>
+                                {% if model.year %}
+                                <div class="model-year">{{ model.year }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="model-full-name">{{ model.full_name }}</div>
+                            {% if model.paper_venue %}
+                            <div class="model-paper">
+                                <span>📄</span>
+                                <span>{{ model.paper_venue }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endif %}
+            {% endfor %}
+        </div>
 
-                <div class="model-actions">
-                    <a href="/model_info/{{ model_id }}" class="btn btn-primary" onclick="event.stopPropagation()">
-                        查看详情 →
-                    </a>
+        <!-- 表格视图 -->
+        <div id="tableView" class="table-view">
+            {% for category, info in category_info.items() %}
+                {% set category_models = models.items()|selectattr('1.category', 'equalto', category)|list %}
+                {% if category_models %}
+                <div class="table-section">
+                    <div class="table-header">
+                        <h3>
+                            <span>{{ info.icon }}</span>
+                            <span>{{ info.name }}</span>
+                        </h3>
+                        <div class="category-count">{{ category_models|length }} 个方法</div>
+                    </div>
+                    
+                    <table class="methods-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%">方法名称</th>
+                                <th style="width: 35%">完整名称</th>
+                                <th style="width: 25%">发表会议</th>
+                                <th style="width: 10%">年份</th>
+                                <th style="width: 15%">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model_id, model in category_models %}
+                            <tr>
+                                <td>
+                                    <span class="method-name-cell" onclick="window.location.href='/model_info/{{ model_id }}'">
+                                        {{ model.name }}
+                                    </span>
+                                </td>
+                                <td>{{ model.full_name }}</td>
+                                <td>
+                                    {% if model.paper_venue %}
+                                    <span class="paper-badge">
+                                        <span>📄</span>
+                                        <span>{{ model.paper_venue }}</span>
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if model.year %}
+                                    <span class="year-badge">{{ model.year }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="/model_info/{{ model_id }}" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                                        查看详情 →
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+                {% endif %}
             {% endfor %}
         </div>
     </div>
@@ -349,53 +576,48 @@
     <script src="/static/js/navigation.js"></script>
     
     <script>
-        // 分类过滤功能
-        const filterTabs = document.querySelectorAll('.filter-tab');
-        const modelCards = document.querySelectorAll('.model-card');
+        // 视图切换
+        function switchView(view) {
+            const cardsView = document.getElementById('cardsView');
+            const tableView = document.getElementById('tableView');
+            const buttons = document.querySelectorAll('.view-btn');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (view === 'cards') {
+                cardsView.style.display = 'block';
+                tableView.classList.remove('active');
+                buttons[0].classList.add('active');
+                localStorage.setItem('preferredView', 'cards');
+            } else {
+                cardsView.style.display = 'none';
+                tableView.classList.add('active');
+                buttons[1].classList.add('active');
+                localStorage.setItem('preferredView', 'table');
+            }
+        }
 
-        filterTabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                // 更新激活状态
-                filterTabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
+        // 恢复上次选择的视图
+        window.addEventListener('DOMContentLoaded', function() {
+            const preferredView = localStorage.getItem('preferredView');
+            if (preferredView === 'table') {
+                switchView('table');
+            }
+        });
 
-                const category = this.dataset.category;
-
-                // 过滤模型卡片
-                modelCards.forEach(card => {
-                    if (category === 'all' || card.dataset.category === category) {
-                        card.style.display = 'block';
-                        // 添加淡入动画
-                        card.style.animation = 'fadeIn 0.5s';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-
-                // 检查是否有可见的卡片
-                const visibleCards = Array.from(modelCards).filter(card => card.style.display !== 'none');
-                if (visibleCards.length === 0) {
-                    const grid = document.getElementById('modelsGrid');
-                    grid.innerHTML = `
-                        <div class="empty-state" style="grid-column: 1 / -1;">
-                            <div class="empty-state-icon">🔍</div>
-                            <div class="empty-state-text">该分类下暂无模型</div>
-                        </div>
-                    `;
+        // 添加平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
                 }
             });
         });
-
-        // 淡入动画
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
-

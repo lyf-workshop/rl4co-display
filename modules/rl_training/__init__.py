@@ -21,6 +21,9 @@ from .mtsp_trainer import MTSPTrainer, train_mtsp
 from .cvrp_trainer import CVRPTrainer, train_cvrp
 from .sdvrp_trainer import SDVRPTrainer, train_sdvrp
 from .vrptw_trainer import VRPTWTrainer, train_vrptw
+from .pdp_trainer import PDPTrainer, train_pdp
+from .op_trainer import OPTrainer, train_op
+from .ffsp_trainer import FFSPTrainer, train_ffsp
 
 # 向后兼容：提供统一的训练入口
 def real_rl4co_training(config, session_id, user_id, queue, training_status, get_background_db_func):
@@ -52,6 +55,15 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         train_sdvrp(config, session_id, user_id, queue, training_status, get_background_db_func)
     elif problem_type == 'vrptw':
         train_vrptw(config, session_id, user_id, queue, training_status, get_background_db_func)
+    elif problem_type == 'pdp':
+        # PDP - 取送货问题
+        train_pdp(config, session_id, user_id, queue, training_status, get_background_db_func)
+    elif problem_type == 'op':
+        # OP - 定向问题
+        train_op(config, session_id, user_id, queue, training_status, get_background_db_func)
+    elif problem_type == 'ffsp':
+        # FFSP - 柔性流水车间调度问题
+        train_ffsp(config, session_id, user_id, queue, training_status, get_background_db_func)
     else:
         # 未支持的问题类型 - 先初始化状态再设置错误
         training_status[session_id] = {
@@ -63,7 +75,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         }
         queue.put(json.dumps({
             'type': 'error',
-            'message': f'暂不支持的问题类型: {problem_type}，请选择 TSP、ATSP、mTSP、CVRP、SDVRP 或 VRPTW'
+            'message': f'暂不支持的问题类型: {problem_type}，请选择 TSP、ATSP、mTSP、CVRP、SDVRP、VRPTW、PDP、OP 或 FFSP'
         }))
 
 
@@ -81,6 +93,9 @@ __all__ = [
     'CVRPTrainer',
     'SDVRPTrainer',
     'VRPTWTrainer',
+    'PDPTrainer',
+    'OPTrainer',
+    'FFSPTrainer',
     
     # 训练入口函数
     'real_rl4co_training',
@@ -89,6 +104,9 @@ __all__ = [
     'train_cvrp',
     'train_sdvrp',
     'train_vrptw',
+    'train_pdp',
+    'train_op',
+    'train_ffsp',
     
     # 向后兼容
     'create_route_animation',

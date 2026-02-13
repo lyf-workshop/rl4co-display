@@ -26,6 +26,8 @@
 
 ### 问题使用指南
 - 📖 [mTSP 使用指南](../modules/problems/MTSP_GUIDE.md) - 多旅行商问题
+- 📖 [PDP 使用指南](./PDP_USER_GUIDE.md) ⭐新增 - 取送货问题
+- 📖 [OP 使用指南](./OP_USER_GUIDE.md) ⭐新增 - 定向问题（推荐）
 - 📖 [更多问题指南](../modules/problems/) - 其他问题类型
 
 ---
@@ -81,6 +83,8 @@
 | 问题类型 | 文档路径 | 状态 |
 |---------|---------|------|
 | mTSP | [modules/problems/MTSP_GUIDE.md](../modules/problems/MTSP_GUIDE.md) | ✅ |
+| PDP | [docs/PDP_USER_GUIDE.md](./PDP_USER_GUIDE.md) | ✅ ⭐新增 |
+| OP | [docs/OP_USER_GUIDE.md](./OP_USER_GUIDE.md) | ✅ ⭐推荐 |
 | TSP | - | 待补充 |
 | CVRP | - | 待补充 |
 | VRPTW | - | 待补充 |
@@ -105,6 +109,13 @@
 
 **如何使用 mTSP？**
 → 阅读 [mTSP 使用指南](../modules/problems/MTSP_GUIDE.md) 或 [快速开始](../MTSP_QUICKSTART.md)
+
+**如何使用 PDP？**
+→ 阅读 [PDP 使用指南](./PDP_USER_GUIDE.md)
+
+**如何使用 OP？**
+→ 阅读 [OP 使用指南](./OP_USER_GUIDE.md)（推荐：旅游规划、无人机巡检）
+
 
 **遇到错误怎么办？**
 → 查看 [常见错误](./ADD_NEW_PROBLEM_TYPE_GUIDE.md#常见错误) 章节

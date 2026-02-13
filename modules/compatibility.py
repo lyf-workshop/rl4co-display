@@ -1,26 +1,83 @@
 """
 组件兼容性验证模块
 检查问题、策略、算法的组合是否有效
+
+基于 RL4CO 官方文档（v0.6.0+）更新
+数据来源：https://github.com/ai4co/rl4co
+最后更新：2024年2月
 """
 
 from typing import Tuple, Dict, List
 
 # ============================================
-# 兼容性规则定义
+# 环境分类（基于 RL4CO 官方）
+# ============================================
+
+# 路由问题（Routing Problems）- 本系统已集成
+ROUTING_PROBLEMS_INTEGRATED = [
+    'tsp',      # Traveling Salesman Problem
+    'atsp',     # Asymmetric TSP
+    'mtsp',     # Multiple TSP
+    'cvrp',     # Capacitated VRP
+    'sdvrp',    # Split Delivery VRP
+    'vrptw',    # VRP with Time Windows
+    'op',       # Orienteering Problem
+    'pdp',      # Pickup and Delivery Problem
+]
+
+# 调度问题（Scheduling Problems）- 本系统已集成
+SCHEDULING_PROBLEMS_INTEGRATED = [
+    'ffsp',     # Flexible Flow Shop Problem
+]
+
+# 所有已集成的问题
+ALL_INTEGRATED_PROBLEMS = ROUTING_PROBLEMS_INTEGRATED + SCHEDULING_PROBLEMS_INTEGRATED
+
+# RL4CO 官方支持但本系统未集成的环境（供将来扩展）
+ROUTING_PROBLEMS_AVAILABLE = [
+    'pctsp',    # Prize Collecting TSP
+    'spctsp',   # Stochastic PCTSP
+    'cvrptw',   # Capacitated VRP with Time Windows
+    'svrp',     # Skill VRP
+    'dpp',      # Dial-a-Ride Problem
+    'mdpp',     # Multi-Depot PDP
+    'mdcpdp',   # Multi-Depot Capacitated PDP
+    'mtvrp',    # Multi-Task VRP (16 variants)
+]
+
+SCHEDULING_PROBLEMS_AVAILABLE = [
+    'ffsp',     # Flexible Flow Shop Problem
+    'fjsp',     # Flexible Job Shop Problem
+    'jssp',     # Job Shop Scheduling Problem
+    'smtwtp',   # Single Machine Total Weighted Tardiness
+]
+
+# ============================================
+# 兼容性规则定义（基于官方文档）
 # ============================================
 
 # 策略 → 问题兼容性
 POLICY_PROBLEM_COMPATIBILITY = {
-    'attention': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],  # AM通用
-    'am': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],         # AM别名
-    'pomo': ['tsp', 'mtsp', 'cvrp'],                                                 # POMO只适用对称问题（不支持ATSP）
+    # Attention Model：支持所有路由问题（需要对应的 init_embedding）
+    'attention': ROUTING_PROBLEMS_INTEGRATED,
+    'am': ROUTING_PROBLEMS_INTEGRATED,  # AM 别名
+    
+    # POMO：仅适用对称路由问题（利用旋转对称性）
+    'pomo': ['tsp', 'mtsp', 'cvrp'],
+    
+    # Pointer Network：基础路由问题（历史方法，性能有限）
+    'ptrnet': ['tsp', 'cvrp'],
+    'ptr': ['tsp', 'cvrp'],  # PtrNet 别名
+    
+    # MatNet：专为非对称和调度问题设计（矩阵注意力）
+    'matnet': ['atsp', 'ffsp'],  # ATSP和FFSP
 }
 
-# 算法 → 问题兼容性 (大部分算法通用)
+# 算法 → 问题兼容性（官方文档：REINFORCE, PPO, A2C 都是通用算法）
 ALGORITHM_PROBLEM_COMPATIBILITY = {
-    'reinforce': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
-    'ppo': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
-    'a2c': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'pctsp', 'op'],
+    'reinforce': ALL_INTEGRATED_PROBLEMS,  # REINFORCE 通用
+    'ppo': ALL_INTEGRATED_PROBLEMS,        # PPO 通用，复杂问题推荐
+    'a2c': ALL_INTEGRATED_PROBLEMS,        # A2C 通用，快速收敛
 }
 
 # 策略 → 算法兼容性
@@ -28,6 +85,9 @@ POLICY_ALGORITHM_COMPATIBILITY = {
     'attention': ['reinforce', 'ppo', 'a2c'],
     'am': ['reinforce', 'ppo', 'a2c'],
     'pomo': ['reinforce', 'ppo', 'a2c'],
+    'ptrnet': ['reinforce'],  # PtrNet 通常只使用 REINFORCE（经典组合）
+    'ptr': ['reinforce'],
+    'matnet': ['reinforce', 'ppo', 'a2c'],  # MatNet支持所有通用算法
 }
 
 # 警告组合 (技术上可行，但不推荐)
@@ -35,8 +95,37 @@ WARNING_COMBINATIONS = [
     {
         'problem': 'atsp',
         'policy': 'pomo',
-        'message': 'POMO设计用于对称问题，不支持ATSP（非对称距离）。请使用Attention Model',
+        'message': 'POMO设计用于对称问题，不支持ATSP（非对称距离）。请使用MatNet',
         'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'policy': 'attention',
+        'message': 'Attention Model不支持FFSP调度问题。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'policy': 'pomo',
+        'message': 'POMO不支持FFSP调度问题。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'policy': 'ptrnet',
+        'message': 'PtrNet不支持FFSP调度问题。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'algorithm': 'reinforce',
+        'message': 'FFSP是复杂调度问题，建议使用PPO或A2C算法以获得更稳定的训练和更好的收敛性',
+        'severity': 'info'
+    },
+    {
+        'policy': 'ptrnet',
+        'message': 'PtrNet 是2015年的经典方法，性能不如现代方法（AM/POMO）。推荐用于学习和研究，实际应用建议使用 Attention Model 或 POMO',
+        'severity': 'info'
     },
     {
         'problem': 'atsp',
@@ -95,6 +184,21 @@ RECOMMENDED_COMBINATIONS = {
         'best': {'policy': 'attention', 'algorithm': 'ppo'},
         'fast': {'policy': 'attention', 'algorithm': 'a2c'},
         'simple': {'policy': 'attention', 'algorithm': 'ppo'},  # VRPTW不建议用REINFORCE
+    },
+    'pdp': {
+        'best': {'policy': 'attention', 'algorithm': 'ppo', 'description': '最佳质量配置'},
+        'fast': {'policy': 'attention', 'algorithm': 'a2c', 'description': '快速训练配置'},
+        'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '简单易用配置'},
+    },
+    'op': {
+        'best': {'policy': 'attention', 'algorithm': 'ppo', 'description': '最佳质量配置'},
+        'fast': {'policy': 'attention', 'algorithm': 'a2c', 'description': '快速训练配置'},
+        'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '简单易用配置'},
+    },
+    'ffsp': {
+        'best': {'policy': 'matnet', 'algorithm': 'ppo', 'description': '最佳质量配置（复杂调度推荐）'},
+        'fast': {'policy': 'matnet', 'algorithm': 'a2c', 'description': '快速收敛配置'},
+        'simple': {'policy': 'matnet', 'algorithm': 'reinforce', 'description': '简单易用配置'},
     },
 }
 
@@ -371,35 +475,124 @@ def get_frontend_constraints(problem: str) -> Dict:
     }
 
 
+def print_compatibility_matrix():
+    """打印完整的兼容性矩阵（用于文档生成）"""
+    print("\n" + "=" * 80)
+    print("RL4CO Display - 兼容性矩阵")
+    print("基于 RL4CO 官方文档 v0.6.0+")
+    print("=" * 80)
+    
+    # 打印已集成的问题
+    print(f"\n📦 已集成的问题类型 ({len(ALL_INTEGRATED_PROBLEMS)}个):")
+    print(f"  路由问题: {', '.join(ROUTING_PROBLEMS_INTEGRATED)}")
+    print(f"  调度问题: {', '.join(SCHEDULING_PROBLEMS_INTEGRATED)}")
+    
+    # 打印策略支持
+    print(f"\n🧠 策略模型支持:")
+    for policy, problems in POLICY_PROBLEM_COMPATIBILITY.items():
+        print(f"  {policy.upper()}: 支持 {len(problems)} 个问题")
+        print(f"    → {', '.join(problems[:8])}...")
+    
+    # 打印算法支持
+    print(f"\n🎮 算法支持:")
+    for algorithm, problems in ALGORITHM_PROBLEM_COMPATIBILITY.items():
+        print(f"  {algorithm.upper()}: 支持 {len(problems)} 个问题 (通用)")
+    
+    # 打印推荐配置
+    print(f"\n⭐ 推荐配置 ({len(RECOMMENDED_COMBINATIONS)}个问题):")
+    for problem, configs in RECOMMENDED_COMBINATIONS.items():
+        best = configs['best']
+        print(f"  {problem.upper()}: {best['policy'].upper()} + {best['algorithm'].upper()}")
+    
+    print("\n" + "=" * 80)
+
+
+def validate_system_consistency():
+    """验证系统配置的一致性"""
+    print("\n" + "=" * 80)
+    print("系统一致性检查")
+    print("=" * 80)
+    
+    errors = []
+    warnings = []
+    
+    # 检查1: 推荐配置是否都在兼容性列表中
+    for problem, configs in RECOMMENDED_COMBINATIONS.items():
+        for config_type, config in configs.items():
+            policy = config['policy']
+            algorithm = config['algorithm']
+            
+            if not is_policy_compatible_with_problem(policy, problem):
+                errors.append(f"{problem.upper()}: 推荐的策略 {policy} 不在兼容列表中")
+            
+            if not is_algorithm_compatible_with_problem(algorithm, problem):
+                errors.append(f"{problem.upper()}: 推荐的算法 {algorithm} 不在兼容列表中")
+    
+    # 检查2: 警告组合是否有效
+    for warning in WARNING_COMBINATIONS:
+        problem = warning.get('problem')
+        policy = warning.get('policy')
+        algorithm = warning.get('algorithm')
+        
+        if problem and problem not in ALL_INTEGRATED_PROBLEMS:
+            warnings.append(f"警告组合引用了未集成的问题: {problem}")
+    
+    # 输出结果
+    if not errors and not warnings:
+        print("✅ 所有检查通过，配置一致！")
+    else:
+        if errors:
+            print(f"\n❌ 发现 {len(errors)} 个错误:")
+            for err in errors:
+                print(f"  - {err}")
+        if warnings:
+            print(f"\n⚠️  发现 {len(warnings)} 个警告:")
+            for warn in warnings:
+                print(f"  - {warn}")
+    
+    print("\n" + "=" * 80)
+    
+    return len(errors) == 0
+
+
 if __name__ == '__main__':
-    # 测试示例
-    print("=== 兼容性验证测试 ===\n")
+    # 打印兼容性矩阵
+    print_compatibility_matrix()
+    
+    # 验证一致性
+    validate_system_consistency()
+    
+    print("\n" + "=" * 80)
+    print("兼容性验证测试")
+    print("=" * 80)
     
     # 测试1: 有效组合
-    print("测试1: TSP + POMO + PPO")
+    print("\n测试1: TSP + POMO + PPO")
     valid, msg, level = validate_combination('tsp', 'pomo', 'ppo')
-    print(f"结果: {msg} [{level}]\n")
+    print(f"结果: {msg} [{level}]")
     
     # 测试2: 无效组合
-    print("测试2: PCTSP + POMO + REINFORCE")
-    valid, msg, level = validate_combination('pctsp', 'pomo', 'reinforce')
-    print(f"结果: {msg} [{level}]\n")
+    print("\n测试2: ATSP + POMO + REINFORCE")
+    valid, msg, level = validate_combination('atsp', 'pomo', 'reinforce')
+    print(f"结果: {msg} [{level}]")
     
-    # 测试3: 警告组合
-    print("测试3: SDVRP + POMO + PPO")
-    valid, msg, level = validate_combination('sdvrp', 'pomo', 'ppo')
-    print(f"结果: {msg} [{level}]\n")
+    # 测试3: PtrNet
+    print("\n测试3: TSP + PtrNet + REINFORCE")
+    valid, msg, level = validate_combination('tsp', 'ptrnet', 'reinforce')
+    print(f"结果: {msg} [{level}]")
     
     # 测试4: 获取可用选项
-    print("测试4: TSP可用的策略和算法")
+    print("\n测试5: TSP可用的策略和算法")
     print(f"策略: {get_available_policies('tsp')}")
-    print(f"算法: {get_available_algorithms('tsp')}\n")
+    print(f"算法: {get_available_algorithms('tsp')}")
     
-    # 测试5: 获取推荐组合
-    print("测试5: CVRP的推荐组合")
+    # 测试6: 获取推荐组合
+    print("\n测试6: CVRP的推荐组合")
     print(f"最佳: {get_recommended_combination('cvrp', 'best')}")
     print(f"快速: {get_recommended_combination('cvrp', 'fast')}")
-    print(f"简单: {get_recommended_combination('cvrp', 'simple')}\n")
+    print(f"简单: {get_recommended_combination('cvrp', 'simple')}")
+    
+    print("\n" + "=" * 80)
 
 
 
