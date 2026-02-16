@@ -17,7 +17,7 @@ matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Un
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
-def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图", num_machine_per_stage=None):
+def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"):
     """
     创建FFSP调度的甘特图
     
@@ -26,7 +26,6 @@ def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"
         schedule: 调度矩阵 [num_machine, num_job+1]，记录每个作业在每台机器上的开始时间
         save_path: 图片保存路径
         title: 图表标题
-        num_machine_per_stage: 每个阶段的机器数量，用于计算阶段编号
     """
     try:
         # 提取数据
@@ -69,36 +68,14 @@ def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"
         # 创建图形
         fig, ax = plt.subplots(figsize=(14, max(8, num_machines * 0.6)))
         
-        # 创建图形
-        fig, ax = plt.subplots(figsize=(16, max(8, num_machines * 0.8)))
-        
-        # 使用更美观的配色方案 (Set3 / Pastel)
-        # 扩展颜色列表以支持更多作业
-        base_colors = plt.cm.Set3(np.linspace(0, 1, 12))
-        if num_jobs > 12:
-            extra_colors = plt.cm.Set2(np.linspace(0, 1, 8))
-            colors = np.vstack((base_colors, extra_colors))
-            # 如果还不够，循环使用
-            if num_jobs > 20:
-                repeats = (num_jobs // 20) + 1
-                colors = np.tile(colors, (repeats, 1))
-        else:
-            colors = base_colors
-            
-        colors = colors[:num_jobs]
+        # 为每个作业分配不同的颜色
+        colors = plt.cm.tab20(np.linspace(0, 1, num_jobs))
         
         # 计算makespan
         makespan = 0
         
         # 绘制每台机器的调度
         for machine_idx in range(num_machines):
-            # 计算当前机器所属的阶段
-            stage_idx = -1
-            machine_in_stage_idx = machine_idx
-            if num_machine_per_stage:
-                stage_idx = machine_idx // num_machine_per_stage
-                machine_in_stage_idx = machine_idx % num_machine_per_stage
-            
             for job_idx in range(num_jobs):
                 start_time = schedule[machine_idx, job_idx]
                 
@@ -132,110 +109,71 @@ def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"
                     makespan = max(makespan, end_time)
                 
                 # 绘制矩形块表示作业
-                # 使用圆角矩形或普通矩形，这里用普通矩形但加深边框
                 rect = Rectangle(
                     (start_time, machine_idx - 0.4),
                     duration,
                     0.8,
                     facecolor=colors[job_idx],
-                    edgecolor='#333333', # 深灰色边框
-                    linewidth=1.0,
-                    alpha=0.9
+                    edgecolor='black',
+                    linewidth=1.5,
+                    alpha=0.8
                 )
                 ax.add_patch(rect)
                 
-                # 构建标注文本
-                label_text = f'J{job_idx}'
-                if stage_idx >= 0:
-                    label_text += f'\nS{stage_idx}'
-                
                 # 在矩形内标注作业编号
-                # 根据矩形大小动态调整字体
-                font_size = 9
-                if duration < makespan * 0.05: # 如果块太小
-                    font_size = 7
-                    label_text = f'J{job_idx}' # 简化文本
-                
-                text_color = 'black'
-                # 简单的亮度计算来决定文字颜色（黑/白）
-                rgb = colors[job_idx][:3]
-                brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000
-                if brightness < 0.5:
-                    text_color = 'white'
-                
                 ax.text(
                     start_time + duration / 2,
                     machine_idx,
-                    label_text,
+                    f'J{job_idx}',
                     ha='center',
                     va='center',
-                    fontsize=font_size,
+                    fontsize=9,
                     fontweight='bold',
-                    color=text_color
+                    color='white' if duration > 2 else 'black'
                 )
         
         # 设置坐标轴
         ax.set_ylim(-0.5, num_machines - 0.5)
         ax.set_xlim(0, makespan * 1.05)
         
-        # Y轴：机器编号 (包含阶段信息)
-        yticks = range(num_machines)
-        yticklabels = []
-        for i in range(num_machines):
-            if num_machine_per_stage:
-                s_idx = i // num_machine_per_stage
-                m_idx = i % num_machine_per_stage
-                yticklabels.append(f'Stage {s_idx}\nMachine {m_idx}')
-            else:
-                yticklabels.append(f'Machine {i}')
-        
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(yticklabels, fontsize=10)
+        # Y轴：机器编号
+        ax.set_yticks(range(num_machines))
+        ax.set_yticklabels([f'机器 {i}' for i in range(num_machines)])
         ax.invert_yaxis()  # 倒转Y轴，使机器0在顶部
         
         # X轴：时间
-        ax.set_xlabel('时间 (Time)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('机器 (Machine)', fontsize=12, fontweight='bold')
+        ax.set_xlabel('时间', fontsize=12, fontweight='bold')
+        ax.set_ylabel('机器', fontsize=12, fontweight='bold')
         
         # 设置标题
-        ax.set_title(f"{title}\n最大完工时间 (Makespan): {makespan:.1f}", 
-                    fontsize=16, fontweight='bold', pad=20)
+        ax.set_title(f"{title}\n完工时间(Makespan): {makespan:.1f}", 
+                    fontsize=14, fontweight='bold', pad=20)
         
         # 添加网格
-        ax.grid(True, axis='x', alpha=0.4, linestyle='--', color='gray')
-        
-        # 添加阶段分隔线
-        if num_machine_per_stage:
-            num_stages = num_machines // num_machine_per_stage
-            for s in range(1, num_stages):
-                y_pos = s * num_machine_per_stage - 0.5
-                ax.axhline(y=y_pos, color='black', linestyle='-', linewidth=1.5, alpha=0.5)
+        ax.grid(True, axis='x', alpha=0.3, linestyle='--')
         
         # 添加图例（作业列表）
-        # 优化布局：放在图表下方
         legend_elements = [
             Rectangle((0, 0), 1, 1, facecolor=colors[i], edgecolor='black', 
-                     label=f'Job {i}', alpha=0.9)
-            for i in range(min(num_jobs, 15))  # 最多显示15个作业
+                     label=f'作业 {i}', alpha=0.8)
+            for i in range(min(num_jobs, 10))  # 最多显示10个作业
         ]
         
-        if num_jobs > 15:
+        if num_jobs > 10:
             legend_elements.append(
                 Rectangle((0, 0), 1, 1, facecolor='gray', edgecolor='black',
-                         label=f'... (+{num_jobs-15})', alpha=0.5)
+                         label=f'... (共{num_jobs}个作业)', alpha=0.5)
             )
         
-        # 将图例放在下方
-        ax.legend(handles=legend_elements, loc='upper center', 
-                 bbox_to_anchor=(0.5, -0.1), fontsize=10, ncol=min(8, num_jobs), frameon=False)
+        ax.legend(handles=legend_elements, loc='upper right', 
+                 bbox_to_anchor=(1.15, 1), fontsize=9)
         
         # 保存图片
         plt.tight_layout()
-        plt.savefig(save_path, dpi=200, bbox_inches='tight') # 提高DPI
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
         plt.close()
         
         return makespan
-
         
     except Exception as e:
         print(f"创建FFSP甘特图时出错: {str(e)}")
@@ -250,7 +188,7 @@ def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"
 
 
 def create_ffsp_schedule_comparison(td_before, td_after, schedule_before, schedule_after,
-                                    save_path, title="FFSP训练前后对比", num_machine_per_stage=None):
+                                    save_path, title="FFSP训练前后对比"):
     """
     创建FFSP训练前后的调度对比图
     
@@ -261,7 +199,6 @@ def create_ffsp_schedule_comparison(td_before, td_after, schedule_before, schedu
         schedule_after: 训练后的调度
         save_path: 图片保存路径
         title: 图表标题
-        num_machine_per_stage: 每个阶段的机器数量
     """
     try:
         # 提取数据
@@ -303,112 +240,96 @@ def create_ffsp_schedule_comparison(td_before, td_after, schedule_before, schedu
         improvement = ((makespan_before - makespan_after) / makespan_before) * 100
         
         # 创建对比图
-        fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+        fig, axes = plt.subplots(1, 2, figsize=(18, 8))
         
         num_machines = schedule_before.shape[0]
         num_jobs = schedule_before.shape[1] - 1
+        colors = plt.cm.tab20(np.linspace(0, 1, num_jobs))
         
-        # 颜色方案
-        base_colors = plt.cm.Set3(np.linspace(0, 1, 12))
-        if num_jobs > 12:
-            extra_colors = plt.cm.Set2(np.linspace(0, 1, 8))
-            colors = np.vstack((base_colors, extra_colors))
-            if num_jobs > 20:
-                repeats = (num_jobs // 20) + 1
-                colors = np.tile(colors, (repeats, 1))
-        else:
-            colors = base_colors
-        colors = colors[:num_jobs]
-        
-        # 辅助函数：绘制单个甘特图
-        def plot_gantt_on_ax(ax, schedule, job_duration, chart_title, title_color):
-            for machine_idx in range(num_machines):
-                stage_idx = -1
-                if num_machine_per_stage:
-                    stage_idx = machine_idx // num_machine_per_stage
-                
-                for job_idx in range(num_jobs):
-                    start_time = schedule[machine_idx, job_idx]
-                    if start_time < 0:
-                        continue
-                    duration = job_duration[job_idx, machine_idx]
-                    
-                    rect = Rectangle(
-                        (start_time, machine_idx - 0.4),
-                        duration, 0.8,
-                        facecolor=colors[job_idx],
-                        edgecolor='#333333',
-                        linewidth=1.0,
-                        alpha=0.9
-                    )
-                    ax.add_patch(rect)
-                    
-                    label_text = f'J{job_idx}'
-                    if stage_idx >= 0:
-                        label_text += f'\nS{stage_idx}'
-                    
-                    font_size = 8
-                    # 简单的亮度计算
-                    rgb = colors[job_idx][:3]
-                    brightness = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000
-                    text_color = 'white' if brightness < 0.5 else 'black'
-                    
-                    if duration > 1.0: # 只有足够宽才显示文字
-                        ax.text(
-                            start_time + duration / 2, machine_idx,
-                            label_text,
-                            ha='center', va='center',
-                            fontsize=font_size, fontweight='bold',
-                            color=text_color
-                        )
-            
-            # 设置坐标轴
-            current_makespan = compute_makespan(schedule, job_duration)
-            ax.set_ylim(-0.5, num_machines - 0.5)
-            ax.set_xlim(0, max(makespan_before, makespan_after) * 1.05)
-            
-            yticks = range(num_machines)
-            yticklabels = []
-            for i in range(num_machines):
-                if num_machine_per_stage:
-                    s_idx = i // num_machine_per_stage
-                    m_idx = i % num_machine_per_stage
-                    yticklabels.append(f'S{s_idx}-M{m_idx}')
-                else:
-                    yticklabels.append(f'M{i}')
-            
-            ax.set_yticks(yticks)
-            ax.set_yticklabels(yticklabels, fontsize=9)
-            ax.invert_yaxis()
-            ax.set_xlabel('时间 (Time)', fontsize=11, fontweight='bold')
-            ax.set_ylabel('机器 (Machine)', fontsize=11, fontweight='bold')
-            ax.set_title(f'{chart_title}\nMakespan: {current_makespan:.1f}', 
-                        fontsize=14, fontweight='bold', color=title_color)
-            ax.grid(True, axis='x', alpha=0.4, linestyle='--', color='gray')
-            
-            # 添加阶段分隔线
-            if num_machine_per_stage:
-                num_stages = num_machines // num_machine_per_stage
-                for s in range(1, num_stages):
-                    y_pos = s * num_machine_per_stage - 0.5
-                    ax.axhline(y=y_pos, color='black', linestyle='-', linewidth=1.0, alpha=0.4)
-
         # 绘制训练前的甘特图
-        plot_gantt_on_ax(axes[0], schedule_before, job_duration_before, '训练前 (Before)', 'red')
+        ax = axes[0]
+        for machine_idx in range(num_machines):
+            for job_idx in range(num_jobs):
+                start_time = schedule_before[machine_idx, job_idx]
+                if start_time < 0:
+                    continue
+                duration = job_duration_before[job_idx, machine_idx]
+                
+                rect = Rectangle(
+                    (start_time, machine_idx - 0.4),
+                    duration, 0.8,
+                    facecolor=colors[job_idx],
+                    edgecolor='black',
+                    linewidth=1.5,
+                    alpha=0.8
+                )
+                ax.add_patch(rect)
+                ax.text(
+                    start_time + duration / 2, machine_idx,
+                    f'J{job_idx}',
+                    ha='center', va='center',
+                    fontsize=8, fontweight='bold',
+                    color='white' if duration > 2 else 'black'
+                )
+        
+        ax.set_ylim(-0.5, num_machines - 0.5)
+        ax.set_xlim(0, max(makespan_before, makespan_after) * 1.05)
+        ax.set_yticks(range(num_machines))
+        ax.set_yticklabels([f'M{i}' for i in range(num_machines)])
+        ax.invert_yaxis()
+        ax.set_xlabel('时间', fontsize=11, fontweight='bold')
+        ax.set_ylabel('机器', fontsize=11, fontweight='bold')
+        ax.set_title(f'训练前\nMakespan: {makespan_before:.1f}', 
+                    fontsize=13, fontweight='bold', color='red')
+        ax.grid(True, axis='x', alpha=0.3, linestyle='--')
         
         # 绘制训练后的甘特图
-        plot_gantt_on_ax(axes[1], schedule_after, job_duration_after, '训练后 (After)', 'green')
+        ax = axes[1]
+        for machine_idx in range(num_machines):
+            for job_idx in range(num_jobs):
+                start_time = schedule_after[machine_idx, job_idx]
+                if start_time < 0:
+                    continue
+                duration = job_duration_after[job_idx, machine_idx]
+                
+                rect = Rectangle(
+                    (start_time, machine_idx - 0.4),
+                    duration, 0.8,
+                    facecolor=colors[job_idx],
+                    edgecolor='black',
+                    linewidth=1.5,
+                    alpha=0.8
+                )
+                ax.add_patch(rect)
+                ax.text(
+                    start_time + duration / 2, machine_idx,
+                    f'J{job_idx}',
+                    ha='center', va='center',
+                    fontsize=8, fontweight='bold',
+                    color='white' if duration > 2 else 'black'
+                )
+        
+        ax.set_ylim(-0.5, num_machines - 0.5)
+        ax.set_xlim(0, max(makespan_before, makespan_after) * 1.05)
+        ax.set_yticks(range(num_machines))
+        ax.set_yticklabels([f'M{i}' for i in range(num_machines)])
+        ax.invert_yaxis()
+        ax.set_xlabel('时间', fontsize=11, fontweight='bold')
+        ax.set_ylabel('机器', fontsize=11, fontweight='bold')
+        ax.set_title(f'训练后\nMakespan: {makespan_after:.1f}', 
+                    fontsize=13, fontweight='bold', color='green')
+        ax.grid(True, axis='x', alpha=0.3, linestyle='--')
         
         # 总标题
         fig.suptitle(
-            f"{title}\n改进 (Improvement): {improvement:.2f}% | "
+            f"{title}\n改进: {improvement:.2f}% | "
             f"Makespan: {makespan_before:.1f} → {makespan_after:.1f}",
-            fontsize=16, fontweight='bold', y=0.98
+            fontsize=15, fontweight='bold', y=0.98
         )
         
         # 保存图片
         plt.tight_layout()
-        plt.savefig(save_path, dpi=200, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
         plt.close()
         
         return {
