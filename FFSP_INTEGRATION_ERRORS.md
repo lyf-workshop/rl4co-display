@@ -578,6 +578,190 @@ class CustomTrainer(BaseTrainer):
 
 ---
 
+## 错误 #7: 可视化生成时的数据提取问题
+
+### 错误信息
+```
+❌ 训练出错: unsupported operand type(s) for +=: 'NoneType' and 'int'
+```
+
+### 根本原因
+FFSP 可视化需要完整的 `schedule` 数据（每个作业在每台机器上的开始时间），但：
+1. `policy()` 的输出是 TensorDict，包含 actions 和 reward
+2. 完整的 `schedule` 需要执行整个 episode，调用 `env.step()` 多次
+3. 简单调用 `policy(td)` 不会自动执行环境的 step，因此无法直接获取 schedule
+
+**数据流程**：
+```
+env.reset() → td (初始状态)
+policy(td) → actions
+env.step(td, actions) → td_next (包含 schedule)
+重复直到 done → 最终 td (包含完整 schedule)
+```
+
+### 解决方案：分阶段实现可视化
+
+#### 阶段 1：简化可视化（仅 Makespan 对比）
+
+由于完整的 schedule rollout 比较复杂，先实现简化版本：
+
+```python
+def generate_visualizations(self, env, model, trainer, checkpoint_path):
+    """生成FFSP可视化结果（简化版本）"""
+    
+    # 1. 生成测试数据
+    td_init = env.reset(batch_size=[3]).to(self.device)
+    
+    # 2. 训练前后测试
+    out_untrained = policy(td_init.clone(), phase="test", decode_type="sampling", return_actions=True)
+    out_trained = policy(td_init.clone(), phase="test", decode_type="greedy", return_actions=True)
+    
+    # 3. 提取 reward（负的 makespan）
+    rewards_untrained = out_untrained.get('reward', torch.zeros(3))
+    rewards_trained = out_trained.get('reward', torch.zeros(3))
+    
+    makespan_untrained = -rewards_untrained.cpu().detach().numpy()
+    makespan_trained = -rewards_trained.cpu().detach().numpy()
+    
+    # 4. 生成简单的条形图对比
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    avg_untrained = float(np.mean(makespan_untrained))
+    avg_trained = float(np.mean(makespan_trained))
+    
+    ax.bar([0, 1], [avg_untrained, avg_trained], 
+           color=['red', 'green'], alpha=0.7)
+    ax.set_xticklabels(['训练前', '训练后'])
+    ax.set_ylabel('完工时间 (Makespan)')
+    
+    improvement = ((avg_untrained - avg_trained) / avg_untrained) * 100
+    ax.set_title(f'FFSP 训练前后对比\n改进: {improvement:.2f}%')
+    
+    plt.savefig(comparison_path, dpi=150)
+    plt.close()
+```
+
+**优点**：
+- ✅ 快速实现，无需复杂的 episode rollout
+- ✅ 直观展示训练效果（makespan 改进）
+- ✅ 避免数据提取错误
+
+**缺点**：
+- ❌ 无法看到具体的调度方案
+- ❌ 缺少甘特图等详细可视化
+
+#### 阶段 2：完整可视化（带 Schedule Rollout）
+
+未来可以实现完整版本：
+
+```python
+def rollout_episode(self, env, policy, td_init):
+    """执行完整的 episode，获取最终 schedule"""
+    td = td_init.clone()
+    done = False
+    
+    while not done:
+        # 获取 action
+        with torch.no_grad():
+            actions = policy(td, phase="test", decode_type="greedy")['actions']
+        
+        # 执行 step
+        td = env.step(td, actions)
+        done = td['done'].all()
+    
+    # 返回包含完整 schedule 的 td
+    return td
+
+def generate_visualizations_full(self, env, model, trainer, checkpoint_path):
+    """生成完整的FFSP可视化（包括甘特图）"""
+    
+    # 1. Rollout 训练前模型
+    td_init = env.reset(batch_size=[3]).to(self.device)
+    td_untrained = self.rollout_episode(env, untrained_policy, td_init.clone())
+    
+    # 2. Rollout 训练后模型
+    td_trained = self.rollout_episode(env, trained_policy, td_init.clone())
+    
+    # 3. 提取 schedule
+    schedule_untrained = td_untrained['schedule']
+    schedule_trained = td_trained['schedule']
+    
+    # 4. 生成甘特图
+    for i in range(3):
+        create_ffsp_gantt_chart(
+            td_init[i],
+            schedule_trained[i],
+            save_path=f"gantt_{i}.png",
+            title=f"训练后调度方案 #{i+1}"
+        )
+        
+        create_ffsp_schedule_comparison(
+            td_init[i],
+            td_init[i],
+            schedule_untrained[i],
+            schedule_trained[i],
+            save_path=f"comparison_{i}.png"
+        )
+```
+
+### 补充：policy() 调用必须传递 env 参数
+
+在修复过程中发现，除了数据提取问题，还有一个关键原因导致可视化失败：
+
+**`policy(td)` 不传 env 参数时，内部会用 `get_env("ffsp")` 创建全新的 FFSPEnv**
+
+查看 RL4CO 源码 `AutoregressivePolicy.forward`（第 41-44 行）：
+```python
+# Instantiate environment if needed
+if isinstance(env, str) or env is None:
+    env_name = self.env_name if env is None else env
+    env = get_env(env_name)  # ← 创建全新的 FFSPEnv，step_cnt = None！
+```
+
+新 env 的 `step_cnt = None`（`FFSPEnv.__init__` 中设置），没有调用 `reset()`，所以 `_step()` 中执行 `self.step_cnt += 1` 时报 `unsupported operand type(s) for +=: 'NoneType' and 'int'`。
+
+**正确做法**：始终传递已 reset 的 base_env 给 policy：
+```python
+# 获取底层的 RL4COEnvBase 实例
+base_env = env.base_env if hasattr(env, 'base_env') else env
+
+# 通过适配器 reset（确保有 cost_matrix）
+td_init = env.reset(batch_size=[3]).to(device)
+
+# 传递 base_env 给 policy（base_env 已在 reset 中被初始化）
+out = policy(td_init.clone(), env=base_env, phase="test", decode_type="greedy", return_actions=True)
+```
+
+注意：每次 rollout 后需要重新 `env.reset()`，因为 rollout 会改变 env 的内部状态。
+
+### 当前状态
+
+- ✅ **已实现**：简化版可视化（Makespan 条形图对比）
+- ⏳ **待实现**：完整 episode rollout + 甘特图生成
+
+### 经验教训
+
+1. **理解 RL4CO 的执行流程**：
+   - `policy(td)` 只返回 actions，不执行环境
+   - 需要手动调用 `env.step()` 来更新状态
+   - 完整的 schedule 在 episode 结束时才生成
+
+2. **分阶段实现**：
+   - 先实现简单可行的版本（快速验证）
+   - 再逐步添加复杂功能（甘特图）
+
+3. **调试信息很重要**：
+   - 打印 TensorDict 的 keys
+   - 打印中间变量的形状和类型
+   - 使用 try-except 捕获详细错误
+
+4. **避免过度假设**：
+   - 不要假设 policy 输出包含所有需要的信息
+   - 检查实际的数据结构
+   - 阅读 RL4CO 的源码了解数据流
+
+---
+
 ## 总结
 
 集成新的调度问题和策略到 RL4CO Display 平台时，主要挑战在于：
