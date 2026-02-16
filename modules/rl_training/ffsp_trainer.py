@@ -322,27 +322,26 @@ class FFSPTrainer(BaseTrainer):
         import traceback
         
         # 生成测试数据
+        # 注意：FFSP环境有实例级可变状态（step_cnt, tables），
+        # 必须将env传给policy，否则policy会创建新的env（step_cnt=None导致TypeError）
         td_init = env.reset(batch_size=[3]).to(self.device)
         
         # 未训练模型测试（使用随机策略）
         self.send_message('info', '正在测试训练前的调度质量...')
-        out_untrained = policy(td_init.clone(), phase="test", decode_type="sampling", return_actions=True)
+        out_untrained = policy(td_init.clone(), env, phase="test", decode_type="sampling", return_actions=True)
+        
+        # 重新reset环境（上一次policy调用会修改env的step_cnt等状态）
+        td_init = env.reset(batch_size=[3]).to(self.device)
         
         # 训练后模型测试（使用greedy策略）
         self.send_message('info', '正在测试训练后的调度质量...')
-        out_trained = policy(td_init.clone(), phase="test", decode_type="greedy", return_actions=True)
+        out_trained = policy(td_init.clone(), env, phase="test", decode_type="greedy", return_actions=True)
         
-        # 提取调度结果
-        # 注意：FFSP的actions和reward在TensorDict中的位置可能不同
+        # 提取调度结果和actions
         try:
-            # 从environment的step结果中获取schedule
-            td_untrained = env.reset(batch_size=[3]).to(self.device)
-            td_trained = env.reset(batch_size=[3]).to(self.device)
-            
-            # 执行完整的episode获取最终的schedule
-            # 这里简化处理，使用初始td和reward作为代理
             rewards_untrained = out_untrained.get('reward', torch.zeros(3))
             rewards_trained = out_trained.get('reward', torch.zeros(3))
+            actions_trained = out_trained.get('actions', None)
             
             if rewards_untrained is None:
                 rewards_untrained = torch.zeros(3)
@@ -352,8 +351,21 @@ class FFSPTrainer(BaseTrainer):
             # 转换为 numpy（FFSP 的 reward 是负的 makespan）
             makespan_untrained = -rewards_untrained.cpu().detach().numpy()
             makespan_trained = -rewards_trained.cpu().detach().numpy()
+            
+            # 检查是否成功获取actions
+            if actions_trained is None:
+                self.send_message('info', '⚠️ 未能从policy输出中获取actions，无法生成甘特图')
+                return {
+                    'plot_paths': [],
+                    'animation_paths': [],
+                    'training_curve': self.training_status[self.session_id].get('plot_url', ''),
+                    'checkpoint_path': checkpoint_path
+                }
+            
         except Exception as e:
             self.send_message('info', f'⚠️ 提取调度结果时出错: {str(e)}')
+            import traceback
+            self.send_message('info', f'详细错误: {traceback.format_exc()}')
             return {
                 'plot_paths': [],
                 'animation_paths': [],
@@ -361,10 +373,41 @@ class FFSPTrainer(BaseTrainer):
                 'checkpoint_path': checkpoint_path
             }
         
-        # 生成甘特图和对比图
+        # 使用actions重新执行环境以获取完整的schedule
+        self.send_message('info', '正在重放调度以生成可视化...')
+        try:
+            # 重置环境并逐步执行以获取最终状态
+            td_replay = env.reset(batch_size=[3]).to(self.device)
+            
+            # 执行每个action
+            for step_idx in range(actions_trained.shape[-1]):
+                action = actions_trained[:, step_idx]
+                td_replay.set('action', action)
+                td_replay = env.step(td_replay)['next']
+                
+                # 如果所有实例都完成了，停止
+                if td_replay['done'].all():
+                    break
+            
+            # 现在td_replay包含了完整的调度信息
+            self.send_message('info', f'✅ 调度重放完成，可用键: {list(td_replay.keys())}')
+            
+        except Exception as e:
+            self.send_message('info', f'⚠️ 调度重放失败: {str(e)}')
+            import traceback
+            self.send_message('info', f'详细错误: {traceback.format_exc()}')
+            return {
+                'plot_paths': [],
+                'animation_paths': [],
+                'training_curve': self.training_status[self.session_id].get('plot_url', ''),
+                'checkpoint_path': checkpoint_path
+            }
+        
+        # 生成甘特图
         plot_paths = []
         
-        for i in range(min(3, len(td_init))):
+        # 遍历每个样本生成甘特图
+        for i in range(min(3, td_replay.batch_size[0])):
             try:
                 # 生成训练后的甘特图
                 gantt_filename = f"ffsp_gantt_{self.session_id[:8]}_{i+1}.png"
@@ -373,8 +416,36 @@ class FFSPTrainer(BaseTrainer):
                 # 确保环境是 reset 过的
                 # 注意：这里假设传入的 td 已经是 reset 后的初始状态
                 
-                # 注意：这里需要从完整的episode中获取schedule
-                # 简化版本：直接使用makespan信息
+                # 检查是否有schedule键
+                if 'schedule' not in td_replay.keys():
+                    self.send_message('info', f'⚠️ TensorDict中没有schedule键，可用键: {list(td_replay.keys())}')
+                    break
+                
+                # 提取单个样本的schedule和job_duration
+                # schedule: [batch, num_machines, num_jobs+1]
+                schedule_single = td_replay['schedule'][i].cpu()  # [num_machines, num_jobs+1]
+                
+                # 创建单个样本的TensorDict，包含必要的键
+                from tensordict import TensorDict
+                td_single_keys = {}
+                for key in ['job_duration', 'run_time', 'job_location', 'machine_wait_step']:
+                    if key in td_replay.keys():
+                        value = td_replay[key][i:i+1] if td_replay[key].dim() > 0 else td_replay[key]
+                        td_single_keys[key] = value
+                
+                td_single = TensorDict(td_single_keys, batch_size=[1])
+                
+                # 调用可视化函数生成甘特图
+                from modules.rl_training.visualizations.ffsp_viz import create_ffsp_gantt_chart
+                
+                makespan = create_ffsp_gantt_chart(
+                    td_single,
+                    schedule_single,
+                    gantt_path,
+                    title=f"FFSP训练后调度 (实例 {i+1})"
+                )
+                
+                self.send_message('info', f'✅ 甘特图 {i+1} 已生成: makespan={makespan:.2f}')
                 
                 # 循环直到所有 batch 完成
                 while not td["done"].all():
@@ -538,6 +609,8 @@ class FFSPTrainer(BaseTrainer):
                 
             except Exception as e:
                 self.send_message('info', f'⚠️ 生成第{i+1}个甘特图时出错: {str(e)}')
+                import traceback
+                self.send_message('info', f'详细错误: {traceback.format_exc()}')
         
         # 保存检查点
         trainer.save_checkpoint(checkpoint_path)
