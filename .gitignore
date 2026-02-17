@@ -159,28 +159,51 @@ cython_debug/
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
 start.sh
 DEPLOYMENT_MACOS.md
 
+# ========== IDE 配置 ==========
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ========== 敏感配置文件 ==========
+config/config.py
+.env
+.env.local
+*.secret
+
+# ========== 训练生成文件 ==========
+checkpoints/
+lightning_logs/
+static/model_plots/user_*/
+logs/*.log
+
+# ========== 数据集文件 ==========
+datasets/
+data/datasets/
+*.pkl
+*.pickle
+
 # ========== 项目特定配置 ==========
 
-# 训练输出文件
+# 训练输出文件（旧配置，保留兼容）
 static/model_plots/*.png
 static/model_plots/*.gif
 data/checkpoints/*.ckpt
 data/logs/
 
-# 用户数据集
-data/datasets/user_*/
-
 # 归档文件
 archive/
 
-# 临时文件
+# 临时文件和备份
 *.bak
+*.tmp
 .DS_Store
 .cleanup_plan.md
 
-# 配置文件（可选，如包含敏感信息）
-# config/config.py
+# 文档草稿（可选）
+*_DRAFT.md
+*_TODO.md

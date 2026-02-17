@@ -73,16 +73,24 @@ EXIT;
 mysql -u root -p flaskdemo_user < config/database_init_with_auth.sql
 ```
 
-**3. 修改配置文件**
+**3. 配置数据库连接**
 
-编辑 `config/config.py`：
+首先复制配置模板：
+
+```bash
+cp config/config.example.py config/config.py
+```
+
+然后编辑 `config/config.py`，修改数据库密码：
 
 ```python
 MYSQL_HOST = 'localhost'
 MYSQL_USER = 'root'
-MYSQL_PASSWORD = 'your_password'  # 修改为你的密码
+MYSQL_PASSWORD = 'your_password'  # 修改为你的实际密码
 MYSQL_DB = 'flaskdemo_user'
 ```
+
+**重要提示**: `config/config.py` 包含敏感信息，已被 `.gitignore` 忽略，不会提交到 Git。
 
 ### 第 4 步：启动应用
 
