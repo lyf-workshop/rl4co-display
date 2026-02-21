@@ -23,6 +23,8 @@ from .sdvrp_trainer import SDVRPTrainer, train_sdvrp
 from .vrptw_trainer import VRPTWTrainer, train_vrptw
 from .pdp_trainer import PDPTrainer, train_pdp
 from .op_trainer import OPTrainer, train_op
+from .pctsp_trainer import PCTSPTrainer, train_pctsp
+from .spctsp_trainer import SPCTSPTrainer, train_spctsp
 from .ffsp_trainer import FFSPTrainer, train_ffsp
 
 # 向后兼容：提供统一的训练入口
@@ -61,6 +63,12 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
     elif problem_type == 'op':
         # OP - 定向问题
         train_op(config, session_id, user_id, queue, training_status, get_background_db_func)
+    elif problem_type == 'pctsp':
+        # PCTSP - 奖励收集旅行商问题
+        train_pctsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+    elif problem_type == 'spctsp':
+        # SPCTSP - 随机奖励收集旅行商问题
+        train_spctsp(config, session_id, user_id, queue, training_status, get_background_db_func)
     elif problem_type == 'ffsp':
         # FFSP - 柔性流水车间调度问题
         train_ffsp(config, session_id, user_id, queue, training_status, get_background_db_func)
@@ -75,7 +83,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         }
         queue.put(json.dumps({
             'type': 'error',
-            'message': f'暂不支持的问题类型: {problem_type}，请选择 TSP、ATSP、mTSP、CVRP、SDVRP、VRPTW、PDP、OP 或 FFSP'
+            'message': f'暂不支持的问题类型: {problem_type}，请选择 TSP、ATSP、mTSP、CVRP、SDVRP、VRPTW、PDP、OP、PCTSP、SPCTSP 或 FFSP'
         }))
 
 
@@ -95,6 +103,8 @@ __all__ = [
     'VRPTWTrainer',
     'PDPTrainer',
     'OPTrainer',
+    'PCTSPTrainer',
+    'SPCTSPTrainer',
     'FFSPTrainer',
     
     # 训练入口函数
@@ -106,6 +116,8 @@ __all__ = [
     'train_vrptw',
     'train_pdp',
     'train_op',
+    'train_pctsp',
+    'train_spctsp',
     'train_ffsp',
     
     # 向后兼容

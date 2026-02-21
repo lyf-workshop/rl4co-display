@@ -203,14 +203,18 @@ rl4co-display/
 
 ### 支持的问题
 
+#### 路由问题 (Routing)
 - **TSP** - 旅行商问题
-- **ATSP** - 非对称旅行商问题 ⭐新增
+- **ATSP** - 非对称旅行商问题
+- **mTSP** - 多旅行商问题
 - **CVRP** - 带容量约束的车辆路径问题
 - **SDVRP** - 分割配送车辆路径问题
 - **VRPTW** - 带时间窗的车辆路径问题
-- **PCTSP** - 带奖励的旅行商问题（计划中）
-- **OP** - 定向问题（计划中）
-- 等多种组合优化问题
+- **PDP** - 取送货问题
+- **OP** - 定向问题
+
+#### 调度问题 (Scheduling)
+- **FFSP** - 柔性流水车间调度问题
 
 ### 可视化功能
 
@@ -256,16 +260,31 @@ app.run(debug=True, host='0.0.0.0', port=5001)  # 改为 5001
 
 ---
 
-## 📚 完整文档
+## 📚 文档导航
 
-详细功能文档位于 `docs/` 目录：
+### 快速开始指南
 
-- [文档索引](docs/README.md) - 所有文档的导航
-- [TSP路线生成指南](docs/TSP路线生成完整指南.md)
-- [实时训练曲线指南](docs/实时训练曲线功能完整指南.md)
-- [文件管理指南](docs/文件管理功能完整指南.md)
-- [算法对比指南](docs/算法对比页面功能完整指南.md)
-- [模型知识库指南](docs/模型知识库功能完整指南.md)
+- [FFSP 完整指南](docs/guides/FFSP_COMPLETE_GUIDE.md) - 柔性流水车间调度问题
+- [mTSP 完整指南](docs/guides/MTSP_COMPLETE_GUIDE.md) - 多旅行商问题
+- [TSP 路线生成指南](docs/guides/TSP路线生成完整指南.md) - 旅行商问题
+- [文件管理指南](docs/guides/文件管理功能完整指南.md) - 数据集上传和管理
+- [算法对比指南](docs/guides/算法对比页面功能完整指南.md) - 性能对比功能
+
+### 开发文档
+
+- [系统架构文档](docs/ARCHITECTURE.md) - 项目架构设计
+- [API 协议文档](docs/api/API_PROTOCOL.md) - RESTful API 接口
+- [添加新问题类型指南](docs/ADD_NEW_PROBLEM_TYPE_GUIDE.md) - 扩展新问题
+- [集成历史](docs/development/INTEGRATION_HISTORY.md) - 各问题类型集成记录
+
+### 部署文档
+
+- [部署指南](docs/deployment/DEPLOYMENT.md) - 生产环境部署
+- [macOS 部署](docs/deployment/DEPLOYMENT_MACOS.md) - macOS 特定说明
+
+### 更多文档
+
+- [完整文档索引](docs/README.md) - 所有文档的导航
 
 ---
 

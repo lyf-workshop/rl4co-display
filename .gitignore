@@ -166,7 +166,7 @@ DEPLOYMENT_MACOS.md
 .idea/
 .vscode/
 *.swp
-*.swo
+*.sw===
 *~
 
 # ========== 敏感配置文件 ==========
@@ -195,8 +195,8 @@ static/model_plots/*.gif
 data/checkpoints/*.ckpt
 data/logs/
 
-# 归档文件
-archive/
+# 归档文件（开发日志，保留在Git中供参考）
+# archive/
 
 # 临时文件和备份
 *.bak

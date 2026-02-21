@@ -20,8 +20,10 @@
   - mTSP ✅ (完全支持)
   - CVRP ✅ (经典应用)
   - SDVRP ✅ (支持)
-  - PCTSP ✅ (支持)
+  - VRPTW ✅ (支持)
+  - PDP ✅ (支持)
   - OP ✅ (支持)
+  - PCTSP ✅ (唯一可用策略，奖励收集专用)
 
 特点:
   - 通用性强，几乎适用所有路径规划问题
@@ -41,7 +43,7 @@
   - mTSP ✅ (优秀效果)
   - CVRP ✅ (优秀效果)
   - SDVRP ⚠️ (理论支持，效果待验证)
-  - PCTSP ❌ (不适用 - 不是对称问题)
+  - PCTSP ❌ (不适用 - 奖励/惩罚非对称，无法利用旋转对称性)
   - OP ❌ (不适用 - 不是对称问题)
 
 特点:
@@ -230,12 +232,73 @@ DQN:       ❌ 不兼容
 
 ---
 
+### PCTSP (奖励收集旅行商问题)
+
+| 策略 \ 算法 | REINFORCE | PPO | A2C |
+|------------|-----------|-----|-----|
+| **Attention Model** | ✅ 支持 | ✅ **推荐** | ✅ 良好 |
+| **POMO** | ❌ 不适用 | ❌ 不适用 | ❌ 不适用 |
+| **MatNet** | ❌ 不适用 | ❌ 不适用 | ❌ 不适用 |
+
+**推荐组合**:
+1. 🥇 Attention Model + PPO（最佳质量，奖励收集推荐PPO）
+2. 🥈 Attention Model + A2C（快速收敛）
+3. 🥉 Attention Model + REINFORCE（基础入门）
+
+**特别说明**:
+- PCTSP **只能使用 Attention Model**，POMO/MatNet 均不适用
+- 节点奖励（prize）和惩罚（penalty）非对称，破坏了POMO所需的旋转对称性
+- 约束：必须收集 `prize_required`（默认1.0）的总奖励才能返回 depot
+- 优化目标：最大化（节省的惩罚 − 路径长度）
+- 可视化：节点大小 ∝ 奖励值，节点边框深浅 ∝ 惩罚值
+
+---
+
+### SPCTSP (随机奖励收集旅行商问题)
+
+| 策略 \ 算法 | REINFORCE | PPO | A2C |
+|------------|-----------|-----|-----|
+| **Attention Model** | ✅ 支持 | ✅ **推荐** | ✅ 良好 |
+| **POMO** | ❌ 不适用 | ❌ 不适用 | ❌ 不适用 |
+| **MatNet** | ❌ 不适用 | ❌ 不适用 | ❌ 不适用 |
+
+**推荐组合**:
+1. 🥇 Attention Model + PPO（最佳质量，随机奖励推荐PPO，训练更稳定）
+2. 🥈 Attention Model + A2C（快速收敛）
+3. 🥉 Attention Model + REINFORCE（基础入门）
+
+**与 PCTSP 的核心差异**:
+
+| 特性 | PCTSP | SPCTSP |
+|------|-------|--------|
+| 奖励类型 | 确定性（完全信息） | 随机性（部分信息）|
+| 决策信息 | 真实奖励预先已知 | 只知期望奖励，访问后才知真实值 |
+| 难度 | 较低 | 较高（更接近现实） |
+| `real_prize` | = `deterministic_prize` | ~ Uniform(0, 2×deterministic_prize) |
+| 可视化 | 单奖励图 | 额外展示期望 vs 真实对比图 |
+
+**特别说明**:
+- SPCTSP 是 PCTSP 的随机版本（`_stochastic=True`）
+- **只能使用 Attention Model**，POMO/MatNet 均不适用
+- `deterministic_prize`（期望奖励）：决策前可见，用于路径规划
+- `real_prize`（真实奖励）：访问节点后才揭晓，期望值与 `deterministic_prize` 相同但有波动
+- 优化目标相同：最大化（节省的惩罚 − 路径长度）
+- 可视化额外包含「随机奖励对比柱形图」，直观展示每个节点期望 vs 真实奖励的偏差
+
+---
+
 ## 🚫 **不兼容组合**
 
 ### 策略限制
 ```yaml
 ❌ POMO + PCTSP: 
    原因: PCTSP不是对称问题，不适合多起点
+
+❌ POMO + SPCTSP:
+   原因: SPCTSP随机奖励 + 非对称特性，POMO不适用
+
+❌ MatNet + SPCTSP:
+   原因: MatNet专为矩阵型非对称问题设计，不适用于奖励收集类问题
 
 ❌ POMO + OP:
    原因: OP不是对称问题，不适合多起点
@@ -263,7 +326,8 @@ const policyConstraints = {
     'cvrp': ['attention', 'pomo'],          // CVRP支持所有策略
     'sdvrp': ['attention'],                 // SDVRP只推荐AM
     'pctsp': ['attention'],                 // PCTSP只能用AM
-    'op': ['attention'],                    // OP只能用AM
+    'spctsp': ['attention'],               // SPCTSP只能用AM（随机奖励限制）
+    'op': ['attention'],                   // OP只能用AM
 };
 ```
 
@@ -276,7 +340,8 @@ const algorithmConstraints = {
     'cvrp': ['reinforce', 'ppo', 'a2c'],    // CVRP支持所有算法
     'sdvrp': ['reinforce', 'ppo', 'a2c'],   // SDVRP支持所有算法
     'pctsp': ['reinforce', 'ppo', 'a2c'],   // PCTSP支持所有算法
-    'op': ['reinforce', 'ppo', 'a2c'],      // OP支持所有算法
+    'spctsp': ['reinforce', 'ppo', 'a2c'], // SPCTSP支持所有算法（推荐PPO）
+    'op': ['reinforce', 'ppo', 'a2c'],     // OP支持所有算法
 };
 ```
 

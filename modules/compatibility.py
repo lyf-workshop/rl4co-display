@@ -23,6 +23,8 @@ ROUTING_PROBLEMS_INTEGRATED = [
     'vrptw',    # VRP with Time Windows
     'op',       # Orienteering Problem
     'pdp',      # Pickup and Delivery Problem
+    'pctsp',    # Prize Collecting TSP
+    'spctsp',   # Stochastic Prize Collecting TSP
 ]
 
 # 调度问题（Scheduling Problems）- 本系统已集成
@@ -35,8 +37,6 @@ ALL_INTEGRATED_PROBLEMS = ROUTING_PROBLEMS_INTEGRATED + SCHEDULING_PROBLEMS_INTE
 
 # RL4CO 官方支持但本系统未集成的环境（供将来扩展）
 ROUTING_PROBLEMS_AVAILABLE = [
-    'pctsp',    # Prize Collecting TSP
-    'spctsp',   # Stochastic PCTSP
     'cvrptw',   # Capacitated VRP with Time Windows
     'svrp',     # Skill VRP
     'dpp',      # Dial-a-Ride Problem
@@ -59,10 +59,11 @@ SCHEDULING_PROBLEMS_AVAILABLE = [
 # 策略 → 问题兼容性
 POLICY_PROBLEM_COMPATIBILITY = {
     # Attention Model：支持所有路由问题（需要对应的 init_embedding）
+    # SPCTSP 也只支持 Attention Model（随机性使 POMO 不适用）
     'attention': ROUTING_PROBLEMS_INTEGRATED,
     'am': ROUTING_PROBLEMS_INTEGRATED,  # AM 别名
-    
-    # POMO：仅适用对称路由问题（利用旋转对称性）
+
+    # POMO：仅适用对称路由问题（利用旋转对称性），PCTSP 不适用（奖励非对称）
     'pomo': ['tsp', 'mtsp', 'cvrp'],
     
     # Pointer Network：基础路由问题（历史方法，性能有限）
@@ -134,6 +135,30 @@ WARNING_COMBINATIONS = [
         'severity': 'info'
     },
     {
+        'problem': 'pctsp',
+        'policy': 'pomo',
+        'message': 'POMO需要问题具有旋转对称性，PCTSP的奖励/惩罚是非对称的，不适用POMO。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'pctsp',
+        'policy': 'matnet',
+        'message': 'MatNet专为非对称距离矩阵和调度问题设计，不适用于PCTSP。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'spctsp',
+        'policy': 'pomo',
+        'message': 'POMO需要旋转对称性，SPCTSP的随机奖励/惩罚具有非对称性，不适用POMO。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'spctsp',
+        'policy': 'matnet',
+        'message': 'MatNet专为非对称距离矩阵和调度问题设计，不适用于SPCTSP。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
         'problem': 'sdvrp',
         'policy': 'pomo',
         'message': 'POMO在SDVRP上的效果未经充分验证，建议使用Attention Model',
@@ -192,6 +217,16 @@ RECOMMENDED_COMBINATIONS = {
     },
     'op': {
         'best': {'policy': 'attention', 'algorithm': 'ppo', 'description': '最佳质量配置'},
+        'fast': {'policy': 'attention', 'algorithm': 'a2c', 'description': '快速训练配置'},
+        'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '简单易用配置'},
+    },
+    'pctsp': {
+        'best': {'policy': 'attention', 'algorithm': 'ppo', 'description': '最佳质量配置（奖励收集推荐PPO）'},
+        'fast': {'policy': 'attention', 'algorithm': 'a2c', 'description': '快速训练配置'},
+        'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '简单易用配置'},
+    },
+    'spctsp': {
+        'best': {'policy': 'attention', 'algorithm': 'ppo', 'description': '最佳质量配置（随机奖励推荐PPO，更稳定）'},
         'fast': {'policy': 'attention', 'algorithm': 'a2c', 'description': '快速训练配置'},
         'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '简单易用配置'},
     },

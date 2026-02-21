@@ -511,12 +511,11 @@
                                 <option value="vrptw">VRPTW - 带时间窗VRP</option>
                                 <option value="pdp">PDP - 取送货问题 ⭐</option>
                                 <option value="op">OP - 定向问题 ⭐</option>
+                                <option value="pctsp">PCTSP - 奖励收集TSP 🆕</option>
+                                <option value="spctsp">SPCTSP - 随机奖励收集TSP 🆕</option>
                             </optgroup>
                             <optgroup label="调度问题 (Scheduling)">
                                 <option value="ffsp">FFSP - 柔性流水车间调度 🆕</option>
-                            </optgroup>
-                            <optgroup label="计划中">
-                                <option value="pctsp" disabled>PCTSP - 奖励收集TSP（敬请期待）</option>
                             </optgroup>
                         </select>
                         <p class="description">选择要解决的组合优化问题类型</p>
@@ -692,6 +691,108 @@
                                 <li>OP 不需要访问所有地点，选择<strong>高价值</strong>地点在约束内最大化奖励</li>
                                 <li>可视化中，地点大小 ∝ 奖励值，便于识别高价值目标</li>
                                 <li>推荐配置：20 地点 + 最大路径 2.0 + 距离奖励</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- PCTSP特有参数 -->
+                    <div id="pctsp-params" class="form-group" style="display: none;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🏆 奖励收集TSP参数</h4>
+                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">选择性访问节点，权衡奖励收集与惩罚规避</p>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div>
+                                <label for="pctsp-num-loc">🏙️ 客户节点数量（不含depot）</label>
+                                <input type="number" id="pctsp-num-loc" name="pctsp_num_loc" value="20" min="10" max="100" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    可选择访问的客户节点数（10-100）
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="penalty-factor">⚖️ 惩罚系数</label>
+                                <input type="number" id="penalty-factor" name="penalty_factor" value="3.0" min="1.0" max="5.0" step="0.1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    跳过节点的惩罚缩放系数（1.0-5.0）<br>
+                                    值越大，未访问节点代价越高
+                                </p>
+                            </div>
+
+                            <div style="grid-column: 1 / -1;">
+                                <label for="prize-required">🎯 最低奖励要求</label>
+                                <input type="number" id="prize-required" name="prize_required" value="1.0" min="0.5" max="2.0" step="0.1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    必须收集的最低总奖励才能返回depot（0.5-2.0，默认1.0）<br>
+                                    值越大，必须访问的节点越多
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style="background: #e8f4fd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #1565c0;">
+                            <strong>💡 PCTSP 提示：</strong>
+                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                                <li>奖励（prize）：访问节点获得，节点大小代表奖励大小</li>
+                                <li>惩罚（penalty）：<strong>未访问</strong>节点产生，边框颜色代表惩罚大小</li>
+                                <li>目标：最大化 节省的惩罚 − 路径长度</li>
+                                <li>推荐配置：20节点 + 惩罚系数3.0 + 最低奖励1.0</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- SPCTSP特有参数 -->
+                    <div id="spctsp-params" class="form-group" style="display: none;">
+                        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🎲 随机奖励收集TSP参数</h4>
+                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">PCTSP的随机版本：访问节点后才知道真实奖励</p>
+                        </div>
+
+                        <div style="background: #fff3e0; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #e65100; border-left: 4px solid #ff9800;">
+                            <strong>🎲 随机奖励机制说明：</strong>
+                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                                <li><strong>期望奖励（deterministic_prize）</strong>：决策前可见，用于路径规划</li>
+                                <li><strong>真实奖励（real_prize）</strong>：访问节点后才揭晓，服从 Uniform(0, 2×期望)</li>
+                                <li>真实奖励期望值 = 期望奖励，但有随机波动</li>
+                                <li>策略必须依靠期望值做出鲁棒决策</li>
+                            </ul>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div>
+                                <label for="spctsp-num-loc">🏙️ 客户节点数量（不含depot）</label>
+                                <input type="number" id="spctsp-num-loc" name="spctsp_num_loc" value="20" min="10" max="100" step="1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    可选择访问的客户节点数（10-100）
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="spctsp-penalty-factor">⚖️ 惩罚系数</label>
+                                <input type="number" id="spctsp-penalty-factor" name="spctsp_penalty_factor" value="3.0" min="1.0" max="5.0" step="0.1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    跳过节点的惩罚缩放系数（1.0-5.0）<br>
+                                    值越大，未访问节点代价越高
+                                </p>
+                            </div>
+
+                            <div style="grid-column: 1 / -1;">
+                                <label for="spctsp-prize-required">🎯 最低奖励要求</label>
+                                <input type="number" id="spctsp-prize-required" name="spctsp_prize_required" value="1.0" min="0.5" max="2.0" step="0.1">
+                                <p class="description" style="font-size: 0.8rem;">
+                                    必须收集的最低总奖励才能返回depot（0.5-2.0，默认1.0）<br>
+                                    基于真实奖励计算，比PCTSP更难满足（有随机性）
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style="background: #e8f4fd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #1565c0;">
+                            <strong>💡 SPCTSP vs PCTSP：</strong>
+                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
+                                <li>PCTSP：奖励确定，完全信息决策</li>
+                                <li>SPCTSP：奖励随机，不完全信息决策（更难，更接近现实）</li>
+                                <li>只支持 <strong>Attention Model</strong>（POMO/MatNet 不适用）</li>
+                                <li>推荐配置：20节点 + 惩罚系数3.0 + 最低奖励1.0 + PPO算法</li>
                             </ul>
                         </div>
                     </div>
@@ -1144,6 +1245,48 @@
                 if (opNumLoc) config.num_loc = parseInt(opNumLoc.value);
                 if (maxLength) config.max_length = parseFloat(maxLength.value);
                 if (prizeType) config.prize_type = prizeType.value;
+            }
+
+            // 添加PCTSP特有参数
+            if (problem === 'pctsp') {
+                const pctspNumLoc = document.getElementById('pctsp-num-loc');
+                const penaltyFactor = document.getElementById('penalty-factor');
+                const prizeRequired = document.getElementById('prize-required');
+
+                if (pctspNumLoc) config.num_loc = parseInt(pctspNumLoc.value);
+                if (penaltyFactor) config.penalty_factor = parseFloat(penaltyFactor.value);
+                if (prizeRequired) config.prize_required = parseFloat(prizeRequired.value);
+
+                // PCTSP 强制使用 Attention Model
+                config.model = 'attention';
+            }
+
+            // 添加SPCTSP特有参数
+            if (problem === 'spctsp') {
+                const spctspNumLoc = document.getElementById('spctsp-num-loc');
+                const spctspPenaltyFactor = document.getElementById('spctsp-penalty-factor');
+                const spctspPrizeRequired = document.getElementById('spctsp-prize-required');
+
+                if (spctspNumLoc) config.num_loc = parseInt(spctspNumLoc.value);
+                if (spctspPenaltyFactor) config.penalty_factor = parseFloat(spctspPenaltyFactor.value);
+                if (spctspPrizeRequired) config.prize_required = parseFloat(spctspPrizeRequired.value);
+
+                // SPCTSP 强制使用 Attention Model
+                config.model = 'attention';
+            }
+
+            // 添加SPCTSP特有参数
+            if (problem === 'spctsp') {
+                const spctspNumLoc = document.getElementById('spctsp-num-loc');
+                const spctspPenaltyFactor = document.getElementById('spctsp-penalty-factor');
+                const spctspPrizeRequired = document.getElementById('spctsp-prize-required');
+
+                if (spctspNumLoc) config.num_loc = parseInt(spctspNumLoc.value);
+                if (spctspPenaltyFactor) config.penalty_factor = parseFloat(spctspPenaltyFactor.value);
+                if (spctspPrizeRequired) config.prize_required = parseFloat(spctspPrizeRequired.value);
+
+                // SPCTSP 强制使用 Attention Model
+                config.model = 'attention';
             }
 
             // 添加FFSP特有参数
@@ -1929,7 +2072,79 @@
                     const isOP = this.currentProblem === 'op';
                     opParams.style.display = isOP ? 'block' : 'none';
                 }
-                
+
+                // 显示/隐藏PCTSP特有参数
+                const pctspParams = document.getElementById('pctsp-params');
+                if (pctspParams) {
+                    const isPCTSP = this.currentProblem === 'pctsp';
+                    pctspParams.style.display = isPCTSP ? 'block' : 'none';
+
+                    // PCTSP 强制使用 Attention Model（POMO不适用）
+                    if (isPCTSP) {
+                        const modelSelect = document.getElementById('model-select');
+                        if (modelSelect && modelSelect.value !== 'attention') {
+                            modelSelect.value = 'attention';
+                            this.currentPolicy = 'attention';
+                            this.updateCompatibility();
+                        }
+                        // 隐藏 POMO 和 MatNet 选项
+                        Array.from(modelSelect ? modelSelect.options : []).forEach(opt => {
+                            if (opt.value === 'pomo' || opt.value === 'matnet') {
+                                opt.disabled = true;
+                                opt.title = 'PCTSP不支持此策略';
+                            } else {
+                                opt.disabled = false;
+                                opt.title = '';
+                            }
+                        });
+                    } else {
+                        // 其他问题时恢复所有策略选项
+                        const modelSelect = document.getElementById('model-select');
+                        if (modelSelect) {
+                            Array.from(modelSelect.options).forEach(opt => {
+                                opt.disabled = false;
+                                opt.title = '';
+                            });
+                        }
+                    }
+                }
+
+                // 显示/隐藏SPCTSP特有参数
+                const spctspParams = document.getElementById('spctsp-params');
+                if (spctspParams) {
+                    const isSPCTSP = this.currentProblem === 'spctsp';
+                    spctspParams.style.display = isSPCTSP ? 'block' : 'none';
+
+                    // SPCTSP 强制使用 Attention Model（与 PCTSP 相同限制）
+                    if (isSPCTSP) {
+                        const modelSelect = document.getElementById('model-select');
+                        if (modelSelect && modelSelect.value !== 'attention') {
+                            modelSelect.value = 'attention';
+                            this.currentPolicy = 'attention';
+                            this.updateCompatibility();
+                        }
+                        // 禁用 POMO 和 MatNet
+                        Array.from(modelSelect ? modelSelect.options : []).forEach(opt => {
+                            if (opt.value === 'pomo' || opt.value === 'matnet') {
+                                opt.disabled = true;
+                                opt.title = 'SPCTSP不支持此策略（随机奖励需要Attention Model）';
+                            } else {
+                                opt.disabled = false;
+                                opt.title = '';
+                            }
+                        });
+                    } else if (this.currentProblem !== 'pctsp') {
+                        // 非 PCTSP/SPCTSP 时恢复所有策略选项
+                        const modelSelect = document.getElementById('model-select');
+                        if (modelSelect) {
+                            Array.from(modelSelect.options).forEach(opt => {
+                                opt.disabled = false;
+                                opt.title = '';
+                            });
+                        }
+                    }
+                }
+
                 // 显示/隐藏FFSP特有参数
                 const ffspParams = document.getElementById('ffsp-params');
                 if (ffspParams) {

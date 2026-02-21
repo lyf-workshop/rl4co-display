@@ -157,11 +157,22 @@ class PDPTrainer(BaseTrainer):
                             instance_id=i+1
                         )
                         if animation_path and os.path.exists(animation_path):
-                            # 转换为 URL 路径
-                            plots_base_dir = os.path.join(os.getcwd(), 'static', 'plots')
-                            url_path = animation_path.replace(plots_base_dir, '/static/plots')
+                            anim_filename = os.path.basename(animation_path)
+                            url_path = f'/static/model_plots/user_{self.user_id}/{anim_filename}'
                             animation_paths.append(url_path)
                             self.send_message('info', f'  ✓ 动画 {i+1} 生成成功')
+
+                            if self.bg_file_manager:
+                                try:
+                                    self.bg_file_manager.save_file_record(
+                                        user_id=self.user_id,
+                                        session_id=self.session_id,
+                                        filename=anim_filename,
+                                        file_type='animation',
+                                        file_path=animation_path
+                                    )
+                                except Exception as db_err:
+                                    self.send_message('info', f'  ⚠️ 动画数据库记录失败: {str(db_err)}')
                     except Exception as e:
                         self.send_message('info', f'  ⚠️ 动画 {i+1} 生成失败: {str(e)}')
                     
@@ -177,11 +188,22 @@ class PDPTrainer(BaseTrainer):
                             instance_id=i+1
                         )
                         if plot_path and os.path.exists(plot_path):
-                            # 转换为 URL 路径
-                            plots_base_dir = os.path.join(os.getcwd(), 'static', 'plots')
-                            url_path = plot_path.replace(plots_base_dir, '/static/plots')
+                            plot_filename = os.path.basename(plot_path)
+                            url_path = f'/static/model_plots/user_{self.user_id}/{plot_filename}'
                             plot_paths.append(url_path)
                             self.send_message('info', f'  ✓ 对比图 {i+1} 生成成功')
+
+                            if self.bg_file_manager:
+                                try:
+                                    self.bg_file_manager.save_file_record(
+                                        user_id=self.user_id,
+                                        session_id=self.session_id,
+                                        filename=plot_filename,
+                                        file_type='comparison',
+                                        file_path=plot_path
+                                    )
+                                except Exception as db_err:
+                                    self.send_message('info', f'  ⚠️ 对比图数据库记录失败: {str(db_err)}')
                     except Exception as e:
                         self.send_message('info', f'  ⚠️ 对比图 {i+1} 生成失败: {str(e)}')
                         
@@ -190,6 +212,21 @@ class PDPTrainer(BaseTrainer):
                     continue
             
             self.send_message('info', f'🎉 PDP可视化完成: {len(animation_paths)}个动画, {len(plot_paths)}个对比图')
+
+            # 保存 checkpoint 记录到数据库
+            if self.bg_file_manager and checkpoint_path:
+                try:
+                    checkpoint_filename = os.path.basename(checkpoint_path)
+                    self.bg_file_manager.save_file_record(
+                        user_id=self.user_id,
+                        session_id=self.session_id,
+                        filename=checkpoint_filename,
+                        file_type='checkpoint',
+                        file_path=checkpoint_path
+                    )
+                    self.send_message('info', '  ✓ checkpoint 记录已保存')
+                except Exception as db_err:
+                    self.send_message('info', f'  ⚠️ checkpoint 数据库记录失败: {str(db_err)}')
             
         except Exception as e:
             self.send_message('error', f'❌ 可视化生成失败: {str(e)}')
