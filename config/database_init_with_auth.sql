@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS training_files (
     user_id INT NOT NULL COMMENT '用户ID',
     session_id VARCHAR(50) NOT NULL COMMENT '训练会话ID',
     file_name VARCHAR(255) NOT NULL COMMENT '文件名',
-    file_type ENUM('plot', 'animation', 'curve', 'checkpoint') NOT NULL COMMENT '文件类型',
+    file_type ENUM('plot', 'comparison', 'animation', 'curve', 'checkpoint') NOT NULL COMMENT '文件类型',
     file_path VARCHAR(500) NOT NULL COMMENT '文件路径',
     file_size BIGINT COMMENT '文件大小（字节）',
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

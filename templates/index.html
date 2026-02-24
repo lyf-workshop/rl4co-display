@@ -126,6 +126,11 @@
             cursor: pointer;
         }
 
+        .form-group select option:disabled {
+            color: #bbb;
+            font-style: italic;
+        }
+
         .description {
             color: #666;
             font-size: 0.85rem;
@@ -1881,6 +1886,7 @@
                     this.currentPolicy = e.target.value;
                     this.updatePolicyDescription();
                     this.showPolicySpecificParams();
+                    this.updateAlgorithmConstraints();
                     this.validateConfiguration();
                 });
                 
@@ -1900,37 +1906,8 @@
             }
             
             async updateAvailableOptions() {
-                try {
-                    const response = await fetch(`/api/compatibility/constraints/${this.currentProblem}`);
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        const { available_policies, available_algorithms } = result.data;
-                        this.updateSelectOptions('model-select', available_policies, this.getPolicyDisplayName);
-                        this.updateSelectOptions('algorithm-select', available_algorithms, this.getAlgorithmDisplayName);
-                    }
-                } catch (error) {
-                    console.error('更新可用选项失败:', error);
-                }
-            }
-            
-            updateSelectOptions(selectId, options, displayNameFunc) {
-                const select = document.getElementById(selectId);
-                const currentValue = select.value;
-                select.innerHTML = '';
-                
-                options.forEach(option => {
-                    const optionElement = document.createElement('option');
-                    optionElement.value = option;
-                    optionElement.textContent = displayNameFunc(option);
-                    select.appendChild(optionElement);
-                });
-                
-                if (options.includes(currentValue)) {
-                    select.value = currentValue;
-                } else if (options.length > 0) {
-                    select.value = options[0];
-                }
+                this.updatePolicyConstraints();
+                this.updateAlgorithmConstraints();
             }
             
             async validateConfiguration() {
@@ -2076,93 +2053,113 @@
                 // 显示/隐藏PCTSP特有参数
                 const pctspParams = document.getElementById('pctsp-params');
                 if (pctspParams) {
-                    const isPCTSP = this.currentProblem === 'pctsp';
-                    pctspParams.style.display = isPCTSP ? 'block' : 'none';
-
-                    // PCTSP 强制使用 Attention Model（POMO不适用）
-                    if (isPCTSP) {
-                        const modelSelect = document.getElementById('model-select');
-                        if (modelSelect && modelSelect.value !== 'attention') {
-                            modelSelect.value = 'attention';
-                            this.currentPolicy = 'attention';
-                            this.updateCompatibility();
-                        }
-                        // 隐藏 POMO 和 MatNet 选项
-                        Array.from(modelSelect ? modelSelect.options : []).forEach(opt => {
-                            if (opt.value === 'pomo' || opt.value === 'matnet') {
-                                opt.disabled = true;
-                                opt.title = 'PCTSP不支持此策略';
-                            } else {
-                                opt.disabled = false;
-                                opt.title = '';
-                            }
-                        });
-                    } else {
-                        // 其他问题时恢复所有策略选项
-                        const modelSelect = document.getElementById('model-select');
-                        if (modelSelect) {
-                            Array.from(modelSelect.options).forEach(opt => {
-                                opt.disabled = false;
-                                opt.title = '';
-                            });
-                        }
-                    }
+                    pctspParams.style.display = this.currentProblem === 'pctsp' ? 'block' : 'none';
                 }
 
                 // 显示/隐藏SPCTSP特有参数
                 const spctspParams = document.getElementById('spctsp-params');
                 if (spctspParams) {
-                    const isSPCTSP = this.currentProblem === 'spctsp';
-                    spctspParams.style.display = isSPCTSP ? 'block' : 'none';
-
-                    // SPCTSP 强制使用 Attention Model（与 PCTSP 相同限制）
-                    if (isSPCTSP) {
-                        const modelSelect = document.getElementById('model-select');
-                        if (modelSelect && modelSelect.value !== 'attention') {
-                            modelSelect.value = 'attention';
-                            this.currentPolicy = 'attention';
-                            this.updateCompatibility();
-                        }
-                        // 禁用 POMO 和 MatNet
-                        Array.from(modelSelect ? modelSelect.options : []).forEach(opt => {
-                            if (opt.value === 'pomo' || opt.value === 'matnet') {
-                                opt.disabled = true;
-                                opt.title = 'SPCTSP不支持此策略（随机奖励需要Attention Model）';
-                            } else {
-                                opt.disabled = false;
-                                opt.title = '';
-                            }
-                        });
-                    } else if (this.currentProblem !== 'pctsp') {
-                        // 非 PCTSP/SPCTSP 时恢复所有策略选项
-                        const modelSelect = document.getElementById('model-select');
-                        if (modelSelect) {
-                            Array.from(modelSelect.options).forEach(opt => {
-                                opt.disabled = false;
-                                opt.title = '';
-                            });
-                        }
-                    }
+                    spctspParams.style.display = this.currentProblem === 'spctsp' ? 'block' : 'none';
                 }
 
                 // 显示/隐藏FFSP特有参数
                 const ffspParams = document.getElementById('ffsp-params');
                 if (ffspParams) {
-                    const isFFSP = this.currentProblem === 'ffsp';
-                    ffspParams.style.display = isFFSP ? 'block' : 'none';
-                    
-                    // FFSP 强制使用 MatNet
-                    if (isFFSP) {
-                        const modelSelect = document.getElementById('model-select');
-                        if (modelSelect && modelSelect.value !== 'matnet') {
-                            modelSelect.value = 'matnet';
-                            this.currentPolicy = 'matnet';
-                            this.updateCompatibility();
-                        }
+                    ffspParams.style.display = this.currentProblem === 'ffsp' ? 'block' : 'none';
+                }
+
+                // ── 统一的策略模型与算法约束 ──
+                this.updatePolicyConstraints();
+                this.updateAlgorithmConstraints();
+            }
+
+            updatePolicyConstraints() {
+                const POLICY_PROBLEM_COMPAT = {
+                    'attention': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
+                    'pomo':      ['tsp', 'mtsp', 'cvrp'],
+                    'matnet':    ['atsp', 'ffsp'],
+                    'ptrnet':    ['tsp', 'cvrp'],
+                };
+
+                const PROBLEM_NAMES = {
+                    'tsp': 'TSP', 'atsp': 'ATSP', 'mtsp': 'mTSP',
+                    'cvrp': 'CVRP', 'sdvrp': 'SDVRP', 'vrptw': 'VRPTW',
+                    'op': 'OP', 'pdp': 'PDP', 'pctsp': 'PCTSP',
+                    'spctsp': 'SPCTSP', 'ffsp': 'FFSP',
+                };
+
+                const modelSelect = document.getElementById('model-select');
+                if (!modelSelect) return;
+
+                const problem = this.currentProblem;
+                let hasValidSelection = false;
+                let firstValidValue = null;
+
+                Array.from(modelSelect.options).forEach(opt => {
+                    const compatProblems = POLICY_PROBLEM_COMPAT[opt.value] || [];
+                    const isCompat = compatProblems.includes(problem);
+
+                    opt.disabled = !isCompat;
+                    opt.title = isCompat ? '' : `此策略不支持 ${PROBLEM_NAMES[problem] || problem.toUpperCase()} 问题`;
+
+                    if (isCompat && !firstValidValue) {
+                        firstValidValue = opt.value;
                     }
+                    if (isCompat && opt.value === modelSelect.value) {
+                        hasValidSelection = true;
+                    }
+                });
+
+                if (!hasValidSelection && firstValidValue) {
+                    modelSelect.value = firstValidValue;
+                    this.currentPolicy = firstValidValue;
+                    this.updatePolicyDescription();
+                    this.showPolicySpecificParams();
                 }
             }
-            
+
+            updateAlgorithmConstraints() {
+                const POLICY_ALGO_COMPAT = {
+                    'attention': ['reinforce', 'ppo', 'a2c'],
+                    'pomo':      ['reinforce', 'ppo', 'a2c'],
+                    'matnet':    ['reinforce', 'ppo', 'a2c'],
+                    'ptrnet':    ['reinforce'],
+                };
+
+                const POLICY_NAMES = {
+                    'attention': 'Attention Model', 'pomo': 'POMO',
+                    'matnet': 'MatNet', 'ptrnet': 'Pointer Network',
+                };
+
+                const algoSelect = document.getElementById('algorithm-select');
+                if (!algoSelect) return;
+
+                const policy = this.currentPolicy;
+                const compatAlgos = POLICY_ALGO_COMPAT[policy] || ['reinforce', 'ppo', 'a2c'];
+                let hasValidSelection = false;
+                let firstValidValue = null;
+
+                Array.from(algoSelect.options).forEach(opt => {
+                    const isCompat = compatAlgos.includes(opt.value);
+
+                    opt.disabled = !isCompat;
+                    opt.title = isCompat ? '' : `${POLICY_NAMES[policy] || policy} 不支持此算法`;
+
+                    if (isCompat && !firstValidValue) {
+                        firstValidValue = opt.value;
+                    }
+                    if (isCompat && opt.value === algoSelect.value) {
+                        hasValidSelection = true;
+                    }
+                });
+
+                if (!hasValidSelection && firstValidValue) {
+                    algoSelect.value = firstValidValue;
+                    this.currentAlgorithm = firstValidValue;
+                    this.updateAlgorithmDescription();
+                }
+            }
+
             getPolicyDisplayName(policy) {
                 const names = {
                     'attention': 'Attention Model (经典)',
