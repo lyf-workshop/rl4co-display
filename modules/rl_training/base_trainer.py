@@ -344,10 +344,33 @@ class BaseTrainer:
         if self.policy_name in model_mapping:
             self.policy_name = model_mapping[self.policy_name]
         
-        # 检测设备
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.accelerator = "gpu" if torch.cuda.is_available() else "cpu"
-        self.devices = 1 if torch.cuda.is_available() else "auto"
+        # 检测设备，支持从 config 指定 GPU 编号
+        gpu_id = config.get('gpu_id', None)
+        if torch.cuda.is_available():
+            if gpu_id is not None:
+                try:
+                    gpu_id = int(gpu_id)
+                    if 0 <= gpu_id < torch.cuda.device_count():
+                        self.device = torch.device(f"cuda:{gpu_id}")
+                        self.accelerator = "gpu"
+                        self.devices = [gpu_id]
+                    else:
+                        print(f"警告: gpu_id={gpu_id} 超出范围，回退到 cuda:0")
+                        self.device = torch.device("cuda:0")
+                        self.accelerator = "gpu"
+                        self.devices = [0]
+                except (ValueError, TypeError):
+                    self.device = torch.device("cuda")
+                    self.accelerator = "gpu"
+                    self.devices = 1
+            else:
+                self.device = torch.device("cuda")
+                self.accelerator = "gpu"
+                self.devices = 1
+        else:
+            self.device = torch.device("cpu")
+            self.accelerator = "cpu"
+            self.devices = "auto"
     
     def send_message(self, msg_type, message, **kwargs):
         """发送消息到队列"""

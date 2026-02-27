@@ -15,6 +15,7 @@ from auth_module import (
     get_current_user_id
 )
 from modules.compatibility import validate_combination
+from app_gpu import _get_allocations
 
 training_bp = Blueprint('training', __name__)
 logger = logging.getLogger('rl4co_display')
@@ -39,6 +40,48 @@ def init_training_globals(status_dict, queues_dict, rl4co_available, real_traini
     get_background_db = bg_db_func
 
 
+def _allocate_gpu(gpu_id, session_id, user_id):
+    """训练启动时在数据库记录 GPU 占用（内部调用）"""
+    if gpu_id is None or get_background_db is None:
+        return
+    try:
+        db = get_background_db()
+        if db is None:
+            return
+        cursor = db.cursor()
+        cursor.execute("""
+            INSERT INTO gpu_allocations (gpu_id, session_id, user_id, status)
+            VALUES (%s, %s, %s, 'allocated')
+        """, (gpu_id, session_id, user_id))
+        cursor.close()
+        db.close()
+        logger.info(f"GPU {gpu_id} 占用记录已写入 (session={session_id})")
+    except Exception as e:
+        logger.error(f"写入 GPU 占用记录失败: {e}")
+
+
+def _release_gpu(session_id):
+    """训练结束/失败时释放 GPU 占用（内部调用，使用后台数据库连接）"""
+    if get_background_db is None:
+        return
+    try:
+        from datetime import datetime
+        db = get_background_db()
+        if db is None:
+            return
+        cursor = db.cursor()
+        cursor.execute("""
+            UPDATE gpu_allocations
+            SET status = 'released', released_at = %s
+            WHERE session_id = %s AND status = 'allocated'
+        """, (datetime.now(), session_id))
+        cursor.close()
+        db.close()
+        logger.info(f"GPU 占用已释放 (session={session_id})")
+    except Exception as e:
+        logger.error(f"释放 GPU 占用失败: {e}")
+
+
 @training_bp.route('/api/start_training', methods=['POST'])
 @login_required
 def start_training():
@@ -53,7 +96,17 @@ def start_training():
             }), 401
         
         config = request.json
-        
+
+        # ========== 解析并写入 gpu_id ==========
+        gpu_id = config.get('gpu_id')
+        if gpu_id is not None:
+            try:
+                gpu_id = int(gpu_id)
+                config['gpu_id'] = gpu_id
+            except (ValueError, TypeError):
+                gpu_id = None
+                config.pop('gpu_id', None)
+
         # ========== 验证配置组合 ==========
         problem = config.get('problem', 'tsp')
         policy = config.get('model', 'attention')
@@ -89,31 +142,44 @@ def start_training():
         
         # 创建消息队列
         training_queues[session_id] = Queue()
-        
+
+        # ========== 写入 GPU 占用记录 ==========
+        if gpu_id is not None:
+            _allocate_gpu(gpu_id, session_id, user_id)
+
+        # 包装训练函数：训练结束后自动释放 GPU
+        def _run_with_gpu_release(train_func, *args):
+            try:
+                train_func(*args)
+            finally:
+                _release_gpu(session_id)
+
         # 根据 RL4CO 是否可用选择训练函数
         if RL4CO_AVAILABLE:
             # 真实训练模式 - 传入必要的全局对象和函数
             training_thread = threading.Thread(
-                target=real_rl4co_training,
-                args=(config, session_id, user_id, training_queues[session_id], training_status, get_background_db),
+                target=_run_with_gpu_release,
+                args=(real_rl4co_training, config, session_id, user_id,
+                      training_queues[session_id], training_status, get_background_db),
                 daemon=True
             )
             mode = "真实训练模式"
         else:
             # 模拟训练模式
             training_thread = threading.Thread(
-                target=simulate_training,
-                args=(config, session_id, user_id),
+                target=_run_with_gpu_release,
+                args=(simulate_training, config, session_id, user_id),
                 daemon=True
             )
             mode = "模拟训练模式"
-        
+
         training_thread.start()
         
         return jsonify({
             'success': True,
             'session_id': session_id,
-            'message': f'训练已启动 ({mode})'
+            'gpu_id': gpu_id,
+            'message': f'训练已启动 ({mode})' + (f'，使用 GPU {gpu_id}' if gpu_id is not None else '，使用 CPU')
         })
         
     except Exception as e:

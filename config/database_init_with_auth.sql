@@ -69,7 +69,26 @@ CREATE TABLE IF NOT EXISTS training_files (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='训练生成文件表';
 
 -- ============================================
--- 4. 创建测试用户（可选）
+-- 4. 创建 GPU 占用记录表
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS gpu_allocations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    gpu_id INT NOT NULL COMMENT 'GPU 编号（0-based）',
+    session_id VARCHAR(50) NOT NULL COMMENT '关联的训练会话ID',
+    user_id INT NOT NULL COMMENT '占用该GPU的用户ID',
+    allocated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '分配时间',
+    released_at TIMESTAMP NULL COMMENT '释放时间',
+    status ENUM('allocated', 'released') DEFAULT 'allocated' COMMENT '占用状态',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_gpu_id (gpu_id),
+    INDEX idx_session_id (session_id),
+    INDEX idx_status (status),
+    INDEX idx_allocated_at (allocated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='GPU 资源占用记录表';
+
+-- ============================================
+-- 5. 创建测试用户（可选）
 -- ============================================
 
 -- 创建管理员账户
@@ -88,7 +107,7 @@ INSERT IGNORE INTO users (username, password) VALUES
 ('testuser2', 'pbkdf2:sha256:600000$testsalt2$hashed123456');
 
 -- ============================================
--- 5. 验证表创建
+-- 6. 验证表创建
 -- ============================================
 
 -- 查看所有表
@@ -98,6 +117,7 @@ SHOW TABLES;
 DESCRIBE users;
 DESCRIBE training_sessions;
 DESCRIBE training_files;
+DESCRIBE gpu_allocations;
 
 -- 查看表记录数
 SELECT 'users' as table_name, COUNT(*) as count FROM users
@@ -224,6 +244,7 @@ SELECT 'Tables created:' AS '';
 SELECT '  - users' AS '';
 SELECT '  - training_sessions' AS '';
 SELECT '  - training_files' AS '';
+SELECT '  - gpu_allocations' AS '';
 SELECT '========================================' AS '';
 SELECT 'Views created:' AS '';
 SELECT '  - user_training_stats' AS '';

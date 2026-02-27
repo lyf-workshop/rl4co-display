@@ -15,6 +15,7 @@ from .attention_model_policy import AttentionModelPolicyWrapper
 from .pomo_policy import POMOPolicyWrapper
 from .ptrnet_policy import PtrNetPolicyWrapper
 from .matnet_policy import MatNetPolicyWrapper
+from .ham_policy import HAMPolicyWrapper
 
 # 策略注册表
 POLICY_REGISTRY = {
@@ -24,6 +25,7 @@ POLICY_REGISTRY = {
     'ptrnet': PtrNetPolicyWrapper,
     'ptr': PtrNetPolicyWrapper,  # 别名
     'matnet': MatNetPolicyWrapper,  # MatNet - 支持ATSP和FFSP
+    'ham': HAMPolicyWrapper,  # HAM - PDP专用异构注意力
     # 未来扩展：
     # 'symnco': SymNCOPolicyWrapper,
     # 'mdam': MDAMPolicyWrapper,
@@ -103,6 +105,25 @@ POLICY_INFO = {
             'flatten_stages': {'default': True, 'type': 'bool'},  # FFSP专用
         }
     },
+    'ham': {
+        'name': 'HAM',
+        'full_name': 'Heterogeneous Attention Model',
+        'cn_name': '异构注意力模型',
+        'type': 'heterogeneous-attention',
+        'year': 2021,
+        'status': 'active',
+        'description': '基于异构多头注意力的构造式模型，专为取送货问题（PDP）设计，区分depot/pickup/delivery节点',
+        'advantages': ['异构节点建模', 'PDP问题首选', '取送货约束感知', '基于AM架构易于理解'],
+        'disadvantages': ['仅支持PDP问题', '问题适用面窄'],
+        'suitable_for': ['PDP'],
+        'params': {
+            'embed_dim': {'default': 128, 'range': [64, 256]},
+            'num_encoder_layers': {'default': 3, 'range': [1, 6]},
+            'num_heads': {'default': 8, 'range': [4, 16]},
+            'normalization': {'default': 'batch', 'options': ['batch', 'instance', 'layer']},
+            'feedforward_hidden': {'default': 512, 'range': [256, 1024]},
+        }
+    },
 }
 
 
@@ -168,6 +189,7 @@ __all__ = [
     'POMOPolicyWrapper',
     'PtrNetPolicyWrapper',
     'MatNetPolicyWrapper',
+    'HAMPolicyWrapper',
     'POLICY_REGISTRY',
     'POLICY_INFO',
     'get_policy_class',

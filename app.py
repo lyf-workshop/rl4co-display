@@ -361,6 +361,7 @@ from app_stats import stats_bp
 from app_compat import compat_bp
 from app_training import training_bp, init_training_globals
 from app_files import files_bp
+from app_gpu import gpu_bp, init_gpu_globals
 
 # 为训练模块注入全局变量
 init_training_globals(
@@ -376,13 +377,17 @@ init_training_globals(
 import app_stats
 app_stats.cached_api = cached_api
 
+# 为 GPU 模块注入数据库访问函数
+init_gpu_globals(get_db)
+
 # 注册Blueprint - 保持URL路径不变
-app.register_blueprint(auth_bp)  # 认证路由：/login, /register, /api/login等
-app.register_blueprint(pages_bp)  # 页面路由：/, /benchmark, /profile等
-app.register_blueprint(stats_bp)  # 统计API：/api/user_stats, /api/user_activity
+app.register_blueprint(auth_bp)    # 认证路由：/login, /register, /api/login等
+app.register_blueprint(pages_bp)   # 页面路由：/, /benchmark, /profile等
+app.register_blueprint(stats_bp)   # 统计API：/api/user_stats, /api/user_activity
 app.register_blueprint(compat_bp)  # 兼容性API：/api/compatibility/*
-app.register_blueprint(training_bp)  # 训练API：/api/start_training, /api/training_progress等
-app.register_blueprint(files_bp)  # 文件管理API：/api/upload_dataset, /api/list_files等
+app.register_blueprint(training_bp) # 训练API：/api/start_training, /api/training_progress等
+app.register_blueprint(files_bp)   # 文件管理API：/api/upload_dataset, /api/list_files等
+app.register_blueprint(gpu_bp)     # GPU管理API：/api/gpu_status, /api/gpu_allocate等
 
 logger.info("✓ 所有Blueprint模块已注册")
 

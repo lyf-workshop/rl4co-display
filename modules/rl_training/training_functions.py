@@ -517,11 +517,33 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
             'message': f'配置: Epochs={epochs}, Batch={batch_size}, LR={learning_rate}, 问题规模={num_loc}'
         }))
         
-        # 检测设备
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        accelerator = "gpu" if torch.cuda.is_available() else "cpu"
-        devices = 1 if torch.cuda.is_available() else "auto"
-        
+        # 检测设备，支持从 config 指定 GPU 编号
+        gpu_id = config.get('gpu_id', None)
+        if torch.cuda.is_available():
+            if gpu_id is not None:
+                try:
+                    gpu_id = int(gpu_id)
+                    if 0 <= gpu_id < torch.cuda.device_count():
+                        device = torch.device(f"cuda:{gpu_id}")
+                        accelerator = "gpu"
+                        devices = [gpu_id]
+                    else:
+                        device = torch.device("cuda:0")
+                        accelerator = "gpu"
+                        devices = [0]
+                except (ValueError, TypeError):
+                    device = torch.device("cuda")
+                    accelerator = "gpu"
+                    devices = 1
+            else:
+                device = torch.device("cuda")
+                accelerator = "gpu"
+                devices = 1
+        else:
+            device = torch.device("cpu")
+            accelerator = "cpu"
+            devices = "auto"
+
         queue.put(json.dumps({
             'type': 'info',
             'message': f'使用设备: {device}'

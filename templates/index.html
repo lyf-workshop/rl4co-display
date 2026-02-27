@@ -895,7 +895,8 @@
                         <select id="model-select" name="model" class="form-control">
                             <option value="attention" selected>Attention Model（经典，快速）</option>
                             <option value="pomo">POMO（高质量，多起点）</option>
-                            <option value="matnet">MatNet（调度专用，矩阵注意力）🆕</option>
+                            <option value="ham">HAM（异构注意力，PDP专用）🆕</option>
+                            <option value="matnet">MatNet（调度专用，矩阵注意力）</option>
                             <option value="ptrnet">Pointer Network（开创性，教学）</option>
                         </select>
                         <p class="description" id="model-description">经典的基于Transformer的构造式模型，速度快，适合入门</p>
@@ -934,6 +935,30 @@
                                value="50" min="10" max="100">
                         <p class="description">同时从多个起点构建路径（10-100，推荐50）</p>
                     </div>
+
+                    <!-- HAM特有参数（条件显示） -->
+                    <div id="ham-params" class="form-group advanced-params" style="display: none;">
+                        <div class="params-grid">
+                            <div class="form-group">
+                                <label for="ham-normalization">📐 归一化方式</label>
+                                <select id="ham-normalization" name="normalization" class="form-control">
+                                    <option value="batch" selected>Batch Normalization</option>
+                                    <option value="instance">Instance Normalization</option>
+                                    <option value="layer">Layer Normalization</option>
+                                </select>
+                                <p class="description">编码器归一化类型（推荐 Batch）</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="ham-feedforward-hidden">🔧 前馈层维度</label>
+                                <input type="number" id="ham-feedforward-hidden" name="feedforward_hidden" class="form-control"
+                                       value="512" min="256" max="1024" step="128">
+                                <p class="description">前馈网络隐藏层维度（256-1024，推荐512）</p>
+                            </div>
+                        </div>
+                        <div class="alert" style="background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
+                            💡 <strong>HAM</strong> 使用异构多头注意力区分 depot / pickup / delivery 节点，是 PDP 问题的首选模型。
+                        </div>
+                    </div>
                 </div>
 
             </section>
@@ -965,7 +990,60 @@
                 </div>
             </section>
 
-            <!-- 第4步：数据集（可选，仅TSP） -->
+            <!-- 第4步（新）：GPU 选择 -->
+            <section class="config-section" style="grid-template-columns: 1fr;">
+              <div class="config-card">
+                <h3><span class="icon">🖥️</span> 第4步：计算设备选择</h3>
+                <p style="color:#666;font-size:0.95rem;margin-bottom:1rem;">
+                  选择用于本次训练的 GPU。不选则使用 CPU（训练较慢）。
+                </p>
+
+                <!-- Mock 数据提示 -->
+                <div id="gpu-mock-banner" style="display:none;
+                    background:#fff3cd;border-left:4px solid #ffc107;
+                    padding:0.6rem 1rem;border-radius:6px;font-size:0.88rem;
+                    margin-bottom:1rem;color:#856404;">
+                  ⚠️ 当前为演示数据（服务器未检测到真实 GPU）
+                </div>
+
+                <!-- 刷新按钮 + 时间戳 -->
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+                  <button type="button" onclick="loadGpuStatus()"
+                      style="background:linear-gradient(135deg,#667eea,#764ba2);
+                             color:white;border:none;padding:0.4rem 1rem;
+                             border-radius:20px;cursor:pointer;font-size:0.85rem;">
+                    🔄 刷新状态
+                  </button>
+                  <span id="gpu-last-update" style="color:#999;font-size:0.82rem;"></span>
+                </div>
+
+                <!-- GPU 卡片容器 -->
+                <div id="gpu-cards-container" style="
+                    display:grid;
+                    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+                    gap:0.8rem;">
+                  <div style="color:#aaa;font-size:0.9rem;padding:1rem;">
+                    加载中...
+                  </div>
+                </div>
+
+                <!-- CPU 选项 -->
+                <div style="margin-top:0.8rem;">
+                  <label style="display:flex;align-items:center;gap:0.5rem;
+                                cursor:pointer;padding:0.7rem 1rem;
+                                border:2px solid #ddd;border-radius:10px;
+                                transition:border-color 0.2s;"
+                         id="cpu-option-label">
+                    <input type="radio" name="gpu_select" value="cpu" id="gpu-select-cpu"
+                           style="accent-color:#667eea;" checked
+                           onchange="onGpuSelect(null)">
+                    <span style="font-size:0.95rem;">💻 使用 CPU（默认，无需 GPU）</span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <!-- 第5步：数据集（可选，仅TSP） -->
             <section class="config-section" style="grid-template-columns: 1fr;">
               <div class="config-card" style="background: #f8f9fa;">
                 <h3><span class="icon">📁</span> 第4步：数据集（可选）</h3>
@@ -1161,7 +1239,158 @@
             });
         });
 
+        // ============================================================
+        // GPU 选择模块
+        // ============================================================
+        window.selectedGpuId = null;   // null 表示使用 CPU
+        let _gpuPollTimer = null;
+
+        /** 渲染单块 GPU 卡片 */
+        function _buildGpuCard(gpu) {
+            const memPct = gpu.memory_pct;
+            const isOccupied = gpu.status === 'occupied';
+            const isBusy    = gpu.status === 'busy';
+            const isIdle    = gpu.status === 'idle';
+            const isSelected = window.selectedGpuId === gpu.id;
+
+            const statusColor = isOccupied ? '#dc3545' : isBusy ? '#fd7e14' : '#28a745';
+            const statusText  = isOccupied ? '占用中' : isBusy ? '高负载' : '空闲';
+            const memBarColor = memPct > 85 ? '#dc3545' : memPct > 60 ? '#fd7e14' : '#28a745';
+
+            const sessions = gpu.sessions || [];
+            const sessionTip = sessions.length
+                ? sessions.map(s => `@${s.username}`).join(', ')
+                : '';
+
+            const borderStyle = isSelected
+                ? 'border:2px solid #667eea;box-shadow:0 0 0 3px rgba(102,126,234,0.25);'
+                : 'border:2px solid #eee;';
+            const disabledAttr = isOccupied ? 'disabled' : '';
+
+            return `
+            <label style="display:block;cursor:${isOccupied?'not-allowed':'pointer'};
+                          border-radius:12px;padding:0.9rem;background:white;
+                          transition:box-shadow 0.2s,border-color 0.2s;
+                          position:relative;${borderStyle}"
+                   title="${sessionTip}">
+              <input type="radio" name="gpu_select" value="${gpu.id}"
+                     id="gpu-select-${gpu.id}" style="display:none;"
+                     ${isSelected ? 'checked' : ''} ${disabledAttr}
+                     onchange="onGpuSelect(${gpu.id})">
+
+              <!-- Mock 角标 -->
+              <span id="gpu-mock-badge-${gpu.id}" style="display:none;
+                  position:absolute;top:6px;right:6px;font-size:0.68rem;
+                  background:#ffc107;color:#856404;padding:1px 6px;border-radius:8px;">
+                演示
+              </span>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <span style="font-weight:600;font-size:0.88rem;color:#333;">
+                  GPU ${gpu.id}
+                </span>
+                <span style="font-size:0.78rem;padding:2px 8px;border-radius:10px;
+                             background:${statusColor}22;color:${statusColor};font-weight:600;">
+                  ${statusText}
+                </span>
+              </div>
+
+              <div style="font-size:0.8rem;color:#555;margin-bottom:0.5rem;
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                   title="${gpu.name}">
+                ${gpu.name}
+              </div>
+
+              <!-- 显存进度条 -->
+              <div style="font-size:0.75rem;color:#888;margin-bottom:3px;">
+                显存 ${gpu.memory_used_mb} / ${gpu.memory_total_mb} MB (${memPct}%)
+              </div>
+              <div style="height:6px;background:#eee;border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${memPct}%;
+                            background:${memBarColor};border-radius:3px;
+                            transition:width 0.4s;"></div>
+              </div>
+
+              <!-- 利用率 -->
+              <div style="font-size:0.75rem;color:#888;margin-top:0.4rem;">
+                GPU 利用率 ${gpu.utilization_pct}%
+              </div>
+
+              ${sessionTip ? `<div style="font-size:0.72rem;color:#dc3545;margin-top:0.3rem;">
+                占用：${sessionTip}</div>` : ''}
+            </label>`;
+        }
+
+        /** 渲染所有 GPU 卡片 */
+        function _renderGpuCards(gpus, isMock) {
+            const container = document.getElementById('gpu-cards-container');
+            const mockBanner = document.getElementById('gpu-mock-banner');
+            if (!container) return;
+
+            mockBanner.style.display = isMock ? 'block' : 'none';
+
+            if (!gpus || gpus.length === 0) {
+                container.innerHTML = '<div style="color:#aaa;font-size:0.9rem;padding:1rem;">未检测到 GPU，将使用 CPU 训练</div>';
+                return;
+            }
+
+            container.innerHTML = gpus.map(g => _buildGpuCard(g)).join('');
+
+            // 为 Mock 模式加演示角标
+            if (isMock) {
+                gpus.forEach(g => {
+                    const badge = document.getElementById(`gpu-mock-badge-${g.id}`);
+                    if (badge) badge.style.display = 'inline';
+                });
+            }
+        }
+
+        /** 加载 GPU 状态（调接口） */
+        async function loadGpuStatus() {
+            try {
+                const resp = await fetch('/api/gpu_status');
+                const data = await resp.json();
+                if (data.success) {
+                    _renderGpuCards(data.gpus, data.is_mock);
+                    const ts = new Date(data.timestamp);
+                    const el = document.getElementById('gpu-last-update');
+                    if (el) el.textContent = `上次更新：${ts.toLocaleTimeString()}`;
+                }
+            } catch(e) {
+                console.warn('GPU 状态加载失败:', e);
+            }
+        }
+
+        /** 用户选择 GPU */
+        function onGpuSelect(gpuId) {
+            window.selectedGpuId = gpuId;
+            // 更新 CPU 选项和 GPU 卡片的选中边框
+            const cpuLabel = document.getElementById('cpu-option-label');
+            if (cpuLabel) {
+                cpuLabel.style.borderColor = gpuId === null ? '#667eea' : '#ddd';
+            }
+            // 重新渲染边框（简单刷新一次状态即可）
+            loadGpuStatus();
+        }
+
+        /** 启动/停止 GPU 状态轮询（每 5 秒） */
+        function startGpuPolling() {
+            stopGpuPolling();
+            _gpuPollTimer = setInterval(loadGpuStatus, 5000);
+        }
+        function stopGpuPolling() {
+            if (_gpuPollTimer) { clearInterval(_gpuPollTimer); _gpuPollTimer = null; }
+        }
+
+        // 页面加载完成后立即拉取 GPU 状态并启动轮询
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGpuStatus();
+            startGpuPolling();
+        });
+
+        // ============================================================
         // 全局变量
+        // ============================================================
         let eventSource = null;
 
         // 开始训练功能
@@ -1198,7 +1427,8 @@
                 batch_size: parseInt(batchSize),
                 learning_rate: parseFloat(learningRate),
                 dataset_mode: document.getElementById('dataset-mode').value,
-                dataset_id: window.uploadedDatasetId || null
+                dataset_id: window.uploadedDatasetId || null,
+                gpu_id: (typeof window.selectedGpuId === 'number') ? window.selectedGpuId : null
             };
 
             // 添加CVRP特有参数
@@ -1320,6 +1550,14 @@
                 if (numStarts) {
                     config.num_starts = parseInt(numStarts.value);
                 }
+            }
+
+            // 添加HAM特有参数
+            if (model === 'ham') {
+                const hamNorm = document.getElementById('ham-normalization');
+                const hamFF = document.getElementById('ham-feedforward-hidden');
+                if (hamNorm) config.normalization = hamNorm.value;
+                if (hamFF) config.feedforward_hidden = parseInt(hamFF.value);
             }
 
             try {
@@ -1990,6 +2228,7 @@
                 const descriptions = {
                     'attention': '经典的基于Transformer的构造式模型，速度快，适合入门',
                     'pomo': '同时从多个起点构建路径，利用问题对称性，质量高但计算量大',
+                    'ham': '异构注意力模型，区分depot/pickup/delivery节点，PDP取送货问题首选',
                     'ptrnet': '🏛️ 开创性的Seq2Seq模型（2015），首个深度学习CO方法，适合学习和研究'
                 };
                 const desc = document.getElementById('model-description');
@@ -2010,6 +2249,10 @@
                 const pomoParams = document.getElementById('pomo-params');
                 if (pomoParams) {
                     pomoParams.style.display = this.currentPolicy === 'pomo' ? 'block' : 'none';
+                }
+                const hamParams = document.getElementById('ham-params');
+                if (hamParams) {
+                    hamParams.style.display = this.currentPolicy === 'ham' ? 'block' : 'none';
                 }
             }
             
@@ -2077,6 +2320,7 @@
                 const POLICY_PROBLEM_COMPAT = {
                     'attention': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
                     'pomo':      ['tsp', 'mtsp', 'cvrp'],
+                    'ham':       ['pdp'],
                     'matnet':    ['atsp', 'ffsp'],
                     'ptrnet':    ['tsp', 'cvrp'],
                 };
@@ -2122,13 +2366,14 @@
                 const POLICY_ALGO_COMPAT = {
                     'attention': ['reinforce', 'ppo', 'a2c'],
                     'pomo':      ['reinforce', 'ppo', 'a2c'],
+                    'ham':       ['reinforce', 'ppo', 'a2c'],
                     'matnet':    ['reinforce', 'ppo', 'a2c'],
                     'ptrnet':    ['reinforce'],
                 };
 
                 const POLICY_NAMES = {
                     'attention': 'Attention Model', 'pomo': 'POMO',
-                    'matnet': 'MatNet', 'ptrnet': 'Pointer Network',
+                    'ham': 'HAM', 'matnet': 'MatNet', 'ptrnet': 'Pointer Network',
                 };
 
                 const algoSelect = document.getElementById('algorithm-select');
@@ -2164,6 +2409,7 @@
                 const names = {
                     'attention': 'Attention Model (经典)',
                     'pomo': 'POMO (高质量)',
+                    'ham': 'HAM (PDP专用)',
                     'ptrnet': 'Pointer Network (开创性)',
                     'ptr': 'Pointer Network (开创性)',
                     'matnet': 'MatNet (调度专用)'

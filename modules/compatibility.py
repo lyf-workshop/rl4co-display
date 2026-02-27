@@ -72,6 +72,9 @@ POLICY_PROBLEM_COMPATIBILITY = {
     
     # MatNet：专为非对称和调度问题设计（矩阵注意力）
     'matnet': ['atsp', 'ffsp'],  # ATSP和FFSP
+
+    # HAM：异构注意力模型，专为PDP（取送货问题）设计
+    'ham': ['pdp'],
 }
 
 # 算法 → 问题兼容性（官方文档：REINFORCE, PPO, A2C 都是通用算法）
@@ -89,6 +92,7 @@ POLICY_ALGORITHM_COMPATIBILITY = {
     'ptrnet': ['reinforce'],  # PtrNet 通常只使用 REINFORCE（经典组合）
     'ptr': ['reinforce'],
     'matnet': ['reinforce', 'ppo', 'a2c'],  # MatNet支持所有通用算法
+    'ham': ['reinforce', 'ppo', 'a2c'],  # HAM支持所有通用算法
 }
 
 # 警告组合 (技术上可行，但不推荐)
@@ -159,6 +163,54 @@ WARNING_COMBINATIONS = [
         'severity': 'error'
     },
     {
+        'problem': 'tsp',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持TSP。请使用Attention Model或POMO',
+        'severity': 'error'
+    },
+    {
+        'problem': 'atsp',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持ATSP。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'mtsp',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持mTSP。请使用Attention Model或POMO',
+        'severity': 'error'
+    },
+    {
+        'problem': 'cvrp',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持CVRP。请使用Attention Model或POMO',
+        'severity': 'error'
+    },
+    {
+        'problem': 'sdvrp',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持SDVRP。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'vrptw',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持VRPTW。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'op',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持OP。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'policy': 'ham',
+        'message': 'HAM专为PDP（取送货问题）设计，不支持FFSP。请使用MatNet',
+        'severity': 'error'
+    },
+    {
         'problem': 'sdvrp',
         'policy': 'pomo',
         'message': 'POMO在SDVRP上的效果未经充分验证，建议使用Attention Model',
@@ -211,9 +263,9 @@ RECOMMENDED_COMBINATIONS = {
         'simple': {'policy': 'attention', 'algorithm': 'ppo'},  # VRPTW不建议用REINFORCE
     },
     'pdp': {
-        'best': {'policy': 'attention', 'algorithm': 'ppo', 'description': '最佳质量配置'},
+        'best': {'policy': 'ham', 'algorithm': 'ppo', 'description': '最佳质量配置（HAM异构注意力，PDP首选）'},
         'fast': {'policy': 'attention', 'algorithm': 'a2c', 'description': '快速训练配置'},
-        'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '简单易用配置'},
+        'simple': {'policy': 'ham', 'algorithm': 'reinforce', 'description': '简单易用配置（HAM + REINFORCE）'},
     },
     'op': {
         'best': {'policy': 'attention', 'algorithm': 'ppo', 'description': '最佳质量配置'},
