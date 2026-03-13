@@ -22,7 +22,104 @@ class OllamaChatEmbedded {
         };
 
         this.elements = {};
+        this.systemPrompt = this._buildSystemPrompt();
         this.init();
+    }
+
+    /**
+     * 构建 system prompt，注入 RL4CO 领域知识
+     */
+    _buildSystemPrompt() {
+        return `你是 RL4CO Display 平台的 AI 智能助手，专门帮助用户分析组合优化问题并配置强化学习训练参数。
+
+## 你的核心能力
+当用户描述一个实际问题或优化需求时，你需要：
+1. 判断这属于哪种组合优化问题类型
+2. 推荐最优的模型和算法组合
+3. 配置合适的训练参数
+4. 输出一个 JSON 配置块让系统自动填写表单
+
+## 平台支持的问题类型
+
+### 路由问题 (Routing)
+- **TSP（旅行商问题）**：一个推销员要访问所有城市并回到起点，求最短路径。适用于：快递路线规划、电路板钻孔顺序、物流配送等。
+- **ATSP（非对称旅行商问题）**：与TSP类似，但城市间的往返距离不同（如单行道、上下坡）。适用于：城市交通规划、单向道路网络。
+- **mTSP（多旅行商问题）**：多个推销员协作访问所有城市。适用于：多配送员同时送货、多无人机协同巡检、多人任务分配。
+- **CVRP（带容量约束的车辆路径问题）**：多辆有容量限制的车辆为客户送货。适用于：快递包裹配送、超市供货、垃圾回收。
+- **SDVRP（分割配送VRP）**：允许一个客户的需求被多辆车分别配送。适用于：大宗货物配送、建材运输。
+- **VRPTW（带时间窗VRP）**：配送有时间限制，必须在指定时间段到达。适用于：生鲜配送、外卖送餐、预约上门服务。
+- **PDP（取送货问题）**：车辆需要先取货再送货，取送货必须配对。适用于：网约车接送乘客、快递揽收配送。
+- **OP（定向问题）**：在路径长度限制内，选择访问哪些城市以最大化收益。适用于：旅游景点规划、销售拜访优先级。
+- **PCTSP（奖励收集TSP）**：收集足够奖励的同时最小化路径和惩罚。适用于：广告投放路径优化。
+- **SPCTSP（随机奖励收集TSP）**：PCTSP的随机版本，奖励具有不确定性。
+
+### 调度问题 (Scheduling)
+- **FFSP（柔性流水车间调度）**：多个工件需要经过多个加工阶段，每个阶段有多台机器可选。适用于：工厂生产排程、流水线优化。
+
+## 支持的模型（策略网络）
+| 模型 | 适用问题 | 特点 |
+|------|---------|------|
+| attention (AM) | 所有路由问题 | 通用性强，基于注意力机制 |
+| pomo | TSP, mTSP, CVRP | 利用对称性，效果最好，但仅适用对称问题 |
+| ptrnet | TSP, CVRP | 经典方法，适合学习研究 |
+| matnet | ATSP, FFSP | 矩阵注意力，专为非对称/调度问题设计 |
+| ham | PDP | 异构注意力，专为取送货问题设计 |
+
+## 支持的算法
+| 算法 | 特点 |
+|------|------|
+| reinforce | 经典策略梯度，简单稳定 |
+| ppo | 近端策略优化，复杂问题推荐 |
+| a2c | 优势Actor-Critic，快速收敛 |
+
+## 推荐组合（最佳配置）
+- TSP → pomo + ppo
+- ATSP → attention + ppo（POMO不支持非对称）
+- mTSP → pomo + ppo
+- CVRP → pomo + ppo
+- SDVRP → attention + ppo
+- VRPTW → attention + ppo
+- PDP → ham + ppo
+- OP → attention + ppo
+- PCTSP/SPCTSP → attention + ppo
+- FFSP → matnet + ppo（仅MatNet支持FFSP）
+
+## 参数范围
+- num_loc（问题规模）：5-200，小规模推荐20-30（快速），中等50，大规模100+
+- epochs（训练轮数）：1-1000，快速验证3-5，常规10-20，充分训练50-100
+- batch_size：32-2048，推荐512
+- learning_rate：0.00001-0.01，推荐0.0001
+- CVRP/SDVRP/VRPTW额外参数：vehicle_capacity（车辆容量，默认1.0）
+- VRPTW额外参数：time_window_width（时间窗宽度，10-500），service_time（服务时间，0-60），max_processing_time（最大配送时间，60-1440），hard_time_windows（true/false）
+- mTSP额外参数：num_agents（代理数量，2-10，推荐5），cost_type（minmax或sum）
+- PDP额外参数：num_loc（偶数，4-40），force_start_at_depot（true/false）
+- OP额外参数：num_loc（10-100），max_length（最大路径长度，1.0-5.0），prize_type（dist/unif/const）
+- PCTSP/SPCTSP额外参数：num_loc（10-100），penalty_factor（惩罚因子，1-10），prize_required（需收集奖励比例，0.1-1.0）
+- FFSP额外参数：num_stage（加工阶段数，2-6），num_machine（每阶段机器数，2-8），num_job（工件数，10-50），min_time（最小加工时间，1-5），max_time（最大加工时间，5-20），flatten_stages（true/false）
+
+## 输出格式要求
+当你分析出用户的问题类型并确定了配置后，请在回答末尾输出一个 JSON 配置块，格式如下：
+
+\`\`\`rl4co_config
+{
+  "problem": "问题类型",
+  "model": "模型名",
+  "algorithm": "算法名",
+  "num_loc": 50,
+  "epochs": 10,
+  "batch_size": 512,
+  "learning_rate": 0.0001
+}
+\`\`\`
+
+JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，把特殊参数也加入 JSON。
+
+## 注意事项
+- 先用自然语言解释你的分析过程和推荐理由
+- JSON 配置块放在回答的最后
+- 如果用户的描述不够清晰，先询问关键信息再给出配置
+- 如果用户只是闲聊或问知识性问题，正常回答即可，不需要输出 JSON
+- 回复请使用中文`;
     }
 
     /**
@@ -204,10 +301,15 @@ class OllamaChatEmbedded {
         this.elements.sendBtn.disabled = true;
 
         try {
-            const messages = this.state.messages.map(msg => ({
-                role: msg.role,
-                content: msg.content
-            }));
+            // 构建带 system prompt 的消息列表
+            const chatMessages = [
+                { role: 'system', content: this.systemPrompt }
+            ];
+            // 只取最近的对话历史（避免 token 过长）
+            const recentMessages = this.state.messages.slice(-20);
+            recentMessages.forEach(msg => {
+                chatMessages.push({ role: msg.role, content: msg.content });
+            });
 
             const response = await fetch(`${this.config.apiUrl}/chat`, {
                 method: 'POST',
@@ -216,7 +318,7 @@ class OllamaChatEmbedded {
                 },
                 body: JSON.stringify({
                     model: this.state.currentModel,
-                    messages: messages,
+                    messages: chatMessages,
                     stream: true
                 })
             });
@@ -287,12 +389,262 @@ class OllamaChatEmbedded {
                     timestamp: Date.now()
                 });
                 this.saveHistory();
+
+                // 先做一次最终的内容渲染（确保配置 JSON 被隐藏）
+                if (messageElement) {
+                    this.updateMessageContent(messageElement, assistantMessage);
+                }
+
+                // 检测是否包含训练配置块，渲染应用按钮
+                const configData = this._extractConfig(assistantMessage);
+                if (configData && messageElement) {
+                    this._renderApplyButton(messageElement, configData);
+                }
             }
 
         } catch (error) {
             console.error('处理流式响应失败:', error);
             throw error;
         }
+    }
+
+    /**
+     * 从 LLM 回复中提取训练配置 JSON 块
+     * 支持多种格式：```rl4co_config、```json、```、甚至裸 JSON
+     */
+    _extractConfig(text) {
+        // 匹配所有代码块: ```lang\n...\n``` 或 ```\n...\n```
+        const codeBlockRegex = /```(\w*)\s*\n([\s\S]*?)```/g;
+        let match;
+        while ((match = codeBlockRegex.exec(text)) !== null) {
+            try {
+                const config = JSON.parse(match[2].trim());
+                if (config.problem && (config.model || config.algorithm)) {
+                    return config;
+                }
+            } catch (e) { /* 不是有效的配置 JSON，继续尝试下一个代码块 */ }
+        }
+
+        // 兜底：尝试匹配裸 JSON 对象（没有代码块包裹）
+        const jsonRegex = /\{[\s\S]*?"problem"\s*:\s*"[^"]+?"[\s\S]*?\}/g;
+        let jsonMatch;
+        while ((jsonMatch = jsonRegex.exec(text)) !== null) {
+            try {
+                const config = JSON.parse(jsonMatch[0]);
+                if (config.problem && (config.model || config.algorithm)) {
+                    return config;
+                }
+            } catch (e) { /* 继续 */ }
+        }
+
+        return null;
+    }
+
+    /**
+     * 在消息气泡下方渲染"应用配置"按钮
+     */
+    _renderApplyButton(messageElement, configData) {
+        const bubble = messageElement.querySelector('.ai-message-bubble');
+        if (!bubble) return;
+
+        const configSummary = this._buildConfigSummary(configData);
+
+        const container = document.createElement('div');
+        container.className = 'ai-config-apply-container';
+        container.innerHTML = `
+            <div class="ai-config-preview">
+                <div class="ai-config-preview-title">🎯 识别到训练配置</div>
+                <div class="ai-config-preview-items">${configSummary}</div>
+            </div>
+            <button class="ai-config-apply-btn" title="将此配置应用到训练表单">
+                ⚡ 应用配置到表单
+            </button>
+        `;
+
+        const applyBtn = container.querySelector('.ai-config-apply-btn');
+        applyBtn.addEventListener('click', () => {
+            this.applyConfiguration(configData);
+            applyBtn.textContent = '✅ 配置已应用';
+            applyBtn.classList.add('applied');
+            applyBtn.disabled = true;
+        });
+
+        bubble.appendChild(container);
+        this.scrollToBottom();
+    }
+
+    /**
+     * 构建配置摘要 HTML
+     */
+    _buildConfigSummary(config) {
+        const labels = {
+            problem: '问题类型', model: '模型', algorithm: '算法',
+            num_loc: '问题规模', epochs: '训练轮数', batch_size: '批次大小',
+            learning_rate: '学习率', vehicle_capacity: '车辆容量',
+            num_agents: '代理数量', cost_type: '优化目标',
+            time_window_width: '时间窗宽度', service_time: '服务时间',
+            max_processing_time: '最大配送时间', hard_time_windows: '硬时间窗',
+            num_stage: '加工阶段', num_machine: '机器数', num_job: '工件数',
+            min_time: '最小加工时间', max_time: '最大加工时间',
+            max_length: '最大路径长度', prize_type: '奖励类型',
+            penalty_factor: '惩罚因子', prize_required: '需收集奖励',
+            flatten_stages: '展平阶段', force_start_at_depot: '从depot出发'
+        };
+
+        const problemNames = {
+            tsp: 'TSP', atsp: 'ATSP', mtsp: 'mTSP', cvrp: 'CVRP',
+            sdvrp: 'SDVRP', vrptw: 'VRPTW', pdp: 'PDP', op: 'OP',
+            pctsp: 'PCTSP', spctsp: 'SPCTSP', ffsp: 'FFSP'
+        };
+
+        const modelNames = {
+            attention: 'Attention Model', pomo: 'POMO',
+            ptrnet: 'PtrNet', matnet: 'MatNet', ham: 'HAM'
+        };
+
+        const algoNames = {
+            reinforce: 'REINFORCE', ppo: 'PPO', a2c: 'A2C'
+        };
+
+        let html = '';
+        for (const [key, value] of Object.entries(config)) {
+            const label = labels[key] || key;
+            let displayValue = value;
+            if (key === 'problem') displayValue = problemNames[value] || value;
+            else if (key === 'model') displayValue = modelNames[value] || value;
+            else if (key === 'algorithm') displayValue = algoNames[value] || value;
+
+            html += `<span class="ai-config-tag"><b>${label}:</b> ${displayValue}</span>`;
+        }
+        return html;
+    }
+
+    /**
+     * 规范化 LLM 输出的配置值，统一为表单 option 要求的格式
+     */
+    _normalizeConfig(raw) {
+        const config = { ...raw };
+
+        // 问题类型：统一小写
+        if (config.problem) {
+            config.problem = String(config.problem).toLowerCase().trim();
+        }
+
+        // 模型名：统一小写 + 别名映射
+        if (config.model) {
+            const modelMap = {
+                'am': 'attention', 'attention_model': 'attention', 'attentionmodel': 'attention',
+                'attention model': 'attention', 'pointer_network': 'ptrnet', 'pointernetwork': 'ptrnet',
+                'pointer network': 'ptrnet', 'ptr': 'ptrnet',
+            };
+            let m = String(config.model).toLowerCase().trim();
+            config.model = modelMap[m] || m;
+        }
+
+        // 算法名：统一小写
+        if (config.algorithm) {
+            config.algorithm = String(config.algorithm).toLowerCase().trim();
+        }
+
+        // 奖励类型
+        if (config.prize_type) {
+            config.prize_type = String(config.prize_type).toLowerCase().trim();
+        }
+
+        // 优化目标
+        if (config.cost_type) {
+            config.cost_type = String(config.cost_type).toLowerCase().trim();
+        }
+
+        return config;
+    }
+
+    /**
+     * 将 AI 推荐的配置应用到训练表单
+     */
+    applyConfiguration(rawConfig) {
+        const config = this._normalizeConfig(rawConfig);
+
+        const setSelect = (id, val) => {
+            const el = document.getElementById(id);
+            if (!el || val === undefined || val === null) return;
+            // 确认 option 存在再赋值
+            const option = Array.from(el.options).find(o => o.value === String(val));
+            if (option) {
+                el.value = option.value;
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        };
+
+        const setInput = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val !== undefined && val !== null) {
+                el.value = val;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        };
+
+        // 第一步：设置问题类型（会触发面板切换、可用模型/算法更新）
+        if (config.problem) {
+            setSelect('problem-select', config.problem);
+        }
+
+        // 延迟设置其他参数，等问题类型变更引发的异步操作完成
+        setTimeout(() => {
+            if (config.model) setSelect('model-select', config.model);
+            if (config.algorithm) setSelect('algorithm-select', config.algorithm);
+            if (config.num_loc) setInput('num-loc', config.num_loc);
+            if (config.epochs) setInput('epochs', config.epochs);
+            if (config.batch_size) setInput('batch-size', config.batch_size);
+            if (config.learning_rate) setInput('learning-rate', config.learning_rate);
+
+            // CVRP/SDVRP/VRPTW 参数
+            if (config.vehicle_capacity) setInput('vehicle-capacity', config.vehicle_capacity);
+
+            // VRPTW 参数
+            if (config.time_window_width) setInput('time-window-width', config.time_window_width);
+            if (config.service_time) setInput('service-time', config.service_time);
+            if (config.max_processing_time) setInput('max-time', config.max_processing_time);
+            if (config.hard_time_windows !== undefined) setSelect('hard-time-windows', String(config.hard_time_windows));
+
+            // mTSP 参数
+            if (config.num_agents) setInput('num-agents', config.num_agents);
+            if (config.cost_type) setSelect('cost-type', config.cost_type);
+
+            // PDP 参数
+            if (config.problem === 'pdp' && config.num_loc) setInput('pdp-num-loc', config.num_loc);
+            if (config.force_start_at_depot !== undefined) setSelect('force-start-depot', String(config.force_start_at_depot));
+
+            // OP 参数
+            if (config.problem === 'op' && config.num_loc) setInput('op-num-loc', config.num_loc);
+            if (config.max_length) setInput('max-length', config.max_length);
+            if (config.prize_type) setSelect('prize-type', config.prize_type);
+
+            // PCTSP/SPCTSP 参数
+            if (config.problem === 'pctsp' && config.num_loc) setInput('pctsp-num-loc', config.num_loc);
+            if (config.problem === 'spctsp' && config.num_loc) setInput('spctsp-num-loc', config.num_loc);
+            if (config.penalty_factor) setInput('penalty-factor', config.penalty_factor);
+            if (config.prize_required) setInput('prize-required', config.prize_required);
+
+            // FFSP 参数
+            if (config.num_stage) setInput('num-stage', config.num_stage);
+            if (config.num_machine) setInput('num-machine', config.num_machine);
+            if (config.num_job) setInput('num-job', config.num_job);
+            if (config.min_time) setInput('min-time', config.min_time);
+            if (config.max_time) setInput('max-time-ffsp', config.max_time);
+            if (config.flatten_stages !== undefined) setSelect('flatten-stages', String(config.flatten_stages));
+
+            // POMO 参数
+            if (config.num_starts) setInput('num-starts', config.num_starts);
+
+            // 滚动到配置区域
+            const configSection = document.getElementById('config');
+            if (configSection) {
+                configSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            this.showNotification('✅ AI 推荐配置已应用到表单！', 'success');
+        }, 500);
     }
 
     /**
@@ -359,7 +711,18 @@ class OllamaChatEmbedded {
      * 格式化消息内容
      */
     formatMessage(content) {
-        let formatted = content
+        // 移除包含训练配置的代码块（配置会通过专用按钮呈现）
+        let cleaned = content.replace(/```(\w*)\s*\n([\s\S]*?)```/g, (match, lang, code) => {
+            try {
+                const parsed = JSON.parse(code.trim());
+                if (parsed.problem && (parsed.model || parsed.algorithm)) {
+                    return '';
+                }
+            } catch (e) { /* 不是配置 JSON，保留原样 */ }
+            return match;
+        }).trim();
+
+        let formatted = cleaned
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
@@ -512,7 +875,14 @@ class OllamaChatEmbedded {
         }
 
         this.state.messages.forEach(msg => {
-            this.addMessage(msg.role, msg.content, false);
+            const el = this.addMessage(msg.role, msg.content, false);
+            // 为历史消息中的配置块也渲染应用按钮
+            if (msg.role === 'assistant') {
+                const configData = this._extractConfig(msg.content);
+                if (configData && el) {
+                    this._renderApplyButton(el, configData);
+                }
+            }
         });
     }
 

@@ -752,5 +752,89 @@
     }
 }
 
+/* ============================================
+   11. AI 配置推荐 - 应用按钮样式
+   ============================================ */
+
+.ai-config-apply-container {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.ai-config-preview {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+
+.ai-config-preview-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4a5fc1;
+    margin-bottom: 8px;
+}
+
+.ai-config-preview-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ai-config-tag {
+    display: inline-block;
+    background: white;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    color: #333;
+    line-height: 1.4;
+}
+
+.ai-config-tag b {
+    color: #5a6acf;
+    font-weight: 600;
+}
+
+.ai-config-apply-btn {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 12px rgba(102, 126, 234, 0.35);
+    letter-spacing: 0.5px;
+}
+
+.ai-config-apply-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 18px rgba(102, 126, 234, 0.45);
+    filter: brightness(1.05);
+}
+
+.ai-config-apply-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.ai-config-apply-btn.applied {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+    box-shadow: 0 3px 12px rgba(39, 174, 96, 0.35);
+    cursor: default;
+}
+
+.ai-config-apply-btn:disabled {
+    opacity: 0.9;
+}
+
 
 
