@@ -1,8 +1,10 @@
 """
 GPU 资源管理模块
 提供 GPU 状态查询、占用申请和释放接口
-- 有真实 GPU：调用 pynvml 获取实时硬件数据
-- 无真实 GPU：返回 Mock 数据，用于开发和演示
+检测优先级：
+  1. pynvml  —— 完整硬件数据（显存 + 利用率）
+  2. torch.cuda —— 基础数据（显存），无利用率
+  3. Mock   —— 演示数据，无真实 GPU 时使用
 """
 from flask import Blueprint, jsonify, request
 from datetime import datetime
@@ -14,7 +16,7 @@ gpu_bp = Blueprint('gpu', __name__)
 logger = logging.getLogger('rl4co_display')
 
 # ============================================
-# pynvml 可用性检测
+# 第一优先级：pynvml
 # ============================================
 try:
     import pynvml
@@ -24,7 +26,23 @@ try:
     logger.info(f"✓ pynvml 初始化成功，检测到 {_gpu_count} 块 GPU")
 except Exception as e:
     PYNVML_AVAILABLE = False
-    logger.warning(f"pynvml 不可用，将使用 Mock GPU 数据: {e}")
+    logger.warning(f"pynvml 不可用: {e}")
+
+# ============================================
+# 第二优先级：torch.cuda
+# ============================================
+TORCH_CUDA_AVAILABLE = False
+if not PYNVML_AVAILABLE:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            _torch_gpu_count = torch.cuda.device_count()
+            TORCH_CUDA_AVAILABLE = _torch_gpu_count > 0
+            logger.info(f"✓ torch.cuda 检测到 {_torch_gpu_count} 块 GPU，将作为兜底数据源")
+        else:
+            logger.warning("torch.cuda.is_available() 返回 False，将使用 Mock GPU 数据")
+    except Exception as e:
+        logger.warning(f"torch.cuda 检测失败: {e}")
 
 # ============================================
 # Mock GPU 数据（无真实 GPU 时使用）
@@ -77,7 +95,7 @@ def init_gpu_globals(get_db_func):
 # ============================================
 
 def _query_real_gpus():
-    """通过 pynvml 查询真实 GPU 硬件信息"""
+    """通过 pynvml 查询真实 GPU 硬件信息（完整数据）"""
     gpus = []
     count = pynvml.nvmlDeviceGetCount()
     for i in range(count):
@@ -93,6 +111,28 @@ def _query_real_gpus():
             "memory_total_mb": mem_info.total // (1024 * 1024),
             "memory_used_mb": mem_info.used // (1024 * 1024),
             "utilization_pct": util.gpu,
+        })
+    return gpus
+
+
+def _query_torch_gpus():
+    """通过 torch.cuda 查询 GPU 基础信息（无利用率数据）"""
+    import torch
+    gpus = []
+    count = torch.cuda.device_count()
+    for i in range(count):
+        props = torch.cuda.get_device_properties(i)
+        total_mb = props.total_memory // (1024 * 1024)
+        # torch 只能拿到已分配/保留的显存，取二者中较大的作为已用显存
+        allocated_mb = torch.cuda.memory_allocated(i) // (1024 * 1024)
+        reserved_mb  = torch.cuda.memory_reserved(i)  // (1024 * 1024)
+        used_mb = max(allocated_mb, reserved_mb)
+        gpus.append({
+            "id": i,
+            "name": props.name,
+            "memory_total_mb": total_mb,
+            "memory_used_mb": used_mb,
+            "utilization_pct": -1,   # torch 无法获取利用率，用 -1 标记
         })
     return gpus
 
@@ -134,13 +174,24 @@ def _get_allocations():
 
 
 def _build_gpu_list():
-    """组合硬件信息与数据库占用信息，返回完整的 GPU 列表"""
+    """
+    组合硬件信息与数据库占用信息，返回完整的 GPU 列表。
+
+    返回：(gpu_list, source)
+    source 取值：
+      'pynvml' — 通过 pynvml 获取完整数据
+      'torch'  — 通过 torch.cuda 获取基础数据（无利用率）
+      'mock'   — 演示数据
+    """
     if PYNVML_AVAILABLE:
         raw_gpus = _query_real_gpus()
-        is_mock = False
+        source = 'pynvml'
+    elif TORCH_CUDA_AVAILABLE:
+        raw_gpus = _query_torch_gpus()
+        source = 'torch'
     else:
         raw_gpus = list(MOCK_GPUS)
-        is_mock = True
+        source = 'mock'
 
     allocations = _get_allocations()
 
@@ -152,7 +203,7 @@ def _build_gpu_list():
         mem_pct = round(mem_used / mem_total * 100, 1) if mem_total > 0 else 0
         sessions = allocations.get(gid, [])
 
-        # 状态判断：utilization > 90% 或有训练任务占用 → busy
+        # 状态判断
         if sessions:
             status = 'occupied'
         elif gpu['utilization_pct'] >= 90:
@@ -166,12 +217,13 @@ def _build_gpu_list():
             "memory_total_mb": mem_total,
             "memory_used_mb": mem_used,
             "memory_pct": mem_pct,
+            # -1 表示 torch 模式下无法获取利用率
             "utilization_pct": gpu['utilization_pct'],
             "status": status,
             "sessions": sessions,
         })
 
-    return result, is_mock
+    return result, source
 
 
 # ============================================
@@ -186,11 +238,12 @@ def gpu_status():
     Mock 模式时字段 is_mock=True
     """
     try:
-        gpus, is_mock = _build_gpu_list()
+        gpus, source = _build_gpu_list()
         return jsonify({
             'success': True,
             'gpus': gpus,
-            'is_mock': is_mock,
+            'source': source,             # 'pynvml' | 'torch' | 'mock'
+            'is_mock': source == 'mock',  # 向后兼容
             'timestamp': datetime.now().isoformat(),
         })
     except Exception as e:

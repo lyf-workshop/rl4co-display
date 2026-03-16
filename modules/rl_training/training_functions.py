@@ -517,36 +517,48 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
             'message': f'配置: Epochs={epochs}, Batch={batch_size}, LR={learning_rate}, 问题规模={num_loc}'
         }))
         
-        # 检测设备，支持从 config 指定 GPU 编号
+        # 检测设备：gpu_id 为整数时使用对应 GPU，为 None 时使用 CPU
         gpu_id = config.get('gpu_id', None)
-        if torch.cuda.is_available():
-            if gpu_id is not None:
-                try:
-                    gpu_id = int(gpu_id)
-                    if 0 <= gpu_id < torch.cuda.device_count():
-                        device = torch.device(f"cuda:{gpu_id}")
-                        accelerator = "gpu"
-                        devices = [gpu_id]
-                    else:
-                        device = torch.device("cuda:0")
-                        accelerator = "gpu"
-                        devices = [0]
-                except (ValueError, TypeError):
-                    device = torch.device("cuda")
+        cuda_ok = torch.cuda.is_available()
+
+        if gpu_id is not None and cuda_ok:
+            # 用户明确选择了某块 GPU
+            try:
+                gpu_id = int(gpu_id)
+                if 0 <= gpu_id < torch.cuda.device_count():
+                    device = torch.device(f"cuda:{gpu_id}")
                     accelerator = "gpu"
-                    devices = 1
-            else:
-                device = torch.device("cuda")
-                accelerator = "gpu"
-                devices = 1
+                    devices = [gpu_id]
+                else:
+                    # 用户选的 GPU ID 超出范围，回退到 GPU 0 并提示
+                    queue.put(json.dumps({
+                        'type': 'warning',
+                        'message': f'GPU {gpu_id} 不存在（共 {torch.cuda.device_count()} 块），已自动切换到 GPU 0'
+                    }))
+                    device = torch.device("cuda:0")
+                    accelerator = "gpu"
+                    devices = [0]
+                    gpu_id = 0
+            except (ValueError, TypeError):
+                device = torch.device("cpu")
+                accelerator = "cpu"
+                devices = "auto"
+                gpu_id = None
         else:
+            # 用户选了 CPU，或当前环境无 CUDA
             device = torch.device("cpu")
             accelerator = "cpu"
             devices = "auto"
+            if gpu_id is not None and not cuda_ok:
+                queue.put(json.dumps({
+                    'type': 'warning',
+                    'message': f'当前环境不支持 CUDA，已自动切换到 CPU 训练'
+                }))
+                gpu_id = None
 
         queue.put(json.dumps({
             'type': 'info',
-            'message': f'使用设备: {device}'
+            'message': f'使用设备: {device}' + (f'（GPU {gpu_id}，{torch.cuda.get_device_name(gpu_id)}）' if gpu_id is not None and cuda_ok else '（CPU）')
         }))
         
         # 初始化环境

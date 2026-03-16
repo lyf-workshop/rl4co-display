@@ -995,15 +995,27 @@
               <div class="config-card">
                 <h3><span class="icon">🖥️</span> 第4步：计算设备选择</h3>
                 <p style="color:#666;font-size:0.95rem;margin-bottom:1rem;">
-                  选择用于本次训练的 GPU。不选则使用 CPU（训练较慢）。
+                  选择用于本次训练的 GPU。默认使用 CPU（较慢）；点击 GPU 卡片可切换到 GPU 训练。
                 </p>
 
-                <!-- Mock 数据提示 -->
+                <!-- 检测来源提示横幅 -->
                 <div id="gpu-mock-banner" style="display:none;
                     background:#fff3cd;border-left:4px solid #ffc107;
                     padding:0.6rem 1rem;border-radius:6px;font-size:0.88rem;
                     margin-bottom:1rem;color:#856404;">
                   ⚠️ 当前为演示数据（服务器未检测到真实 GPU）
+                </div>
+                <div id="gpu-torch-banner" style="display:none;
+                    background:#e8f4fd;border-left:4px solid #3498db;
+                    padding:0.6rem 1rem;border-radius:6px;font-size:0.88rem;
+                    margin-bottom:1rem;color:#1a6e9e;">
+                  ℹ️ 数据来源：PyTorch CUDA（利用率暂不可用，安装 <code>nvidia-ml-py</code> 可获取完整数据）
+                </div>
+                <div id="gpu-pynvml-banner" style="display:none;
+                    background:#eafaf1;border-left:4px solid #27ae60;
+                    padding:0.6rem 1rem;border-radius:6px;font-size:0.88rem;
+                    margin-bottom:1rem;color:#1a6e4e;">
+                  ✅ 数据来源：NVML（完整硬件数据）
                 </div>
 
                 <!-- 刷新按钮 + 时间戳 -->
@@ -1313,7 +1325,7 @@
 
               <!-- 利用率 -->
               <div style="font-size:0.75rem;color:#888;margin-top:0.4rem;">
-                GPU 利用率 ${gpu.utilization_pct}%
+                GPU 利用率 ${gpu.utilization_pct === -1 ? 'N/A' : gpu.utilization_pct + '%'}
               </div>
 
               ${sessionTip ? `<div style="font-size:0.72rem;color:#dc3545;margin-top:0.3rem;">
@@ -1322,12 +1334,14 @@
         }
 
         /** 渲染所有 GPU 卡片 */
-        function _renderGpuCards(gpus, isMock) {
+        function _renderGpuCards(gpus, source) {
             const container = document.getElementById('gpu-cards-container');
-            const mockBanner = document.getElementById('gpu-mock-banner');
             if (!container) return;
 
-            mockBanner.style.display = isMock ? 'block' : 'none';
+            // 控制三种横幅的显示
+            document.getElementById('gpu-mock-banner').style.display   = source === 'mock'   ? 'block' : 'none';
+            document.getElementById('gpu-torch-banner').style.display  = source === 'torch'  ? 'block' : 'none';
+            document.getElementById('gpu-pynvml-banner').style.display = source === 'pynvml' ? 'block' : 'none';
 
             if (!gpus || gpus.length === 0) {
                 container.innerHTML = '<div style="color:#aaa;font-size:0.9rem;padding:1rem;">未检测到 GPU，将使用 CPU 训练</div>';
@@ -1336,8 +1350,8 @@
 
             container.innerHTML = gpus.map(g => _buildGpuCard(g)).join('');
 
-            // 为 Mock 模式加演示角标
-            if (isMock) {
+            // Mock 模式加演示角标
+            if (source === 'mock') {
                 gpus.forEach(g => {
                     const badge = document.getElementById(`gpu-mock-badge-${g.id}`);
                     if (badge) badge.style.display = 'inline';
@@ -1351,7 +1365,9 @@
                 const resp = await fetch('/api/gpu_status');
                 const data = await resp.json();
                 if (data.success) {
-                    _renderGpuCards(data.gpus, data.is_mock);
+                    // 兼容旧版（无 source 字段时根据 is_mock 推断）
+                    const source = data.source || (data.is_mock ? 'mock' : 'pynvml');
+                    _renderGpuCards(data.gpus, source);
                     const ts = new Date(data.timestamp);
                     const el = document.getElementById('gpu-last-update');
                     if (el) el.textContent = `上次更新：${ts.toLocaleTimeString()}`;
