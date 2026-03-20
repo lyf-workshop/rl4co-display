@@ -340,37 +340,37 @@ class BaseTrainer:
             'attention': 'attention',
             'am': 'attention',
             'pomo': 'pomo',
+            'symnco': 'symnco',
         }
         if self.policy_name in model_mapping:
             self.policy_name = model_mapping[self.policy_name]
         
         # 检测设备，支持从 config 指定 GPU 编号
+        # gpu_id 为整数 → 使用该 GPU；为 None → 强制 CPU（与用户在 UI 选择一致）
         gpu_id = config.get('gpu_id', None)
-        if torch.cuda.is_available():
-            if gpu_id is not None:
-                try:
-                    gpu_id = int(gpu_id)
-                    if 0 <= gpu_id < torch.cuda.device_count():
-                        self.device = torch.device(f"cuda:{gpu_id}")
-                        self.accelerator = "gpu"
-                        self.devices = [gpu_id]
-                    else:
-                        print(f"警告: gpu_id={gpu_id} 超出范围，回退到 cuda:0")
-                        self.device = torch.device("cuda:0")
-                        self.accelerator = "gpu"
-                        self.devices = [0]
-                except (ValueError, TypeError):
-                    self.device = torch.device("cuda")
+        if gpu_id is not None and torch.cuda.is_available():
+            try:
+                gpu_id = int(gpu_id)
+                if 0 <= gpu_id < torch.cuda.device_count():
+                    self.device = torch.device(f"cuda:{gpu_id}")
                     self.accelerator = "gpu"
-                    self.devices = 1
-            else:
-                self.device = torch.device("cuda")
-                self.accelerator = "gpu"
-                self.devices = 1
+                    self.devices = [gpu_id]
+                else:
+                    print(f"警告: gpu_id={gpu_id} 超出范围，回退到 cuda:0")
+                    self.device = torch.device("cuda:0")
+                    self.accelerator = "gpu"
+                    self.devices = [0]
+            except (ValueError, TypeError):
+                self.device = torch.device("cpu")
+                self.accelerator = "cpu"
+                self.devices = "auto"
         else:
+            # gpu_id 为 None（用户选 CPU）或 CUDA 不可用，均使用 CPU
             self.device = torch.device("cpu")
             self.accelerator = "cpu"
             self.devices = "auto"
+            if gpu_id is not None and not torch.cuda.is_available():
+                print("警告: 当前环境不支持 CUDA，已自动切换到 CPU 训练")
     
     def send_message(self, msg_type, message, **kwargs):
         """发送消息到队列"""
@@ -450,8 +450,49 @@ class BaseTrainer:
         self.send_message('info', '策略网络初始化完成 (传统模式)')
         return policy
     
+    def _create_symnco_model(self, env, policy):
+        """为 SymNCO 策略创建专用模型（内置自定义多损失训练算法）"""
+        try:
+            from rl4co.models.zoo.symnco import SymNCO
+        except ImportError:
+            raise ImportError(
+                "RL4CO库未安装或当前版本不包含SymNCO。\n"
+                "请安装最新版: pip install rl4co"
+            )
+
+        num_augment = int(self.config.get('num_augment', 8))
+        num_starts = int(self.config.get('num_starts', 0))
+        alpha = float(self.config.get('symnco_alpha', 0.2))
+        beta = float(self.config.get('symnco_beta', 1.0))
+
+        model = SymNCO(
+            env,
+            policy,
+            baseline='symnco',
+            num_augment=num_augment,
+            num_starts=num_starts,
+            alpha=alpha,
+            beta=beta,
+            batch_size=self.batch_size,
+            train_data_size=10_000,
+            val_data_size=1_000,
+            optimizer_kwargs={'lr': self.learning_rate},
+        )
+
+        self.send_message(
+            'info',
+            f'✅ SymNCO模型创建成功 '
+            f'(num_augment={num_augment}, num_starts={num_starts}, '
+            f'alpha={alpha}, beta={beta})'
+        )
+        return model
+
     def create_model(self, env, policy):
         """创建RL模型（支持多种算法）"""
+        # SymNCO 使用内置的自定义多损失训练算法，跳过算法注册表
+        if self.policy_name == 'symnco':
+            return self._create_symnco_model(env, policy)
+
         # ========== 使用新的算法注册表（如果可用） ==========
         if MODULES_AVAILABLE:
             try:

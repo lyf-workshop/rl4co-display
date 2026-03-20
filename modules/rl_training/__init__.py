@@ -17,6 +17,7 @@ RL4CO 训练模块 - 模块化重构版
 import json
 from .base_trainer import BaseTrainer, ProgressCallback
 from .tsp_trainer import TSPTrainer, train_tsp
+from .atsp_trainer import ATSPTrainer, train_atsp
 from .mtsp_trainer import MTSPTrainer, train_mtsp
 from .cvrp_trainer import CVRPTrainer, train_cvrp
 from .sdvrp_trainer import SDVRPTrainer, train_sdvrp
@@ -46,8 +47,13 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
     if problem_type == 'tsp':
         train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func)
     elif problem_type == 'atsp':
-        # ATSP使用TSP训练器（距离矩阵不对称，但训练流程相同）
-        train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        # ATSP：MatNet 需要 ATSPEnv（提供 cost_matrix），attention 模型用 TSP 训练器即可
+        policy = config.get('model', 'attention').lower()
+        if policy in ('matnet',):
+            from .atsp_trainer import train_atsp
+            train_atsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        else:
+            train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func)
     elif problem_type == 'mtsp':
         # mTSP - 多旅行商问题
         train_mtsp(config, session_id, user_id, queue, training_status, get_background_db_func)
@@ -97,6 +103,7 @@ __all__ = [
     
     # 具体问题训练器
     'TSPTrainer',
+    'ATSPTrainer',
     'MTSPTrainer',
     'CVRPTrainer',
     'SDVRPTrainer',
@@ -110,6 +117,7 @@ __all__ = [
     # 训练入口函数
     'real_rl4co_training',
     'train_tsp',
+    'train_atsp',
     'train_mtsp',
     'train_cvrp',
     'train_sdvrp',

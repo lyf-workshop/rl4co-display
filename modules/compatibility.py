@@ -75,6 +75,10 @@ POLICY_PROBLEM_COMPATIBILITY = {
 
     # HAM：异构注意力模型，专为PDP（取送货问题）设计
     'ham': ['pdp'],
+
+    # SymNCO：对称性神经CO，基于AM+投影头，利用二面体8对称增强
+    # 与POMO相同的问题范围：需要二维坐标的对称性问题
+    'symnco': ['tsp', 'mtsp', 'cvrp'],
 }
 
 # 算法 → 问题兼容性（官方文档：REINFORCE, PPO, A2C 都是通用算法）
@@ -93,6 +97,9 @@ POLICY_ALGORITHM_COMPATIBILITY = {
     'ptr': ['reinforce'],
     'matnet': ['reinforce', 'ppo', 'a2c'],  # MatNet支持所有通用算法
     'ham': ['reinforce', 'ppo', 'a2c'],  # HAM支持所有通用算法
+    # SymNCO内置自定义多损失训练算法（基于REINFORCE的问题/解对称性+不变性损失）
+    # 不支持外部PPO/A2C，因其训练逻辑不兼容
+    'symnco': ['reinforce'],
 }
 
 # 警告组合 (技术上可行，但不推荐)
@@ -228,12 +235,73 @@ WARNING_COMBINATIONS = [
         'message': 'VRPTW问题复杂度高，建议使用PPO或A2C算法以获得更稳定的训练',
         'severity': 'info'
     },
+    # SymNCO 不兼容警告
+    {
+        'problem': 'atsp',
+        'policy': 'symnco',
+        'message': 'SymNCO依赖二维坐标的二面体对称变换，ATSP是非对称距离矩阵问题，不支持SymNCO。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'policy': 'symnco',
+        'message': 'SymNCO不支持FFSP调度问题。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'pctsp',
+        'policy': 'symnco',
+        'message': 'PCTSP奖励/惩罚非对称，不适合SymNCO的对称增强。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'spctsp',
+        'policy': 'symnco',
+        'message': 'SPCTSP随机奖励/惩罚非对称，不适合SymNCO的对称增强。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'pdp',
+        'policy': 'symnco',
+        'message': 'PDP（取送货问题）需要区分取货点和送货点，不适合SymNCO的通用对称增强。请使用HAM',
+        'severity': 'error'
+    },
+    {
+        'problem': 'sdvrp',
+        'policy': 'symnco',
+        'message': 'SDVRP（可拆分需求）未经充分验证，不建议使用SymNCO。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'vrptw',
+        'policy': 'symnco',
+        'message': 'VRPTW（时间窗约束）打破了二维坐标的对称性假设，不适合SymNCO。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'op',
+        'policy': 'symnco',
+        'message': 'OP（定向问题）的奖励结构与SymNCO的对称性假设不匹配。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'policy': 'symnco',
+        'algorithm': 'ppo',
+        'message': 'SymNCO使用内置的自定义多损失训练算法，不支持外部PPO算法。算法选项将被忽略',
+        'severity': 'warning'
+    },
+    {
+        'policy': 'symnco',
+        'algorithm': 'a2c',
+        'message': 'SymNCO使用内置的自定义多损失训练算法，不支持外部A2C算法。算法选项将被忽略',
+        'severity': 'warning'
+    },
 ]
 
 # 推荐组合 (根据问题类型)
 RECOMMENDED_COMBINATIONS = {
     'tsp': {
-        'best': {'policy': 'pomo', 'algorithm': 'ppo'},
+        'best': {'policy': 'symnco', 'algorithm': 'reinforce'},  # SymNCO利用对称性，质量最优
         'fast': {'policy': 'attention', 'algorithm': 'ppo'},
         'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
@@ -243,13 +311,13 @@ RECOMMENDED_COMBINATIONS = {
         'simple': {'policy': 'attention', 'algorithm': 'ppo'},     # ATSP不建议用REINFORCE
     },
     'mtsp': {
-        'best': {'policy': 'pomo', 'algorithm': 'ppo'},           # mTSP支持POMO（对称问题）
-        'fast': {'policy': 'attention', 'algorithm': 'ppo'},
+        'best': {'policy': 'symnco', 'algorithm': 'reinforce'},   # SymNCO利用对称性，质量最优
+        'fast': {'policy': 'pomo', 'algorithm': 'ppo'},
         'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
     'cvrp': {
-        'best': {'policy': 'pomo', 'algorithm': 'ppo'},
-        'fast': {'policy': 'attention', 'algorithm': 'ppo'},
+        'best': {'policy': 'symnco', 'algorithm': 'reinforce'},   # SymNCO利用对称性，质量最优
+        'fast': {'policy': 'pomo', 'algorithm': 'ppo'},
         'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
     'sdvrp': {

@@ -60,10 +60,13 @@ class OllamaChatEmbedded {
 | 模型 | 适用问题 | 特点 |
 |------|---------|------|
 | attention (AM) | 所有路由问题 | 通用性强，基于注意力机制 |
-| pomo | TSP, mTSP, CVRP | 利用对称性，效果最好，但仅适用对称问题 |
+| pomo | TSP, mTSP, CVRP | 利用对称性，效果好，但仅适用对称问题 |
+| symnco | TSP, mTSP, CVRP | 二面体8对称增强+多损失训练，质量最高，比POMO更好 |
 | ptrnet | TSP, CVRP | 经典方法，适合学习研究 |
 | matnet | ATSP, FFSP | 矩阵注意力，专为非对称/调度问题设计 |
 | ham | PDP | 异构注意力，专为取送货问题设计 |
+
+注意：symnco使用内置的自定义训练算法，选择symnco时algorithm字段填"reinforce"（实际使用SymNCO自定义多损失）。
 
 ## 支持的算法
 | 算法 | 特点 |
@@ -73,10 +76,10 @@ class OllamaChatEmbedded {
 | a2c | 优势Actor-Critic，快速收敛 |
 
 ## 推荐组合（最佳配置）
-- TSP → pomo + ppo
-- ATSP → attention + ppo（POMO不支持非对称）
-- mTSP → pomo + ppo
-- CVRP → pomo + ppo
+- TSP → symnco + reinforce（最高质量），或 pomo + ppo（快速）
+- ATSP → attention + ppo（POMO/SymNCO不支持非对称）
+- mTSP → symnco + reinforce（最高质量），或 pomo + ppo（快速）
+- CVRP → symnco + reinforce（最高质量），或 pomo + ppo（快速）
 - SDVRP → attention + ppo
 - VRPTW → attention + ppo
 - PDP → ham + ppo
@@ -96,6 +99,7 @@ class OllamaChatEmbedded {
 - OP额外参数：num_loc（10-100），max_length（最大路径长度，1.0-5.0），prize_type（dist/unif/const）
 - PCTSP/SPCTSP额外参数：num_loc（10-100），penalty_factor（惩罚因子，1-10），prize_required（需收集奖励比例，0.1-1.0）
 - FFSP额外参数：num_stage（加工阶段数，2-6），num_machine（每阶段机器数，2-8），num_job（工件数，10-50），min_time（最小加工时间，1-5），max_time（最大加工时间，5-20），flatten_stages（true/false）
+- SymNCO额外参数：num_augment（对称增强数量，1-10，推荐8），num_starts（多起点数量，0-50，默认0），symnco_alpha（不变性损失权重，默认0.2），symnco_beta（解对称损失权重，默认1.0）
 
 ## 输出格式要求
 当你分析出用户的问题类型并确定了配置后，请在回答末尾输出一个 JSON 配置块，格式如下：
@@ -488,7 +492,9 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
             min_time: '最小加工时间', max_time: '最大加工时间',
             max_length: '最大路径长度', prize_type: '奖励类型',
             penalty_factor: '惩罚因子', prize_required: '需收集奖励',
-            flatten_stages: '展平阶段', force_start_at_depot: '从depot出发'
+            flatten_stages: '展平阶段', force_start_at_depot: '从depot出发',
+            num_augment: '对称增强数量', num_starts: '多起点数量',
+            symnco_alpha: '不变性损失权重α', symnco_beta: '解对称损失权重β'
         };
 
         const problemNames = {
@@ -498,7 +504,7 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
         };
 
         const modelNames = {
-            attention: 'Attention Model', pomo: 'POMO',
+            attention: 'Attention Model', pomo: 'POMO', symnco: 'SymNCO',
             ptrnet: 'PtrNet', matnet: 'MatNet', ham: 'HAM'
         };
 
@@ -536,6 +542,8 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
                 'am': 'attention', 'attention_model': 'attention', 'attentionmodel': 'attention',
                 'attention model': 'attention', 'pointer_network': 'ptrnet', 'pointernetwork': 'ptrnet',
                 'pointer network': 'ptrnet', 'ptr': 'ptrnet',
+                'sym_nco': 'symnco', 'sym-nco': 'symnco', 'symnco policy': 'symnco',
+                'symmetric nco': 'symnco', 'symmetric_nco': 'symnco',
             };
             let m = String(config.model).toLowerCase().trim();
             config.model = modelMap[m] || m;
@@ -636,6 +644,12 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
 
             // POMO 参数
             if (config.num_starts) setInput('num-starts', config.num_starts);
+
+            // SymNCO 参数
+            if (config.num_augment) setInput('num-augment', config.num_augment);
+            if (config.num_starts && config.model === 'symnco') setInput('symnco-num-starts', config.num_starts);
+            if (config.symnco_alpha !== undefined) setInput('symnco-alpha', config.symnco_alpha);
+            if (config.symnco_beta !== undefined) setInput('symnco-beta', config.symnco_beta);
 
             // 滚动到配置区域
             const configSection = document.getElementById('config');

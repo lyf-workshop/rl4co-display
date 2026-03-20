@@ -895,7 +895,8 @@
                         <select id="model-select" name="model" class="form-control">
                             <option value="attention" selected>Attention Model（经典，快速）</option>
                             <option value="pomo">POMO（高质量，多起点）</option>
-                            <option value="ham">HAM（异构注意力，PDP专用）🆕</option>
+                            <option value="symnco">SymNCO（对称优化，最高质量）🆕</option>
+                            <option value="ham">HAM（异构注意力，PDP专用）</option>
                             <option value="matnet">MatNet（调度专用，矩阵注意力）</option>
                             <option value="ptrnet">Pointer Network（开创性，教学）</option>
                         </select>
@@ -957,6 +958,39 @@
                         </div>
                         <div class="alert" style="background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
                             💡 <strong>HAM</strong> 使用异构多头注意力区分 depot / pickup / delivery 节点，是 PDP 问题的首选模型。
+                        </div>
+                    </div>
+
+                    <!-- SymNCO特有参数（条件显示） -->
+                    <div id="symnco-params" class="form-group advanced-params" style="display: none;">
+                        <div class="params-grid">
+                            <div class="form-group">
+                                <label for="num-augment">🔄 对称增强数量</label>
+                                <input type="number" id="num-augment" name="num_augment" class="form-control"
+                                       value="8" min="1" max="10">
+                                <p class="description">二面体对称变换数量（推荐8，对应dihedral-8增强）</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="symnco-num-starts">🚩 多起点数量</label>
+                                <input type="number" id="symnco-num-starts" name="num_starts" class="form-control"
+                                       value="0" min="0" max="50">
+                                <p class="description">多起点数量（0=禁用，可与增强组合提升质量）</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="symnco-alpha">⚖️ 不变性损失权重 α</label>
+                                <input type="number" id="symnco-alpha" name="symnco_alpha" class="form-control"
+                                       value="0.2" min="0" max="1" step="0.05">
+                                <p class="description">投影嵌入不变性损失权重（推荐0.2）</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="symnco-beta">⚖️ 解对称损失权重 β</label>
+                                <input type="number" id="symnco-beta" name="symnco_beta" class="form-control"
+                                       value="1.0" min="0" max="2" step="0.1">
+                                <p class="description">解对称性损失权重（推荐1.0）</p>
+                            </div>
+                        </div>
+                        <div class="alert" style="background-color: #f3e5f5; border-left: 4px solid #9c27b0; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
+                            💡 <strong>SymNCO</strong> 利用二面体8对称增强和三种自定义损失（问题对称性 L<sub>ps</sub>、解对称性 L<sub>ss</sub>、不变性 L<sub>inv</sub>），无需额外选择训练算法，适合 TSP / mTSP / CVRP。
                         </div>
                     </div>
                 </div>
@@ -2244,8 +2278,10 @@
                 const descriptions = {
                     'attention': '经典的基于Transformer的构造式模型，速度快，适合入门',
                     'pomo': '同时从多个起点构建路径，利用问题对称性，质量高但计算量大',
+                    'symnco': '利用二面体8对称增强+多损失训练（L_ps+L_ss+L_inv），TSP/mTSP/CVRP最高质量',
                     'ham': '异构注意力模型，区分depot/pickup/delivery节点，PDP取送货问题首选',
-                    'ptrnet': '🏛️ 开创性的Seq2Seq模型（2015），首个深度学习CO方法，适合学习和研究'
+                    'matnet': '矩阵注意力网络，专为非对称距离矩阵和调度问题设计，ATSP/FFSP首选',
+                    'ptrnet': '开创性的Seq2Seq模型（2015），首个深度学习CO方法，适合学习和研究'
                 };
                 const desc = document.getElementById('model-description');
                 if (desc) desc.textContent = descriptions[this.currentPolicy] || '';
@@ -2269,6 +2305,19 @@
                 const hamParams = document.getElementById('ham-params');
                 if (hamParams) {
                     hamParams.style.display = this.currentPolicy === 'ham' ? 'block' : 'none';
+                }
+                const symncoParams = document.getElementById('symnco-params');
+                if (symncoParams) {
+                    symncoParams.style.display = this.currentPolicy === 'symnco' ? 'block' : 'none';
+                }
+                // SymNCO 使用内置训练算法，锁定算法下拉框
+                const algoSelect = document.getElementById('algorithm-select');
+                if (algoSelect) {
+                    algoSelect.disabled = this.currentPolicy === 'symnco';
+                    if (this.currentPolicy === 'symnco') {
+                        algoSelect.value = 'reinforce';
+                        this.currentAlgorithm = 'reinforce';
+                    }
                 }
             }
             
@@ -2336,6 +2385,7 @@
                 const POLICY_PROBLEM_COMPAT = {
                     'attention': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
                     'pomo':      ['tsp', 'mtsp', 'cvrp'],
+                    'symnco':    ['tsp', 'mtsp', 'cvrp'],
                     'ham':       ['pdp'],
                     'matnet':    ['atsp', 'ffsp'],
                     'ptrnet':    ['tsp', 'cvrp'],
@@ -2382,6 +2432,7 @@
                 const POLICY_ALGO_COMPAT = {
                     'attention': ['reinforce', 'ppo', 'a2c'],
                     'pomo':      ['reinforce', 'ppo', 'a2c'],
+                    'symnco':    ['reinforce'],
                     'ham':       ['reinforce', 'ppo', 'a2c'],
                     'matnet':    ['reinforce', 'ppo', 'a2c'],
                     'ptrnet':    ['reinforce'],
@@ -2389,7 +2440,8 @@
 
                 const POLICY_NAMES = {
                     'attention': 'Attention Model', 'pomo': 'POMO',
-                    'ham': 'HAM', 'matnet': 'MatNet', 'ptrnet': 'Pointer Network',
+                    'symnco': 'SymNCO', 'ham': 'HAM',
+                    'matnet': 'MatNet', 'ptrnet': 'Pointer Network',
                 };
 
                 const algoSelect = document.getElementById('algorithm-select');
@@ -2425,6 +2477,7 @@
                 const names = {
                     'attention': 'Attention Model (经典)',
                     'pomo': 'POMO (高质量)',
+                    'symnco': 'SymNCO (对称优化)',
                     'ham': 'HAM (PDP专用)',
                     'ptrnet': 'Pointer Network (开创性)',
                     'ptr': 'Pointer Network (开创性)',

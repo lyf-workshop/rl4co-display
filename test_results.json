@@ -1,0 +1,496 @@
+{
+  "run_at": "2026-03-19T18:22:20.133402",
+  "config": {
+    "epochs": 1,
+    "batch_size": 16,
+    "train_data_size": 200,
+    "val_data_size": 50,
+    "timeout_sec": 360,
+    "use_gpu": false
+  },
+  "summary": {
+    "total": 53,
+    "pass": 53,
+    "fail": 0,
+    "timeout": 0
+  },
+  "results": [
+    {
+      "idx": 1,
+      "problem": "tsp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 130.99561953544617
+    },
+    {
+      "idx": 2,
+      "problem": "tsp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 124.43071389198303
+    },
+    {
+      "idx": 3,
+      "problem": "tsp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 118.57342648506165
+    },
+    {
+      "idx": 4,
+      "problem": "tsp",
+      "policy": "pomo",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 127.6662209033966
+    },
+    {
+      "idx": 5,
+      "problem": "tsp",
+      "policy": "pomo",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 128.5589153766632
+    },
+    {
+      "idx": 6,
+      "problem": "tsp",
+      "policy": "pomo",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 129.37521982192993
+    },
+    {
+      "idx": 7,
+      "problem": "tsp",
+      "policy": "ptrnet",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 128.70743203163147
+    },
+    {
+      "idx": 8,
+      "problem": "tsp",
+      "policy": "symnco",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 129.67513370513916
+    },
+    {
+      "idx": 9,
+      "problem": "atsp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 133.6653435230255
+    },
+    {
+      "idx": 10,
+      "problem": "atsp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 135.531391620636
+    },
+    {
+      "idx": 11,
+      "problem": "atsp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 127.02264404296875
+    },
+    {
+      "idx": 12,
+      "problem": "atsp",
+      "policy": "matnet",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 194.64744186401367
+    },
+    {
+      "idx": 13,
+      "problem": "atsp",
+      "policy": "matnet",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 200.6599986553192
+    },
+    {
+      "idx": 14,
+      "problem": "atsp",
+      "policy": "matnet",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 6.33886456489563
+    },
+    {
+      "idx": 15,
+      "problem": "mtsp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 149.5072956085205
+    },
+    {
+      "idx": 16,
+      "problem": "mtsp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 158.37203788757324
+    },
+    {
+      "idx": 17,
+      "problem": "mtsp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 52.26216268539429
+    },
+    {
+      "idx": 18,
+      "problem": "mtsp",
+      "policy": "pomo",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 174.23016834259033
+    },
+    {
+      "idx": 19,
+      "problem": "mtsp",
+      "policy": "pomo",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 159.53076219558716
+    },
+    {
+      "idx": 20,
+      "problem": "mtsp",
+      "policy": "pomo",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 43.485318183898926
+    },
+    {
+      "idx": 21,
+      "problem": "mtsp",
+      "policy": "symnco",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 326.08693528175354
+    },
+    {
+      "idx": 22,
+      "problem": "cvrp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 153.38303017616272
+    },
+    {
+      "idx": 23,
+      "problem": "cvrp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 154.6664683818817
+    },
+    {
+      "idx": 24,
+      "problem": "cvrp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 160.39125514030457
+    },
+    {
+      "idx": 25,
+      "problem": "cvrp",
+      "policy": "pomo",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 157.40125107765198
+    },
+    {
+      "idx": 26,
+      "problem": "cvrp",
+      "policy": "pomo",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 148.12988591194153
+    },
+    {
+      "idx": 27,
+      "problem": "cvrp",
+      "policy": "pomo",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 150.70586133003235
+    },
+    {
+      "idx": 28,
+      "problem": "cvrp",
+      "policy": "ptrnet",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 145.31451773643494
+    },
+    {
+      "idx": 29,
+      "problem": "cvrp",
+      "policy": "symnco",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 156.29614353179932
+    },
+    {
+      "idx": 30,
+      "problem": "sdvrp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 212.07116031646729
+    },
+    {
+      "idx": 31,
+      "problem": "sdvrp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 217.8863079547882
+    },
+    {
+      "idx": 32,
+      "problem": "sdvrp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 236.42598509788513
+    },
+    {
+      "idx": 33,
+      "problem": "vrptw",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 41.545204639434814
+    },
+    {
+      "idx": 34,
+      "problem": "vrptw",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 42.01071786880493
+    },
+    {
+      "idx": 35,
+      "problem": "vrptw",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 8.577895402908325
+    },
+    {
+      "idx": 36,
+      "problem": "pdp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 30.06326413154602
+    },
+    {
+      "idx": 37,
+      "problem": "pdp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 31.450103282928467
+    },
+    {
+      "idx": 38,
+      "problem": "pdp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 7.3949034214019775
+    },
+    {
+      "idx": 39,
+      "problem": "pdp",
+      "policy": "ham",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 57.30216884613037
+    },
+    {
+      "idx": 40,
+      "problem": "pdp",
+      "policy": "ham",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 54.45700716972351
+    },
+    {
+      "idx": 41,
+      "problem": "pdp",
+      "policy": "ham",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 7.1495747566223145
+    },
+    {
+      "idx": 42,
+      "problem": "op",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 26.686195611953735
+    },
+    {
+      "idx": 43,
+      "problem": "op",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 25.329782724380493
+    },
+    {
+      "idx": 44,
+      "problem": "op",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 3.27622652053833
+    },
+    {
+      "idx": 45,
+      "problem": "pctsp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 26.00838017463684
+    },
+    {
+      "idx": 46,
+      "problem": "pctsp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 28.4328773021698
+    },
+    {
+      "idx": 47,
+      "problem": "pctsp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 4.561344623565674
+    },
+    {
+      "idx": 48,
+      "problem": "spctsp",
+      "policy": "attention",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 28.85063886642456
+    },
+    {
+      "idx": 49,
+      "problem": "spctsp",
+      "policy": "attention",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 28.42223048210144
+    },
+    {
+      "idx": 50,
+      "problem": "spctsp",
+      "policy": "attention",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 4.878243923187256
+    },
+    {
+      "idx": 51,
+      "problem": "ffsp",
+      "policy": "matnet",
+      "algorithm": "a2c",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 44.462340354919434
+    },
+    {
+      "idx": 52,
+      "problem": "ffsp",
+      "policy": "matnet",
+      "algorithm": "ppo",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 43.64064383506775
+    },
+    {
+      "idx": 53,
+      "problem": "ffsp",
+      "policy": "matnet",
+      "algorithm": "reinforce",
+      "status": "PASS",
+      "error": null,
+      "elapsed": 42.51488733291626
+    }
+  ]
+}

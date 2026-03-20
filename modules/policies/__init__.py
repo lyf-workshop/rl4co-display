@@ -16,6 +16,7 @@ from .pomo_policy import POMOPolicyWrapper
 from .ptrnet_policy import PtrNetPolicyWrapper
 from .matnet_policy import MatNetPolicyWrapper
 from .ham_policy import HAMPolicyWrapper
+from .symnco_policy import SymNCOPolicyWrapper
 
 # 策略注册表
 POLICY_REGISTRY = {
@@ -26,9 +27,7 @@ POLICY_REGISTRY = {
     'ptr': PtrNetPolicyWrapper,  # 别名
     'matnet': MatNetPolicyWrapper,  # MatNet - 支持ATSP和FFSP
     'ham': HAMPolicyWrapper,  # HAM - PDP专用异构注意力
-    # 未来扩展：
-    # 'symnco': SymNCOPolicyWrapper,
-    # 'mdam': MDAMPolicyWrapper,
+    'symnco': SymNCOPolicyWrapper,  # SymNCO - 对称性神经CO，利用二面体对称增强
 }
 
 # 策略元信息
@@ -124,6 +123,27 @@ POLICY_INFO = {
             'feedforward_hidden': {'default': 512, 'range': [256, 1024]},
         }
     },
+    'symnco': {
+        'name': 'SymNCO',
+        'full_name': 'Symmetric Neural Combinatorial Optimization',
+        'cn_name': '对称性神经组合优化',
+        'type': 'symmetric-constructive',
+        'year': 2022,
+        'status': 'active',
+        'description': '利用问题对称性的构造式模型，通过二面体8对称增强和多损失训练实现高质量解，适合TSP/mTSP/CVRP',
+        'advantages': ['充分利用对称性', '质量高于AM', '多损失正则化', '可选多起点组合'],
+        'disadvantages': ['仅支持坐标对称问题', '训练时间较长', '显存占用较高'],
+        'suitable_for': ['TSP', 'mTSP', 'CVRP'],
+        'params': {
+            'embed_dim': {'default': 128, 'range': [64, 256]},
+            'num_encoder_layers': {'default': 3, 'range': [3, 6]},
+            'num_heads': {'default': 8, 'range': [4, 16]},
+            'num_augment': {'default': 8, 'range': [1, 10]},
+            'num_starts': {'default': 0, 'range': [0, 50]},
+            'symnco_alpha': {'default': 0.2, 'range': [0.0, 1.0]},
+            'symnco_beta': {'default': 1.0, 'range': [0.0, 2.0]},
+        }
+    },
 }
 
 
@@ -190,6 +210,7 @@ __all__ = [
     'PtrNetPolicyWrapper',
     'MatNetPolicyWrapper',
     'HAMPolicyWrapper',
+    'SymNCOPolicyWrapper',
     'POLICY_REGISTRY',
     'POLICY_INFO',
     'get_policy_class',
