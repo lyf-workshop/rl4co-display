@@ -50,12 +50,13 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 class ProgressCallback(Callback):
     """Lightning回调类，用于捕获训练进度并推送到消息队列"""
     
-    def __init__(self, queue, session_id, total_epochs, user_id):
+    def __init__(self, queue, session_id, total_epochs, user_id, training_status=None):
         super().__init__()
         self.queue = queue  # 与前端通信的消息队列
         self.session_id = session_id  # 当前训练会话ID
         self.total_epochs = total_epochs  # 总训练轮数
         self.user_id = user_id  # 用户ID
+        self.training_status = training_status  # 全局训练状态字典引用
         self.best_reward = float('-inf')  # 记录历史最优奖励
         self.epoch_losses = []  # 当前epoch内每个batch的loss
         self.epoch_rewards = []  # 当前epoch内每个batch的reward
@@ -265,6 +266,14 @@ class ProgressCallback(Callback):
                 'message': f'生成训练曲线失败: {str(e)}'
             }))
         
+        # 同步更新全局 training_status，供训练结束时 final_results 读取
+        if self.training_status is not None and self.session_id in self.training_status:
+            self.training_status[self.session_id]['loss'] = round(loss, 4)
+            self.training_status[self.session_id]['reward'] = round(reward, 4)
+            self.training_status[self.session_id]['best_reward'] = round(self.best_reward, 4)
+            self.training_status[self.session_id]['epoch'] = epoch
+            self.training_status[self.session_id]['progress'] = round(progress, 2)
+
         # 发送进度更新
         self.queue.put(json.dumps({
             'type': 'progress',
@@ -558,8 +567,8 @@ class BaseTrainer:
             if ckpt_path:
                 self.send_message('info', f'加载检查点: {checkpoint_path}')
             
-            # 创建进度回调
-            progress_callback = ProgressCallback(self.queue, self.session_id, self.epochs, self.user_id)
+            # 创建进度回调（传入 training_status 以便每个 epoch 同步更新指标）
+            progress_callback = ProgressCallback(self.queue, self.session_id, self.epochs, self.user_id, self.training_status)
             
             # 初始化训练器
             trainer = RL4COTrainer(
@@ -620,14 +629,26 @@ class BaseTrainer:
                 except Exception as e:
                     print(f"更新训练会话状态失败: {str(e)}")
             
+            # 优先从 progress_callback 读取最终指标（最准确），
+            # 再兜底到 training_status（已由 callback 同步写入）
+            final_loss = (progress_callback.history_losses[-1]
+                          if progress_callback.history_losses
+                          else self.training_status[self.session_id]['loss'])
+            final_reward = (progress_callback.history_rewards[-1]
+                            if progress_callback.history_rewards
+                            else self.training_status[self.session_id]['reward'])
+            best_reward = (progress_callback.best_reward
+                           if progress_callback.best_reward != float('-inf')
+                           else self.training_status[self.session_id]['best_reward'])
+
             final_results = {
                 'model': self.model_type,
                 'problem': self.problem_type,
-                'strategy': self.algorithm_name.upper(),  # 使用实际的算法名称
+                'strategy': self.algorithm_name.upper(),
                 'total_epochs': self.epochs,
-                'final_loss': self.training_status[self.session_id]['loss'],
-                'final_reward': self.training_status[self.session_id]['reward'],
-                'best_reward': self.training_status[self.session_id]['best_reward'],
+                'final_loss': round(float(final_loss), 4),
+                'final_reward': round(float(final_reward), 4),
+                'best_reward': round(float(best_reward), 4),
                 **results
             }
             

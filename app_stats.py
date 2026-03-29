@@ -67,16 +67,17 @@ def get_user_stats():
                 session_stats = cursor.fetchone()
                 
                 if session_stats:
-                    stats['total_sessions'] = session_stats['total'] or 0
-                    stats['completed_sessions'] = session_stats['completed'] or 0
-                    stats['running_sessions'] = session_stats['running'] or 0
-                    stats['failed_sessions'] = session_stats['failed'] or 0
+                    stats['total_sessions'] = int(session_stats['total'] or 0)
+                    stats['completed_sessions'] = int(session_stats['completed'] or 0)
+                    stats['running_sessions'] = int(session_stats['running'] or 0)
+                    stats['failed_sessions'] = int(session_stats['failed'] or 0)
                 
                 # 获取文件统计
                 storage_stats = file_manager.get_user_storage_stats(user_id)
                 if storage_stats:
-                    stats['total_files'] = storage_stats['total_files'] or 0
-                    stats['total_size_mb'] = storage_stats['total_mb'] or 0
+                    stats['total_files'] = int(storage_stats['total_files'] or 0)
+                    # MySQL ROUND() 返回 Decimal 类型，需转为 float 才能被 jsonify 序列化
+                    stats['total_size_mb'] = float(storage_stats['total_mb'] or 0)
                     
             except Exception as e:
                 logger.error(f"获取统计数据失败: {str(e)}", exc_info=True)

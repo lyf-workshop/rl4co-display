@@ -208,12 +208,13 @@ def create_route_animation(td, actions, save_path, title="路线生成过程", f
 class ProgressCallback(Callback):
     """Lightning回调类，用于捕获训练进度并推送到消息队列"""
     
-    def __init__(self, queue, session_id, total_epochs, user_id):
+    def __init__(self, queue, session_id, total_epochs, user_id, training_status=None):
         super().__init__()
         self.queue = queue  # 与前端通信的消息队列
         self.session_id = session_id  # 当前训练会话ID
         self.total_epochs = total_epochs  # 总训练轮数
         self.user_id = user_id  # 用户ID
+        self.training_status = training_status  # 全局训练状态字典引用
         self.best_reward = float('-inf')  # 记录历史最优奖励
         self.epoch_losses = []  # 当前epoch内每个batch的loss
         self.epoch_rewards = []  # 当前epoch内每个batch的reward
@@ -400,10 +401,14 @@ class ProgressCallback(Callback):
                 'message': f'生成训练曲线失败: {str(e)}'
             }))
         
-        # 发送进度更新（需要更新全局 training_status）
-        # 注意：这里需要从 app.py 传入 training_status 的引用
-        # 为了解耦，我们通过队列发送所有信息
-        
+        # 同步更新全局 training_status，供训练结束时 final_results 读取
+        if self.training_status is not None and self.session_id in self.training_status:
+            self.training_status[self.session_id]['loss'] = round(loss, 4)
+            self.training_status[self.session_id]['reward'] = round(reward, 4)
+            self.training_status[self.session_id]['best_reward'] = round(self.best_reward, 4)
+            self.training_status[self.session_id]['epoch'] = epoch
+            self.training_status[self.session_id]['progress'] = round(progress, 2)
+
         # 发送进度更新
         self.queue.put(json.dumps({
             'type': 'progress',
@@ -634,7 +639,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
             }))
         
         # 创建进度回调
-        progress_callback = ProgressCallback(queue, session_id, epochs, user_id)
+        progress_callback = ProgressCallback(queue, session_id, epochs, user_id, training_status)
         
         # 初始化训练器
         trainer = RL4COTrainer(

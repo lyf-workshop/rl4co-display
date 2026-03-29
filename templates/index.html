@@ -418,6 +418,10 @@
 
         .results-panel h3 {
             margin-bottom: 1rem;
+            color: #ffffff;
+            font-size: 1.8rem;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            letter-spacing: 0.03em;
         }
 
         .results-grid {
@@ -1790,34 +1794,36 @@
 
             // 显示训练结果
             const results = data.results;
+            // 安全格式化数值：将 null/undefined/非数字 统一转为 0 再格式化
+            const fmt = (v) => (typeof v === 'number' && isFinite(v) ? v : parseFloat(v) || 0).toFixed(4);
             let resultsHTML = `
                 <div class="result-item">
                     <div class="result-label">模型</div>
-                    <div class="result-value">${results.model.toUpperCase()}</div>
+                    <div class="result-value">${(results.model || '').toUpperCase()}</div>
                 </div>
                 <div class="result-item">
                     <div class="result-label">问题类型</div>
-                    <div class="result-value">${results.problem.toUpperCase()}</div>
+                    <div class="result-value">${(results.problem || '').toUpperCase()}</div>
                 </div>
                 <div class="result-item">
                     <div class="result-label">训练策略</div>
-                    <div class="result-value">${results.strategy.toUpperCase()}</div>
+                    <div class="result-value">${(results.strategy || '').toUpperCase()}</div>
                 </div>
                 <div class="result-item">
                     <div class="result-label">训练轮数</div>
-                    <div class="result-value">${results.total_epochs}</div>
+                    <div class="result-value">${results.total_epochs ?? '-'}</div>
                 </div>
                 <div class="result-item">
                     <div class="result-label">最终 Loss</div>
-                    <div class="result-value">${results.final_loss.toFixed(4)}</div>
+                    <div class="result-value">${fmt(results.final_loss)}</div>
                 </div>
                 <div class="result-item">
                     <div class="result-label">最终 Reward</div>
-                    <div class="result-value">${results.final_reward.toFixed(4)}</div>
+                    <div class="result-value">${fmt(results.final_reward)}</div>
                 </div>
                 <div class="result-item" style="grid-column: 1 / -1;">
                     <div class="result-label">最佳 Reward</div>
-                    <div class="result-value" style="font-size: 2rem;">🏆 ${results.best_reward.toFixed(4)}</div>
+                    <div class="result-value" style="font-size: 2rem;">🏆 ${fmt(results.best_reward)}</div>
                 </div>
             `;
 
