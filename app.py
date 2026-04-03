@@ -179,12 +179,9 @@ def get_background_db():
 
 logger.info("✓ 用户认证模块（请求上下文模式）配置完成")
 
-# 将数据库访问函数添加到auth_module以便Blueprint使用
+# 将数据库访问函数注入 auth_module（通过正式 API，而非运行时属性赋值）
 import auth_module
-auth_module.get_db = get_db
-auth_module.get_user_manager = get_user_manager
-auth_module.get_session_manager = get_session_manager
-auth_module.get_file_manager = get_file_manager
+auth_module.init_db_accessors(get_db, get_user_manager, get_session_manager, get_file_manager)
 
 # ============================================
 # 全局变量：训练状态和进度

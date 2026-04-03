@@ -11,6 +11,38 @@ import os
 
 
 # ============================================
+# 0. 数据库访问函数占位符
+#    真实实现由 app.py 在启动时通过 init_db_accessors() 注入。
+#    Blueprint 模块在请求处理阶段调用这些函数，此时注入早已完成，
+#    不会出现 AttributeError；若未初始化则抛出明确错误以便排查。
+# ============================================
+
+def _not_initialized(*_args, **_kwargs):
+    raise RuntimeError(
+        "auth_module 的数据库访问函数尚未初始化，"
+        "请确认 app.py 已调用 auth_module.init_db_accessors()。"
+    )
+
+get_db = _not_initialized
+get_user_manager = _not_initialized
+get_session_manager = _not_initialized
+get_file_manager = _not_initialized
+
+
+def init_db_accessors(get_db_func, get_user_manager_func,
+                      get_session_manager_func, get_file_manager_func):
+    """
+    由 app.py 在应用启动时调用，将 Flask 请求上下文的数据库访问函数
+    注入到本模块，替代运行时猴子补丁（auth_module.get_db = ...）。
+    """
+    global get_db, get_user_manager, get_session_manager, get_file_manager
+    get_db = get_db_func
+    get_user_manager = get_user_manager_func
+    get_session_manager = get_session_manager_func
+    get_file_manager = get_file_manager_func
+
+
+# ============================================
 # 1. 登录检查装饰器
 # ============================================
 

@@ -1155,14 +1155,33 @@
             <section class="config-section" style="grid-template-columns: 1fr;">
                 <div class="config-card" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                     <h3 style="color: white; margin-bottom: 1.5rem;"><span class="icon">🚀</span> 第5步：开始训练</h3>
+
+                    <!-- 继续上次训练开关 -->
+                    <div style="display: inline-flex; align-items: center; gap: 0.8rem;
+                                background: rgba(255,255,255,0.15); border-radius: 12px;
+                                padding: 0.75rem 1.5rem; margin-bottom: 1.5rem;
+                                border: 1px solid rgba(255,255,255,0.3); cursor: pointer;"
+                         onclick="document.getElementById('resume-checkbox').click()">
+                        <input type="checkbox" id="resume-checkbox" name="resume_checkpoint"
+                               style="width: 18px; height: 18px; accent-color: #fff; cursor: pointer;"
+                               onchange="updateResumeHint()">
+                        <div style="text-align: left;">
+                            <div style="font-size: 1rem; font-weight: 600;">🔄 继续上次训练</div>
+                            <div id="resume-hint" style="font-size: 0.8rem; opacity: 0.85; margin-top: 0.2rem;">
+                                未勾选：每次全新训练（默认，推荐）
+                            </div>
+                        </div>
+                    </div>
+
+                    <br>
                     <button type="button" class="start-button-large" id="start-button" onclick="startTraining()">
                         🚀 开始训练
                     </button>
                     <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
                         点击后将启动强化学习训练，实时显示进度和结果
                     </p>
-        </div>
-    </section>
+                </div>
+            </section>
         </form>
 
         <!-- 训练状态和结果区域 -->
@@ -1448,6 +1467,16 @@
         let eventSource = null;
 
         // 开始训练功能
+        function updateResumeHint() {
+            const checked = document.getElementById('resume-checkbox').checked;
+            const hint = document.getElementById('resume-hint');
+            if (checked) {
+                hint.textContent = '已勾选：从上次保存的检查点继续训练（相同问题+模型）';
+            } else {
+                hint.textContent = '未勾选：每次全新训练（默认，推荐）';
+            }
+        }
+
         async function startTraining() {
             // 获取所有配置参数
             const problem = document.getElementById('problem-select').value;
@@ -1482,7 +1511,8 @@
                 learning_rate: parseFloat(learningRate),
                 dataset_mode: document.getElementById('dataset-mode').value,
                 dataset_id: window.uploadedDatasetId || null,
-                gpu_id: (typeof window.selectedGpuId === 'number') ? window.selectedGpuId : null
+                gpu_id: (typeof window.selectedGpuId === 'number') ? window.selectedGpuId : null,
+                resume_checkpoint: document.getElementById('resume-checkbox').checked
             };
 
             // 添加CVRP特有参数

@@ -624,7 +624,7 @@ def delete_by_session():
                         os.remove(file_path)
                         deleted_files.append(filename)
                     except Exception as e:
-                        print(f"删除文件 {filename} 失败: {str(e)}")
+                        logger.warning(f"删除文件 {filename} 失败: {e}")
         
         return jsonify({
             'success': True,
@@ -675,7 +675,7 @@ def clear_all_files():
                         os.remove(file_path)
                         deleted_count += 1
                     except Exception as e:
-                        print(f"删除文件 {filename} 失败: {str(e)}")
+                        logger.warning(f"删除文件 {filename} 失败: {e}")
         
         # 清空用户的检查点文件
         if os.path.exists(USER_CHECKPOINTS_DIR):
@@ -686,7 +686,7 @@ def clear_all_files():
                         os.remove(file_path)
                         deleted_count += 1
                     except Exception as e:
-                        print(f"删除文件 {filename} 失败: {str(e)}")
+                        logger.warning(f"删除文件 {filename} 失败: {e}")
         
         # ========== 同时清空数据库记录 ==========
         file_manager = get_file_manager()

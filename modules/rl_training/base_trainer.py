@@ -6,12 +6,15 @@ RL4CO 训练基类和通用组件
 import os
 import json
 import time
+import logging
 import torch
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from datetime import datetime
+
+logger = logging.getLogger('rl4co_display')
 
 # 导入 RL4CO 相关组件
 try:
@@ -23,7 +26,7 @@ except ImportError:
     RL4CO_AVAILABLE = False
     Callback = object  # 降级为普通对象基类
     TensorDict = None
-    print("警告: RL4CO 库未安装，训练功能将不可用")
+    logger.warning("RL4CO 库未安装，训练功能将不可用")
 
 # ========== 导入算法和策略模块 ==========
 try:
@@ -32,7 +35,7 @@ try:
     MODULES_AVAILABLE = True
 except ImportError:
     MODULES_AVAILABLE = False
-    print("警告: 算法/策略模块未找到，使用传统模式")
+    logger.warning("算法/策略模块未找到，使用传统模式")
 
 # 导入认证模块的路径辅助函数
 from auth_module import (
@@ -47,26 +50,59 @@ matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Un
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
+def _prepare_checkpoint_safe_globals():
+    """
+    为 PyTorch 2.6+ 将 RL4CO 所有环境类加入 torch.load 安全白名单。
+    PyTorch 2.6 起 weights_only 默认为 True，自定义类需显式声明可信才能反序列化。
+    """
+    try:
+        import importlib
+        import torch.serialization as _ser
+
+        _candidates = [
+            ('rl4co.envs',                          ['TSPEnv', 'CVRPEnv', 'MTSPEnv', 'SDVRPEnv']),
+            ('rl4co.envs.routing',                  ['ATSPEnv', 'PCTSPEnv', 'SPCTSPEnv', 'PDPEnv', 'OPEnv']),
+            ('rl4co.envs.routing.atsp.env',         ['ATSPEnv']),
+            ('rl4co.envs.scheduling',               ['FFSPEnv']),
+            ('modules.envs.vrptw_env_wrapper',      ['CVRPEnvWithTimeWindows']),
+        ]
+
+        safe_classes = []
+        for module_path, class_names in _candidates:
+            try:
+                mod = importlib.import_module(module_path)
+                for name in class_names:
+                    cls = getattr(mod, name, None)
+                    if cls is not None and cls not in safe_classes:
+                        safe_classes.append(cls)
+            except (ImportError, ModuleNotFoundError):
+                pass
+
+        if safe_classes and hasattr(_ser, 'add_safe_globals'):
+            _ser.add_safe_globals(safe_classes)
+    except Exception:
+        pass  # 加载失败时由 trainer.fit 自行报错，不影响正常流程
+
+
 class ProgressCallback(Callback):
     """Lightning回调类，用于捕获训练进度并推送到消息队列"""
     
-    def __init__(self, queue, session_id, total_epochs, user_id, training_status=None):
+    def __init__(self, queue, session_id, total_epochs, user_id,
+                 training_status=None, file_manager=None):
         super().__init__()
-        self.queue = queue  # 与前端通信的消息队列
-        self.session_id = session_id  # 当前训练会话ID
-        self.total_epochs = total_epochs  # 总训练轮数
-        self.user_id = user_id  # 用户ID
-        self.training_status = training_status  # 全局训练状态字典引用
-        self.best_reward = float('-inf')  # 记录历史最优奖励
-        self.epoch_losses = []  # 当前epoch内每个batch的loss
-        self.epoch_rewards = []  # 当前epoch内每个batch的reward
-        # 用于存储所有epoch的历史数据，用于绘制折线图
-        self.history_losses = []  # 所有epoch的平均loss历史
-        self.history_rewards = []  # 所有epoch的平均reward历史
-        self.history_epochs = []  # epoch编号列表
-        # 为后台线程创建独立的数据库连接和管理器
-        self.db = None
-        self.file_manager = None
+        self.queue = queue
+        self.session_id = session_id
+        self.total_epochs = total_epochs
+        self.user_id = user_id
+        self.training_status = training_status
+        # 由 BaseTrainer 传入已建立的后台 FileManager，避免 Callback 内部自建连接
+        self.file_manager = file_manager
+        self.best_reward = float('-inf')
+        self.epoch_losses = []
+        self.epoch_rewards = []
+        self.history_losses = []
+        self.history_rewards = []
+        self.history_epochs = []
     
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         """每个 batch 结束时收集指标"""
@@ -224,24 +260,7 @@ class ProgressCallback(Callback):
             plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             plt.close(fig)
             
-            # 保存文件记录到数据库
-            if self.file_manager is None:
-                # 为后台线程创建独立的数据库连接
-                from config.config import Config
-                import mysql.connector as mysql_connector
-                try:
-                    self.db = mysql_connector.connect(
-                        host=Config.MYSQL_HOST,
-                        user=Config.MYSQL_USER,
-                        password=Config.MYSQL_PASSWORD,
-                        database=Config.MYSQL_DB,
-                        autocommit=True
-                    )
-                    if self.db:
-                        self.file_manager = FileManager(self.db)
-                except Exception as e:
-                    print(f"创建后台数据库连接失败: {str(e)}")
-            
+            # 保存训练曲线文件记录到数据库（file_manager 由 BaseTrainer 注入）
             if self.file_manager:
                 try:
                     self.file_manager.save_file_record(
@@ -252,7 +271,7 @@ class ProgressCallback(Callback):
                         file_path=plot_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {e}")
             
             # 通过队列发送图表路径
             self.queue.put(json.dumps({
@@ -292,13 +311,6 @@ class ProgressCallback(Callback):
             'message': f'Epoch {epoch}/{self.total_epochs} - Loss: {loss:.4f}, Reward: {reward:.4f}, Best: {self.best_reward:.4f}'
         }))
     
-    def __del__(self):
-        """析构时关闭数据库连接"""
-        if self.db:
-            try:
-                self.db.close()
-            except:
-                pass
 
 
 class BaseTrainer:
@@ -365,7 +377,7 @@ class BaseTrainer:
                     self.accelerator = "gpu"
                     self.devices = [gpu_id]
                 else:
-                    print(f"警告: gpu_id={gpu_id} 超出范围，回退到 cuda:0")
+                    logger.warning(f"gpu_id={gpu_id} 超出范围，回退到 cuda:0")
                     self.device = torch.device("cuda:0")
                     self.accelerator = "gpu"
                     self.devices = [0]
@@ -379,7 +391,7 @@ class BaseTrainer:
             self.accelerator = "cpu"
             self.devices = "auto"
             if gpu_id is not None and not torch.cuda.is_available():
-                print("警告: 当前环境不支持 CUDA，已自动切换到 CPU 训练")
+                logger.warning("当前环境不支持 CUDA，已自动切换到 CPU 训练")
     
     def send_message(self, msg_type, message, **kwargs):
         """发送消息到队列"""
@@ -560,25 +572,47 @@ class BaseTrainer:
             policy = self.create_policy(env)
             model = self.create_model(env, policy)
             
-            # 检查checkpoint
+            # 检查点管理
+            # 每次训练后会将模型保存到此路径（problem_type + model_type 唯一标识）
             checkpoint_path = os.path.join(self.user_checkpoints_dir, f"{self.problem_type}-{self.model_type}.ckpt")
-            ckpt_path = checkpoint_path if os.path.exists(checkpoint_path) else None
+            resume_checkpoint = self.config.get('resume_checkpoint', False)
+            ckpt_path = None
+
+            if resume_checkpoint:
+                if os.path.exists(checkpoint_path):
+                    # PyTorch 2.6+ 默认 weights_only=True，需要先将 RL4CO 环境类加入安全白名单
+                    _prepare_checkpoint_safe_globals()
+                    ckpt_path = checkpoint_path
+                    self.send_message('info', f'🔄 从检查点恢复训练: {os.path.basename(checkpoint_path)}')
+                else:
+                    self.send_message('warning', '⚠️ 未找到历史检查点，将从头开始全新训练')
+            else:
+                if os.path.exists(checkpoint_path):
+                    self.send_message('info', '🆕 全新训练（已跳过历史检查点，如需继续上次训练请勾选"继续上次训练"）')
+                else:
+                    self.send_message('info', '🆕 开始全新训练')
             
-            if ckpt_path:
-                self.send_message('info', f'加载检查点: {checkpoint_path}')
-            
-            # 创建进度回调（传入 training_status 以便每个 epoch 同步更新指标）
-            progress_callback = ProgressCallback(self.queue, self.session_id, self.epochs, self.user_id, self.training_status)
+            # 创建进度回调
+            # training_status: 每个 epoch 结束后同步写入指标供 final_results 读取
+            # file_manager: 复用 BaseTrainer 已建立的后台连接，避免 Callback 内部自建新连接
+            progress_callback = ProgressCallback(
+                self.queue, self.session_id, self.epochs, self.user_id,
+                training_status=self.training_status,
+                file_manager=self.bg_file_manager,
+            )
             
             # 初始化训练器
+            # logger=False: 完全禁用 Lightning 日志（logger=None 仍会创建默认 TensorBoardLogger/CSVLogger）
+            # enable_checkpointing=False: 禁用 Lightning 自动存档（项目使用自己的检查点管理）
             trainer = RL4COTrainer(
                 max_epochs=self.epochs,
                 accelerator=self.accelerator,
                 devices=self.devices,
                 callbacks=[progress_callback],
-                logger=None,
+                logger=False,
                 enable_progress_bar=False,
                 enable_model_summary=False,
+                enable_checkpointing=False,
             )
             
             self.send_message('info', '开始训练...')
@@ -594,22 +628,7 @@ class BaseTrainer:
             # 生成可视化
             results = self.generate_visualizations(env, model, trainer, checkpoint_path)
             
-            # ========== 调试信息 ==========
-            print("=" * 80)
-            print("BaseTrainer.train() - 生成可视化完成")
-            print("=" * 80)
-            print(f"generate_visualizations 返回类型: {type(results)}")
-            print(f"返回内容: {results}")
-            if isinstance(results, dict):
-                print(f"字典键: {list(results.keys())}")
-                if 'plot_paths' in results:
-                    print(f"plot_paths 长度: {len(results['plot_paths'])}")
-                    print(f"plot_paths 内容: {results['plot_paths']}")
-                if 'animation_paths' in results:
-                    print(f"animation_paths 长度: {len(results['animation_paths'])}")
-                    print(f"animation_paths 内容: {results['animation_paths']}")
-            print("=" * 80)
-            # ========== 调试信息结束 ==========
+            logger.debug("generate_visualizations 完成: keys=%s", list(results.keys()) if isinstance(results, dict) else type(results))
             
             # 训练完成
             self.training_status[self.session_id]['status'] = 'completed'
@@ -627,7 +646,7 @@ class BaseTrainer:
                         checkpoint_path=checkpoint_path
                     )
                 except Exception as e:
-                    print(f"更新训练会话状态失败: {str(e)}")
+                    logger.error(f"更新训练会话状态失败: {e}", exc_info=True)
             
             # 优先从 progress_callback 读取最终指标（最准确），
             # 再兜底到 training_status（已由 callback 同步写入）
@@ -652,17 +671,10 @@ class BaseTrainer:
                 **results
             }
             
-            # ========== 调试信息 ==========
-            print("=" * 80)
-            print("BaseTrainer.train() - 准备发送 complete 消息")
-            print("=" * 80)
-            print(f"final_results 类型: {type(final_results)}")
-            print(f"final_results 键: {list(final_results.keys())}")
-            print(f"final_results 完整内容:")
-            import json as json_module
-            print(json_module.dumps(final_results, indent=2, ensure_ascii=False))
-            print("=" * 80)
-            # ========== 调试信息结束 ==========
+            logger.debug("final_results: loss=%.4f reward=%.4f best_reward=%.4f",
+                         final_results.get('final_loss', 0),
+                         final_results.get('final_reward', 0),
+                         final_results.get('best_reward', 0))
             
             self.send_message('complete', '训练完成！', results=final_results)
             
@@ -680,7 +692,7 @@ class BaseTrainer:
                         end_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     )
                 except Exception as update_error:
-                    print(f"更新失败状态失败: {str(update_error)}")
+                    logger.error(f"更新失败状态失败: {update_error}")
             
             self.send_message('error', f'训练出错: {str(e)}')
         
