@@ -15,24 +15,43 @@ RL4CO 训练模块 - 模块化重构版
 """
 
 import json
+import logging
+
+logger = logging.getLogger('rl4co_display')
+
+# base_trainer 不依赖 rl4co，始终可以导入
 from .base_trainer import BaseTrainer, ProgressCallback
-from .tsp_trainer import TSPTrainer, train_tsp
-from .atsp_trainer import ATSPTrainer, train_atsp
-from .mtsp_trainer import MTSPTrainer, train_mtsp
-from .cvrp_trainer import CVRPTrainer, train_cvrp
-from .sdvrp_trainer import SDVRPTrainer, train_sdvrp
-from .vrptw_trainer import VRPTWTrainer, train_vrptw
-from .pdp_trainer import PDPTrainer, train_pdp
-from .op_trainer import OPTrainer, train_op
-from .pctsp_trainer import PCTSPTrainer, train_pctsp
-from .spctsp_trainer import SPCTSPTrainer, train_spctsp
-from .ffsp_trainer import FFSPTrainer, train_ffsp
+
+# 以下 Trainer 依赖 rl4co → torchrl，在 Windows 上可能因原生 DLL 问题导入失败。
+# 用 try/except 隔离，确保 Flask 应用和不依赖 rl4co 的测试不受影响。
+try:
+    from .tsp_trainer import TSPTrainer, train_tsp
+    from .atsp_trainer import ATSPTrainer, train_atsp
+    from .mtsp_trainer import MTSPTrainer, train_mtsp
+    from .cvrp_trainer import CVRPTrainer, train_cvrp
+    from .sdvrp_trainer import SDVRPTrainer, train_sdvrp
+    from .vrptw_trainer import VRPTWTrainer, train_vrptw
+    from .pdp_trainer import PDPTrainer, train_pdp
+    from .op_trainer import OPTrainer, train_op
+    from .pctsp_trainer import PCTSPTrainer, train_pctsp
+    from .spctsp_trainer import SPCTSPTrainer, train_spctsp
+    from .ffsp_trainer import FFSPTrainer, train_ffsp
+    _RL4CO_TRAINERS_AVAILABLE = True
+except Exception as e:
+    _RL4CO_TRAINERS_AVAILABLE = False
+    logger.warning(f"RL4CO 训练器导入失败（将使用模拟训练模式）: {e}")
+    # 定义占位符，避免 NameError
+    TSPTrainer = ATSPTrainer = MTSPTrainer = CVRPTrainer = None
+    SDVRPTrainer = VRPTWTrainer = PDPTrainer = OPTrainer = None
+    PCTSPTrainer = SPCTSPTrainer = FFSPTrainer = None
+    train_tsp = train_atsp = train_mtsp = train_cvrp = train_sdvrp = None
+    train_vrptw = train_pdp = train_op = train_pctsp = train_spctsp = train_ffsp = None
 
 # 向后兼容：提供统一的训练入口
 def real_rl4co_training(config, session_id, user_id, queue, training_status, get_background_db_func):
     """
     统一的强化学习训练入口函数（根据问题类型自动路由）
-    
+
     参数:
         config: 训练配置字典
         session_id: 训练会话ID
@@ -41,6 +60,14 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
+    if not _RL4CO_TRAINERS_AVAILABLE:
+        training_status[session_id] = {'status': 'error', 'progress': 0}
+        queue.put(json.dumps({
+            'type': 'error',
+            'message': 'RL4CO 训练器加载失败（可能是 torchrl DLL 兼容性问题），请检查环境配置'
+        }))
+        return
+
     problem_type = config.get('problem', 'tsp').lower()
     
     # 根据问题类型路由到对应的训练器
@@ -94,7 +121,10 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
 
 
 # 向后兼容：保留原有的动画创建函数（使用TSP可视化）
-from .visualizations.tsp_viz import create_tsp_route_animation as create_route_animation
+try:
+    from .visualizations.tsp_viz import create_tsp_route_animation as create_route_animation
+except Exception:
+    create_route_animation = None
 
 __all__ = [
     # 基类和通用组件

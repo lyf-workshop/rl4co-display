@@ -8,6 +8,13 @@ import os
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# 排除脚本风格的测试文件（含顶层 sys.exit()，会导致 pytest 收集阶段崩溃）
+# 这些文件应用 python 直接运行，而非通过 pytest
+collect_ignore_glob = [
+    os.path.join(os.path.dirname(__file__), 'unit', 'test_auth_*'),
+    os.path.join(os.path.dirname(__file__), 'unit', 'test_cvrp_viz*'),
+]
+
 
 @pytest.fixture
 def app():

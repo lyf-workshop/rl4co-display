@@ -33,6 +33,7 @@ class TestGpuStatusEndpoint(unittest.TestCase):
         import app_gpu
         importlib.reload(app_gpu)
         app_gpu.PYNVML_AVAILABLE = False
+        app_gpu.TORCH_CUDA_AVAILABLE = False  # 同时禁用 torch.cuda 兜底，强制 Mock
 
         from flask import Flask
         self.flask_app = Flask(__name__)
@@ -379,13 +380,13 @@ class TestBaseTrainerDeviceSelection(unittest.TestCase):
         self.assertEqual(trainer.accelerator, 'cpu')
         self.assertEqual(trainer.devices, 'auto')
 
-    def test_gpu_id_none_uses_default_gpu_when_cuda(self):
-        """有 CUDA 时，不传 gpu_id 应使用默认 GPU（devices=1）"""
+    def test_gpu_id_none_uses_cpu(self):
+        """不传 gpu_id 时（用户选择 CPU），即使 CUDA 可用也应使用 CPU"""
         with patch('torch.cuda.is_available', return_value=True), \
              patch('torch.cuda.device_count', return_value=4):
             trainer = self._make_trainer()
-        self.assertEqual(trainer.accelerator, 'gpu')
-        self.assertEqual(trainer.devices, 1)
+        self.assertEqual(trainer.accelerator, 'cpu')
+        self.assertEqual(trainer.devices, 'auto')
 
     def test_valid_gpu_id_sets_device_list(self):
         """有 CUDA 且 gpu_id 有效时，devices 应为 [gpu_id]"""
@@ -410,14 +411,13 @@ class TestBaseTrainerDeviceSelection(unittest.TestCase):
             trainer = self._make_trainer({'gpu_id': 0})
         self.assertEqual(trainer.devices, [0])
 
-    def test_invalid_string_gpu_id_falls_back(self):
-        """传字符串类型 gpu_id 应不崩溃，回退到 devices=1"""
+    def test_invalid_string_gpu_id_falls_back_to_cpu(self):
+        """传字符串类型 gpu_id 应不崩溃，ValueError 回退到 CPU"""
         with patch('torch.cuda.is_available', return_value=True), \
              patch('torch.cuda.device_count', return_value=4):
             trainer = self._make_trainer({'gpu_id': 'bad_value'})
-        self.assertEqual(trainer.accelerator, 'gpu')
-        # 应回退到 devices=1（默认 GPU）
-        self.assertEqual(trainer.devices, 1)
+        self.assertEqual(trainer.accelerator, 'cpu')
+        self.assertEqual(trainer.devices, 'auto')
 
     def test_no_cuda_with_gpu_id_uses_cpu(self):
         """无 CUDA 时即使传了 gpu_id 也应使用 CPU"""
