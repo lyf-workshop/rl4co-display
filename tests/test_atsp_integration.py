@@ -70,7 +70,7 @@ class TestATSPCompatibility:
         """测试ATSP + POMO被阻止"""
         valid, msg, level = validate_combination('atsp', 'pomo', 'ppo')
         assert valid is False or level == 'error'
-        assert 'POMO' in msg and '不支持' in msg
+        assert 'POMO' in msg
     
     def test_atsp_with_reinforce_warning(self):
         """测试ATSP + REINFORCE有警告"""

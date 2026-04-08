@@ -3,7 +3,8 @@
     "allow": [
       "Bash(wc -l \"F:/Github/rl4co-display\"/*.py)",
       "Bash(grep -l \"Blueprint\\\\|@.*route\" \"F:/Github/rl4co-display\"/app_*.py)",
-      "Bash(find F:\\\\Github\\\\rl4co-display:*)"
+      "Bash(find F:\\\\Github\\\\rl4co-display:*)",
+      "Bash(python -m pytest tests/ -v --tb=short)"
     ]
   }
 }

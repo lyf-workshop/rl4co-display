@@ -62,7 +62,7 @@ def login_required(f):
                     'redirect': '/login'
                 }), 401
             # 页面请求重定向到登录页
-            return redirect(url_for('login'))
+            return redirect(url_for('auth.login_page'))
         return f(*args, **kwargs)
     return decorated_function
 

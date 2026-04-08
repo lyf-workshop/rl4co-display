@@ -3,6 +3,7 @@ RL4CO Display - 主应用入口
 重构后的Flask应用，路由分离到各个Blueprint模块
 """
 import json
+import threading
 from flask import Flask, g
 from config.config import Config
 import os
@@ -10,7 +11,7 @@ import time
 from datetime import timedelta
 from functools import wraps
 import mysql.connector as mysql_connector
-import logging
+import logging 
 
 # ========== 导入日志配置 ==========
 from logging_config import setup_logging
@@ -225,6 +226,34 @@ class SimpleCache:
 api_cache = SimpleCache(timeout=300)  # 5分钟缓存
 
 
+def _start_cleanup_reaper(status_dict, queues_dict, ttl_seconds=1800):
+    """
+    启动后台守护线程，定期清理过期的训练状态和队列。
+
+    每 10 分钟扫描一次 status_dict，将状态为 completed/error 且完成时间
+    超过 ttl_seconds（默认 30 分钟）的条目从两个字典中同时删除。
+    队列通常已由 SSE 生成器的 finally 块提前清理，此处为兜底。
+    """
+    def _reaper():
+        while True:
+            time.sleep(600)  # 每 10 分钟检查一次
+            now = time.time()
+            expired = [
+                sid for sid, info in list(status_dict.items())
+                if info.get('status') in ('completed', 'error')
+                and (now - info.get('_completed_at', now)) > ttl_seconds
+            ]
+            for sid in expired:
+                status_dict.pop(sid, None)
+                queues_dict.pop(sid, None)
+            if expired:
+                logger.info(f"[Reaper] 已清理 {len(expired)} 个过期会话: {expired}")
+
+    t = threading.Thread(target=_reaper, daemon=True, name='session-reaper')
+    t.start()
+    logger.info("✓ 训练会话清理线程（Reaper）已启动")
+
+
 def cached_api(key_prefix=''):
     """API缓存装饰器"""
     def decorator(f):
@@ -254,6 +283,9 @@ def cached_api(key_prefix=''):
         return decorated_function
     return decorator
 
+
+# 启动后台清理线程，防止 training_status / training_queues 无限增长
+_start_cleanup_reaper(training_status, training_queues, ttl_seconds=1800)
 
 # ============================================
 # 模拟训练函数（当 RL4CO 不可用时）

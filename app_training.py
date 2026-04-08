@@ -147,12 +147,14 @@ def start_training():
         if gpu_id is not None:
             _allocate_gpu(gpu_id, session_id, user_id)
 
-        # 包装训练函数：训练结束后自动释放 GPU
+        # 包装训练函数：训练结束后自动释放 GPU，并记录完成时间供 Reaper 清理
         def _run_with_gpu_release(train_func, *args):
             try:
                 train_func(*args)
             finally:
                 _release_gpu(session_id)
+                if session_id in training_status:
+                    training_status[session_id]['_completed_at'] = time.time()
 
         # 根据 RL4CO 是否可用选择训练函数
         if RL4CO_AVAILABLE:
@@ -196,27 +198,31 @@ def training_progress(session_id):
         if session_id not in training_queues:
             yield f"data: {json.dumps({'type': 'error', 'message': '无效的会话 ID'})}\n\n"
             return
-        
+
         queue = training_queues[session_id]
-        
-        while True:
-            try:
-                # 从队列中获取消息（阻塞等待）
-                message = queue.get(timeout=1)
-                yield f"data: {message}\n\n"
-                
-                # 如果收到完成或错误消息，则结束流
-                data = json.loads(message)
-                if data['type'] in ['complete', 'error']:
-                    break
-                    
-            except:
-                # 超时或队列为空，发送心跳
-                if session_id in training_status:
-                    if training_status[session_id]['status'] == 'completed':
+        try:
+            while True:
+                try:
+                    # 从队列中获取消息（阻塞等待）
+                    message = queue.get(timeout=1)
+                    yield f"data: {message}\n\n"
+
+                    # 如果收到完成或错误消息，则结束流
+                    data = json.loads(message)
+                    if data['type'] in ['complete', 'error']:
                         break
-                yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
-    
+
+                except Exception:
+                    # 超时或队列为空，发送心跳
+                    if session_id in training_status:
+                        if training_status[session_id]['status'] == 'completed':
+                            break
+                    yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
+        finally:
+            # 无论正常结束、客户端断连还是异常，都立即释放队列对象
+            training_queues.pop(session_id, None)
+            logger.debug(f"已清理会话 {session_id} 的消息队列")
+
     return Response(generate(), mimetype='text/event-stream')
 
 

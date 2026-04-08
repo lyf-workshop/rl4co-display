@@ -1,0 +1,53 @@
+# ============================================
+# RL4CO Display - 生产环境依赖
+# 山西大学 计算机科学与技术学院
+# ============================================
+
+# Flask 核心框架
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# 数据库
+mysql-connector-python>=8.0.0
+
+# 环境变量管理
+python-dotenv==1.0.0
+
+# 深度学习框架
+torch>=2.0.0
+lightning>=2.0.0
+
+# 强化学习组合优化库
+rl4co>=0.4.0
+
+# 数据处理与可视化
+numpy>=1.24.0
+matplotlib>=3.7.0
+Pillow>=10.0.0
+
+# GPU 监控（可选，无 GPU 时可跳过）
+# nvidia-ml-py3>=11.495.46
+
+# ============================================
+# 安装说明
+# ============================================
+#
+# 1. 基础安装（所有依赖）:
+#    pip install -r requirements.txt
+#
+# 2. 带 GPU 监控（推荐有 NVIDIA GPU 的用户）:
+#    pip install -r requirements.txt
+#    pip install nvidia-ml-py3
+#
+# 3. 仅 CPU 版本（无 GPU）:
+#    # 先安装 PyTorch CPU 版本
+#    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+#    # 再安装其他依赖
+#    pip install -r requirements.txt --no-deps torch
+#
+# 4. Conda 环境（推荐）:
+#    conda create -n rl4co-display python=3.10
+#    conda activate rl4co-display
+#    conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+#    pip install -r requirements.txt --no-deps torch torchvision torchaudio
+#
