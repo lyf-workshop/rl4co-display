@@ -4,12 +4,15 @@ mTSP问题专用可视化函数
 """
 
 import os
+import logging
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from PIL import Image
+
+logger = logging.getLogger('rl4co_display')
 
 # 配置中文字体支持
 matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
@@ -279,9 +282,9 @@ def create_mtsp_route_animation(td, actions, save_path, title="mTSP路线生成�
         duration = int(1000 / fps)  # 每帧持续时间（毫秒）
         frames[0].save(save_path, save_all=True, append_images=frames[1:],
                       duration=duration, loop=0, optimize=False)
-        print(f"✓ mTSP动画已保存: {save_path}")
+        logger.info(f"mTSP动画已保存: {save_path}")
     else:
-        print("✗ 没有生成任何帧")
+        logger.warning("mTSP动画：没有生成任何帧")
 
 
 def create_mtsp_comparison_plot(td, actions, save_path, cost=None, 
@@ -414,4 +417,4 @@ def create_mtsp_comparison_plot(td, actions, save_path, cost=None,
     fig.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"✓ mTSP对比图已保存: {save_path}")
+    logger.info(f"mTSP对比图已保存: {save_path}")

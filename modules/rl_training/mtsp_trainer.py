@@ -5,16 +5,19 @@ mTSP问题专用训练器
 
 import os
 import json
+import logging
 import torch
 import numpy as np
 from datetime import datetime
+
+logger = logging.getLogger('rl4co_display')
 
 try:
     from rl4co.envs import MTSPEnv
     RL4CO_AVAILABLE = True
 except ImportError:
     RL4CO_AVAILABLE = False
-    print("警告: RL4CO 库未安装或不支持 MTSPEnv")
+    logger.warning("RL4CO 库未安装或不支持 MTSPEnv")
 
 from .base_trainer import BaseTrainer
 from .visualizations.mtsp_viz import create_mtsp_route_animation, create_mtsp_comparison_plot
@@ -23,8 +26,8 @@ from .visualizations.mtsp_viz import create_mtsp_route_animation, create_mtsp_co
 class MTSPTrainer(BaseTrainer):
     """mTSP问题训练器"""
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         
         # mTSP特有参数
         self.num_agents = int(config.get('num_agents', 5))
@@ -127,7 +130,7 @@ class MTSPTrainer(BaseTrainer):
                                 file_path=anim_path
                             )
                         except Exception as e:
-                            print(f"保存动画记录失败: {str(e)}")
+                            logger.warning(f"保存动画记录失败: {str(e)}")
                 except Exception as e:
                     self.send_message('info', f'⚠️ 动画 {i+1} 生成失败: {str(e)}')
                 
@@ -154,23 +157,13 @@ class MTSPTrainer(BaseTrainer):
                                 file_path=comp_path
                             )
                         except Exception as e:
-                            print(f"保存对比图记录失败: {str(e)}")
+                            logger.warning(f"保存对比图记录失败: {str(e)}")
                 except Exception as e:
                     self.send_message('info', f'⚠️ 对比图 {i+1} 生成失败: {str(e)}')
             
             self.send_message('info', f'🎉 mTSP可视化完成: {len(animation_paths)}个动画, {len(comparison_paths)}个对比图')
-            
-            # ========== 调试信息 ==========
-            print("=" * 80)
-            print("MTSPTrainer.generate_visualizations() - 可视化生成完成")
-            print("=" * 80)
-            print(f"生成的动画数量: {len(animation_paths)}")
-            print(f"动画路径: {animation_paths}")
-            print(f"生成的对比图数量: {len(comparison_paths)}")
-            print(f"对比图路径: {comparison_paths}")
-            print("=" * 80)
-            # ========== 调试信息结束 ==========
-            
+            logger.debug("mTSP可视化完成: animations=%s, comparisons=%s", animation_paths, comparison_paths)
+
             # 保存检查点
             trainer.save_checkpoint(checkpoint_path)
             
@@ -186,7 +179,7 @@ class MTSPTrainer(BaseTrainer):
                         file_path=checkpoint_path
                     )
                 except Exception as e:
-                    print(f"保存checkpoint记录失败: {str(e)}")
+                    logger.warning(f"保存checkpoint记录失败: {str(e)}")
             
             self.send_message('info', f'检查点已保存: {checkpoint_path}')
             
@@ -220,7 +213,7 @@ class MTSPTrainer(BaseTrainer):
         return summary
 
 
-def train_mtsp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_mtsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     mTSP训练入口函数
     
@@ -232,7 +225,7 @@ def train_mtsp(config, session_id, user_id, queue, training_status, get_backgrou
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = MTSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = MTSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()
 
 

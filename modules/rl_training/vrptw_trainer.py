@@ -4,8 +4,11 @@ VRPTW (Vehicle Routing Problem with Time Windows) 训练器
 
 import os
 import json
+import logging
 import torch
 from datetime import datetime
+
+logger = logging.getLogger('rl4co_display')
 
 from .base_trainer import BaseTrainer
 from modules.problems import get_problem_class
@@ -23,8 +26,8 @@ class VRPTWTrainer(BaseTrainer):
     处理带时间窗的车辆路径问题的强化学习训练
     """
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         self.problem_type = 'vrptw'
         
         # 获取VRPTW特定参数
@@ -176,7 +179,7 @@ class VRPTWTrainer(BaseTrainer):
             import traceback
             error_traceback = traceback.format_exc()
             self.send_message('warning', f'生成VRPTW可视化时出错: {str(e)}')
-            print(f"VRPTW可视化错误详情:\n{error_traceback}")
+            logger.error(f"VRPTW可视化错误详情:\n{error_traceback}")
         
         return results
     
@@ -189,7 +192,7 @@ class VRPTWTrainer(BaseTrainer):
         }
 
 
-def train_vrptw(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_vrptw(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     VRPTW训练函数（供外部调用）
     
@@ -201,7 +204,7 @@ def train_vrptw(config, session_id, user_id, queue, training_status, get_backgro
         training_status: 训练状态字典
         get_background_db_func: 数据库连接函数
     """
-    trainer = VRPTWTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = VRPTWTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()
 
 

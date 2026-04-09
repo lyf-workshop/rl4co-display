@@ -4,12 +4,15 @@ VRPTW问题专用可视化函数
 """
 
 import os
+import logging
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from PIL import Image
+
+logger = logging.getLogger('rl4co_display')
 
 # 配置中文字体支持
 matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
@@ -315,7 +318,7 @@ def create_vrptw_route_animation(td, actions, save_path, title="VRPTW路线生�
         if os.path.exists(temp_path):
             os.remove(temp_path)
     
-    print(f"✅ VRPTW动画已保存: {save_path}")
+    logger.info(f"VRPTW动画已保存: {save_path}")
     return save_path
 
 
@@ -374,7 +377,7 @@ def create_vrptw_comparison_plot(before_cost, after_cost, save_path,
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
     
-    print(f"✅ VRPTW对比图已保存: {save_path}")
+    logger.info(f"VRPTW对比图已保存: {save_path}")
     return save_path
 
 
@@ -542,7 +545,7 @@ def create_vrptw_time_schedule(td, actions, save_path, title="VRPTW时间调度�
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
     
-    print(f"✅ VRPTW时间调度图已保存: {save_path}")
+    logger.info(f"VRPTW时间调度图已保存: {save_path}")
     return save_path
 
 

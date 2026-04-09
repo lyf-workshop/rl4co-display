@@ -5,8 +5,11 @@ FFSP问题专用训练器
 
 import os
 import json
+import logging
 import torch
 from datetime import datetime
+
+logger = logging.getLogger('rl4co_display')
 
 try:
     from rl4co.envs.scheduling import FFSPEnv
@@ -16,7 +19,7 @@ try:
 except ImportError:
     RL4CO_AVAILABLE = False
     TensorDict = None
-    print("警告: RL4CO 库未安装或版本过旧")
+    logger.warning("RL4CO 库未安装或版本过旧")
 
 from .base_trainer import BaseTrainer
 from .visualizations.ffsp_viz import (
@@ -51,10 +54,10 @@ def _patch_index_tables():
                 self.set_bs(num_starts)
         
         IndexTables.augment_machine_tables = augment_machine_tables
-        print("✅ 已修补 IndexTables.augment_machine_tables 方法")
-        
+        logger.info("已修补 IndexTables.augment_machine_tables 方法")
+
     except Exception as e:
-        print(f"⚠️  无法修补 IndexTables: {e}")
+        logger.warning(f"无法修补 IndexTables: {e}")
 
 # 在模块导入时立即执行修补
 _patch_index_tables()
@@ -171,8 +174,8 @@ class FFSPEnvWithCostMatrix:
 class FFSPTrainer(BaseTrainer):
     """FFSP问题训练器"""
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         
         # FFSP特有参数
         self.num_stage = int(config.get('num_stage', 3))
@@ -452,7 +455,7 @@ class FFSPTrainer(BaseTrainer):
                             file_path=gantt_path
                         )
                     except Exception as e:
-                        print(f"保存文件记录失败: {str(e)}")
+                        logger.warning(f"保存文件记录失败: {str(e)}")
                 
                 plot_paths.append(f"/static/model_plots/user_{self.user_id}/{gantt_filename}")
                 
@@ -476,7 +479,7 @@ class FFSPTrainer(BaseTrainer):
                     file_path=checkpoint_path
                 )
             except Exception as e:
-                print(f"保存checkpoint记录失败: {str(e)}")
+                logger.warning(f"保存checkpoint记录失败: {str(e)}")
         
         self.send_message('info', f'检查点已保存: {checkpoint_path}')
         
@@ -517,7 +520,7 @@ class FFSPTrainer(BaseTrainer):
         }
 
 
-def train_ffsp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_ffsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     FFSP训练入口函数
     
@@ -529,5 +532,5 @@ def train_ffsp(config, session_id, user_id, queue, training_status, get_backgrou
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = FFSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = FFSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()

@@ -35,8 +35,8 @@ class PCTSPTrainer(BaseTrainer):
         prize_required (float): 必须收集的最低奖励，默认 1.0
     """
 
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
 
         self.pctsp_num_loc = int(config.get('num_loc', 20))
         self.penalty_factor = float(config.get('penalty_factor', 3.0))
@@ -250,7 +250,7 @@ class PCTSPTrainer(BaseTrainer):
         return summary
 
 
-def train_pctsp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_pctsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     PCTSP 训练入口函数
 
@@ -262,7 +262,7 @@ def train_pctsp(config, session_id, user_id, queue, training_status, get_backgro
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = PCTSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = PCTSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()
 
 

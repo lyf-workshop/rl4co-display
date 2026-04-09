@@ -5,14 +5,17 @@ attention / ptrnet 等坐标模型仍沿用 TSPTrainer。
 """
 
 import os
+import logging
 import torch
+
+logger = logging.getLogger('rl4co_display')
 
 try:
     from rl4co.envs.routing.atsp.env import ATSPEnv
     RL4CO_AVAILABLE = True
 except ImportError:
     RL4CO_AVAILABLE = False
-    print("警告: RL4CO 库未安装或版本过旧，ATSPEnv 不可用")
+    logger.warning("RL4CO 库未安装或版本过旧，ATSPEnv 不可用")
 
 from .base_trainer import BaseTrainer
 from .visualizations.tsp_viz import create_tsp_comparison_plot
@@ -49,7 +52,7 @@ class ATSPTrainer(BaseTrainer):
                     file_path=checkpoint_path,
                 )
             except Exception as e:
-                print(f"保存 checkpoint 记录失败: {e}")
+                logger.warning(f"保存 checkpoint 记录失败: {e}")
 
         self.send_message('info', f'检查点已保存: {checkpoint_path}')
         self.send_message('info', 'ℹ️ ATSP 为代价矩阵表示，跳过路线可视化')
@@ -62,7 +65,7 @@ class ATSPTrainer(BaseTrainer):
         }
 
 
-def train_atsp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_atsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """ATSP（MatNet）训练入口"""
-    trainer = ATSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = ATSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()

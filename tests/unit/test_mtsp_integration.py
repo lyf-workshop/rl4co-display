@@ -3,12 +3,15 @@ mTSP 集成测试
 验证 mTSP 问题类型是否正确集成到系统中
 """
 
+import importlib
 import pytest
 import sys
 import os
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+_torch_available = importlib.util.find_spec('torch') is not None
 
 from modules.problems import get_problem_class, PROBLEM_REGISTRY, get_problem_info
 
@@ -177,6 +180,7 @@ class TestMTSPIntegration:
         assert any('代理' in str(f) for f in features)
         assert any('起点' in str(f) or 'depot' in str(f).lower() for f in features)
     
+    @pytest.mark.skipif(not _torch_available, reason='torch 未安装')
     def test_mtsp_visualization_functions(self):
         """测试 mTSP 可视化函数获取"""
         config = {
@@ -197,9 +201,10 @@ class TestMTSPIntegration:
         assert callable(viz_funcs['comparison'])
 
 
+@pytest.mark.skipif(not _torch_available, reason='torch 未安装')
 class TestMTSPVisualization:
     """mTSP 可视化函数测试"""
-    
+
     def test_extract_agent_routes(self):
         """测试代理路径提取函数"""
         from modules.rl_training.visualizations.mtsp_viz import extract_agent_routes

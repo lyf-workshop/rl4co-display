@@ -5,15 +5,18 @@ SDVRP问题专用训练器
 
 import os
 import json
+import logging
 import torch
 from datetime import datetime
+
+logger = logging.getLogger('rl4co_display')
 
 try:
     from rl4co.envs import CVRPEnv
     RL4CO_AVAILABLE = True
 except ImportError:
     RL4CO_AVAILABLE = False
-    print("警告: RL4CO 库未安装")
+    logger.warning("RL4CO 库未安装")
 
 from .base_trainer import BaseTrainer
 from .visualizations.sdvrp_viz import (
@@ -26,8 +29,8 @@ from .visualizations.sdvrp_viz import (
 class SDVRPTrainer(BaseTrainer):
     """SDVRP问题训练器（允许分割配送）"""
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         
         # SDVRP特有的参数
         self.vehicle_capacity = float(config.get('vehicle_capacity', 1.0))
@@ -130,7 +133,7 @@ class SDVRPTrainer(BaseTrainer):
                             file_path=plot_path
                         )
                     except Exception as e:
-                        print(f"保存文件记录失败: {str(e)}")
+                        logger.warning(f"保存文件记录失败: {str(e)}")
                 plot_paths.append(f"/static/model_plots/user_{self.user_id}/{plot_filename}")
                 
                 # 2. 生成动态路线动画
@@ -157,7 +160,7 @@ class SDVRPTrainer(BaseTrainer):
                             file_path=animation_path
                         )
                     except Exception as e:
-                        print(f"保存文件记录失败: {str(e)}")
+                        logger.warning(f"保存文件记录失败: {str(e)}")
                 animation_paths.append(f"/static/model_plots/user_{self.user_id}/{animation_filename}")
                 
                 # 3. 生成分割配送分析图
@@ -186,7 +189,7 @@ class SDVRPTrainer(BaseTrainer):
                             file_path=analysis_path
                         )
                     except Exception as e:
-                        print(f"保存文件记录失败: {str(e)}")
+                        logger.warning(f"保存文件记录失败: {str(e)}")
                 analysis_paths.append(f"/static/model_plots/user_{self.user_id}/{analysis_filename}")
             
             return {
@@ -202,7 +205,7 @@ class SDVRPTrainer(BaseTrainer):
             return {}
 
 
-def train_sdvrp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_sdvrp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     SDVRP训练入口函数
     
@@ -220,7 +223,8 @@ def train_sdvrp(config, session_id, user_id, queue, training_status, get_backgro
         user_id=user_id,
         queue=queue,
         training_status=training_status,
-        get_background_db_func=get_background_db_func
+        get_background_db_func=get_background_db_func,
+        pause_event=pause_event
     )
     
     trainer.train()

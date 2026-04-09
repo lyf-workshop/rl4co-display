@@ -6,8 +6,11 @@ RL4CO 训练核心函数模块
 import os
 import json
 import time
+import logging
 import torch
 import numpy as np
+
+logger = logging.getLogger('rl4co_display')
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -26,7 +29,7 @@ except ImportError:
     RL4CO_AVAILABLE = False
     Callback = object  # 降级为普通对象基类
     TensorDict = None
-    print("警告: RL4CO 库未安装，训练功能将不可用")
+    logger.warning("RL4CO 库未安装，训练功能将不可用")
 
 # 导入认证模块的路径辅助函数
 from auth_module import (
@@ -375,7 +378,7 @@ class ProgressCallback(Callback):
                     if self.db:
                         self.file_manager = FileManager(self.db)
                 except Exception as e:
-                    print(f"创建后台数据库连接失败: {str(e)}")
+                    logger.error(f"创建后台数据库连接失败: {str(e)}")
             
             if self.file_manager:
                 try:
@@ -387,7 +390,7 @@ class ProgressCallback(Callback):
                         file_path=plot_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {str(e)}")
             
             # 通过队列发送图表路径
             self.queue.put(json.dumps({
@@ -432,8 +435,8 @@ class ProgressCallback(Callback):
         if self.db:
             try:
                 self.db.close()
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"析构时关闭数据库连接出错: {e}")
 
 
 def real_rl4co_training(config, session_id, user_id, queue, training_status, get_background_db_func):
@@ -726,7 +729,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
                         file_path=plot_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {str(e)}")
             
             plot_paths.append(f"/static/model_plots/user_{user_id}/{plot_filename}")
             
@@ -758,7 +761,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
                         file_path=animation_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {str(e)}")
             
             animation_paths.append(f"/static/model_plots/user_{user_id}/{animation_filename}")
         
@@ -777,7 +780,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
                     file_path=checkpoint_path
                 )
             except Exception as e:
-                print(f"保存checkpoint记录失败: {str(e)}")
+                logger.warning(f"保存checkpoint记录失败: {str(e)}")
         
         queue.put(json.dumps({
             'type': 'info',
@@ -800,7 +803,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
                     checkpoint_path=checkpoint_path
                 )
             except Exception as e:
-                print(f"更新训练会话状态失败: {str(e)}")
+                logger.error(f"更新训练会话状态失败: {str(e)}")
         
         final_results = {
             'model': model_type,
@@ -836,7 +839,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
                     end_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 )
             except Exception as update_error:
-                print(f"更新失败状态失败: {str(update_error)}")
+                logger.error(f"更新失败状态失败: {str(update_error)}")
         
         queue.put(json.dumps({
             'type': 'error',
@@ -848,6 +851,6 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         if bg_db:
             try:
                 bg_db.close()
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"关闭后台数据库连接出错: {e}")
 

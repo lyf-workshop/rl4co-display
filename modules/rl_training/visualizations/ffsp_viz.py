@@ -4,6 +4,7 @@ FFSP问题专用可视化函数
 """
 
 import os
+import logging
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -11,6 +12,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from PIL import Image
 import torch
+
+logger = logging.getLogger('rl4co_display')
 
 # 配置中文字体支持
 matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
@@ -53,17 +56,16 @@ def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"
         if job_duration.ndim == 3:
             job_duration = job_duration[0]  # 取第一个batch
         
-        print(f"[DEBUG] schedule shape: {schedule.shape}")
-        print(f"[DEBUG] job_duration shape: {job_duration.shape}")
-        print(f"[DEBUG] schedule min/max: {schedule.min():.2f} / {schedule.max():.2f}")
+        logger.debug("schedule shape: %s, job_duration shape: %s, min/max: %.2f/%.2f",
+                     schedule.shape, job_duration.shape, schedule.min(), schedule.max())
         
         # schedule: [num_machine_total, num_job+1]
         # job_duration: [num_job+1, num_machine_total] 或 [num_job, num_machine_total]
         num_machines = schedule.shape[0]
         num_jobs = schedule.shape[1] - 1  # 排除dummy job
         
-        print(f"[DEBUG] num_machines: {num_machines}, num_jobs: {num_jobs}")
-        print(f"[DEBUG] job_duration需要的形状: ({num_jobs}, {num_machines}) 或 ({num_jobs+1}, {num_machines})")
+        logger.debug("num_machines: %d, num_jobs: %d, job_duration expected shape: (%d, %d) or (%d, %d)",
+                     num_machines, num_jobs, num_jobs, num_machines, num_jobs + 1, num_machines)
         
         # 创建图形
         fig, ax = plt.subplots(figsize=(14, max(8, num_machines * 0.6)))
@@ -90,10 +92,10 @@ def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"
                         duration = job_duration[job_idx, machine_idx]
                     else:
                         # 索引越界，跳过
-                        print(f"[WARN] 索引越界: job_idx={job_idx}, machine_idx={machine_idx}, shape={job_duration.shape}")
+                        logger.warning("索引越界: job_idx=%d, machine_idx=%d, shape=%s", job_idx, machine_idx, job_duration.shape)
                         continue
                 except Exception as e:
-                    print(f"[ERROR] 获取duration失败: {e}")
+                    logger.error(f"获取duration失败: {e}")
                     continue
                 
                 # 确保duration是标量
@@ -176,7 +178,7 @@ def create_ffsp_gantt_chart(td, schedule, save_path, title="FFSP调度甘特图"
         return makespan
         
     except Exception as e:
-        print(f"创建FFSP甘特图时出错: {str(e)}")
+        logger.error(f"创建FFSP甘特图时出错: {str(e)}")
         # 创建空白图片
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.text(0.5, 0.5, f'甘特图生成失败\n{str(e)}', 
@@ -339,7 +341,7 @@ def create_ffsp_schedule_comparison(td_before, td_after, schedule_before, schedu
         }
         
     except Exception as e:
-        print(f"创建FFSP对比图时出错: {str(e)}")
+        logger.error(f"创建FFSP对比图时出错: {str(e)}")
         # 创建空白图片
         fig, ax = plt.subplots(figsize=(12, 6))
         ax.text(0.5, 0.5, f'对比图生成失败\n{str(e)}', 
@@ -392,7 +394,7 @@ def create_ffsp_statistics_plot(makespans, save_path, title="FFSP训练收敛曲
         plt.close()
         
     except Exception as e:
-        print(f"创建FFSP统计图时出错: {str(e)}")
+        logger.error(f"创建FFSP统计图时出错: {str(e)}")
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.text(0.5, 0.5, f'统计图生成失败\n{str(e)}', 
                ha='center', va='center', fontsize=12)

@@ -31,9 +31,9 @@ class OPTrainer(BaseTrainer):
         prize_type (str): 奖励类型（'dist'/'unif'/'const'）
     """
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
         """初始化 OP 训练器"""
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         
         # 提取 OP 特有参数（从 config 直接获取）
         self.op_num_loc = int(config.get('num_loc', 20))
@@ -285,7 +285,7 @@ class OPTrainer(BaseTrainer):
         return summary
 
 
-def train_op(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_op(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     OP训练入口函数
     
@@ -297,7 +297,7 @@ def train_op(config, session_id, user_id, queue, training_status, get_background
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = OPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = OPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()
 
 

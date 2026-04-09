@@ -30,9 +30,9 @@ class PDPTrainer(BaseTrainer):
         force_start_at_depot (bool): 是否强制从 depot 开始
     """
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
         """初始化 PDP 训练器"""
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         
         # 提取 PDP 特有参数（从 config 直接获取，不是从 self.env_params）
         self.pdp_num_loc = int(config.get('num_loc', 20))
@@ -260,7 +260,7 @@ class PDPTrainer(BaseTrainer):
         return summary
 
 
-def train_pdp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_pdp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     PDP训练入口函数
     
@@ -272,5 +272,5 @@ def train_pdp(config, session_id, user_id, queue, training_status, get_backgroun
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = PDPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = PDPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()

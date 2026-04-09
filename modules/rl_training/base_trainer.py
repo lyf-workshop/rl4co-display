@@ -88,7 +88,7 @@ class ProgressCallback(Callback):
     """Lightning回调类，用于捕获训练进度并推送到消息队列"""
     
     def __init__(self, queue, session_id, total_epochs, user_id,
-                 training_status=None, file_manager=None):
+                 training_status=None, file_manager=None, pause_event=None):
         super().__init__()
         self.queue = queue
         self.session_id = session_id
@@ -97,6 +97,8 @@ class ProgressCallback(Callback):
         self.training_status = training_status
         # 由 BaseTrainer 传入已建立的后台 FileManager，避免 Callback 内部自建连接
         self.file_manager = file_manager
+        # pause_event: threading.Event，set=运行，clear=暂停
+        self.pause_event = pause_event
         self.best_reward = float('-inf')
         self.epoch_losses = []
         self.epoch_rewards = []
@@ -156,19 +158,7 @@ class ProgressCallback(Callback):
         # 如果没有从 batch 中获取到，尝试从 metrics 获取
         if loss == 0.0 or reward == 0.0:
             metrics = trainer.callback_metrics
-            
-            # 调试：打印所有可用的指标键名（仅第一个epoch）
-            if epoch == 1:
-                self.queue.put(json.dumps({
-                    'type': 'info',
-                    'message': f'🔍 可用的 callback_metrics 键: {list(metrics.keys())}'
-                }))
-                if hasattr(trainer, 'logged_metrics'):
-                    self.queue.put(json.dumps({
-                        'type': 'info',
-                        'message': f'🔍 可用的 logged_metrics 键: {list(trainer.logged_metrics.keys())}'
-                    }))
-            
+
             # RL4CO 的 REINFORCE 模型可能使用的键名（扩展搜索）
             if loss == 0.0:
                 loss = (metrics.get('loss') or 
@@ -310,13 +300,45 @@ class ProgressCallback(Callback):
             'type': 'info',
             'message': f'Epoch {epoch}/{self.total_epochs} - Loss: {loss:.4f}, Reward: {reward:.4f}, Best: {self.best_reward:.4f}'
         }))
-    
+
+        # 中止检测：若已设置 stop_requested，通知 Lightning 终止并发送 stopped 事件
+        if (self.training_status is not None
+                and self.session_id in self.training_status
+                and self.training_status[self.session_id].get('stop_requested')):
+            trainer.should_stop = True
+            self.training_status[self.session_id]['status'] = 'stopped'
+            self.queue.put(json.dumps({
+                'type': 'stopped',
+                'message': f'训练已中止（已完成 Epoch {epoch}/{self.total_epochs}）',
+                'epoch': epoch,
+                'progress': round(progress, 2)
+            }))
+            return  # 跳过后续的暂停检测
+
+        # 暂停检测：如果 pause_event 已被清除（clear），则阻塞直到恢复（set）
+        if self.pause_event is not None and not self.pause_event.is_set():
+            if self.training_status is not None and self.session_id in self.training_status:
+                self.training_status[self.session_id]['status'] = 'paused'
+            self.queue.put(json.dumps({
+                'type': 'paused',
+                'message': f'训练已暂停（已完成 Epoch {epoch}/{self.total_epochs}）',
+                'epoch': epoch,
+                'progress': round(progress, 2)
+            }))
+            self.pause_event.wait()  # 阻塞，直到 resume 将 event 重新 set
+            if self.training_status is not None and self.session_id in self.training_status:
+                self.training_status[self.session_id]['status'] = 'running'
+            self.queue.put(json.dumps({
+                'type': 'resumed',
+                'message': f'训练已恢复，继续 Epoch {epoch + 1}'
+            }))
+
 
 
 class BaseTrainer:
     """强化学习训练器基类，提供通用训练逻辑"""
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
         """
         初始化训练器
         
@@ -334,7 +356,8 @@ class BaseTrainer:
         self.queue = queue
         self.training_status = training_status
         self.get_background_db_func = get_background_db_func
-        
+        self.pause_event = pause_event
+
         # 创建数据库连接
         self.bg_db = get_background_db_func()
         self.bg_session_manager = TrainingSessionManager(self.bg_db) if self.bg_db else None
@@ -599,6 +622,7 @@ class BaseTrainer:
                 self.queue, self.session_id, self.epochs, self.user_id,
                 training_status=self.training_status,
                 file_manager=self.bg_file_manager,
+                pause_event=self.pause_event,
             )
             
             # 初始化训练器
@@ -622,7 +646,11 @@ class BaseTrainer:
                 trainer.fit(model, ckpt_path=ckpt_path)
             else:
                 trainer.fit(model)
-            
+
+            # 若训练被中止，ProgressCallback 已发送 stopped 事件，直接返回
+            if self.training_status.get(self.session_id, {}).get('status') == 'stopped':
+                return
+
             self.send_message('info', '训练完成，开始生成可视化结果...')
             
             # 生成可视化
@@ -701,8 +729,8 @@ class BaseTrainer:
             if self.bg_db:
                 try:
                     self.bg_db.close()
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"关闭后台数据库连接时出错: {e}")
     
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成可视化结果（子类实现）"""

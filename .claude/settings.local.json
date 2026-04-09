@@ -4,7 +4,10 @@
       "Bash(wc -l \"F:/Github/rl4co-display\"/*.py)",
       "Bash(grep -l \"Blueprint\\\\|@.*route\" \"F:/Github/rl4co-display\"/app_*.py)",
       "Bash(find F:\\\\Github\\\\rl4co-display:*)",
-      "Bash(python -m pytest tests/ -v --tb=short)"
+      "Bash(python -m pytest tests/ -v --tb=short)",
+      "Bash(grep:*)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app_files.py','r',encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(python:*)"
     ]
   }
 }

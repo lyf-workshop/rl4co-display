@@ -36,7 +36,16 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'rl4co-display-secret-key-2024-change-in-production'
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    import warnings
+    _secret_key = 'rl4co-display-secret-key-dev-only-change-in-production'
+warnings.warn(
+        "SECRET_KEY 未通过环境变量设置，正在使用默认开发密钥。"
+        "生产环境必须设置 SECRET_KEY 环境变量，否则 session 可被伪造！",
+        stacklevel=1
+    )
+app.config['SECRET_KEY'] = _secret_key
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 # ============================================
@@ -190,6 +199,9 @@ auth_module.init_db_accessors(get_db, get_user_manager, get_session_manager, get
 
 training_status = {}
 training_queues = {}
+training_events = {}  # session_id -> threading.Event（set=运行，clear=暂停）
+# 保护上述三个字典的并发读写
+training_lock = threading.Lock()
 
 # 创建输出目录
 PLOTS_DIR = "static/model_plots"
@@ -226,26 +238,31 @@ class SimpleCache:
 api_cache = SimpleCache(timeout=300)  # 5分钟缓存
 
 
-def _start_cleanup_reaper(status_dict, queues_dict, ttl_seconds=1800):
+def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_seconds=1800):
     """
     启动后台守护线程，定期清理过期的训练状态和队列。
 
     每 10 分钟扫描一次 status_dict，将状态为 completed/error 且完成时间
-    超过 ttl_seconds（默认 30 分钟）的条目从两个字典中同时删除。
+    超过 ttl_seconds（默认 30 分钟）的条目从三个字典中同时删除。
     队列通常已由 SSE 生成器的 finally 块提前清理，此处为兜底。
     """
     def _reaper():
         while True:
             time.sleep(600)  # 每 10 分钟检查一次
             now = time.time()
-            expired = [
-                sid for sid, info in list(status_dict.items())
-                if info.get('status') in ('completed', 'error')
-                and (now - info.get('_completed_at', now)) > ttl_seconds
-            ]
-            for sid in expired:
-                status_dict.pop(sid, None)
-                queues_dict.pop(sid, None)
+            with lock:
+                expired = [
+                    sid for sid, info in list(status_dict.items())
+                    if info.get('status') in ('completed', 'error', 'stopped')
+                    and (now - info.get('_completed_at', now)) > ttl_seconds
+                ]
+                for sid in expired:
+                    status_dict.pop(sid, None)
+                    queues_dict.pop(sid, None)
+                    # 确保事件被 set，防止训练线程（如果还在阻塞中）永久挂起
+                    evt = events_dict.pop(sid, None)
+                    if evt is not None:
+                        evt.set()
             if expired:
                 logger.info(f"[Reaper] 已清理 {len(expired)} 个过期会话: {expired}")
 
@@ -284,53 +301,95 @@ def cached_api(key_prefix=''):
     return decorator
 
 
-# 启动后台清理线程，防止 training_status / training_queues 无限增长
-_start_cleanup_reaper(training_status, training_queues, ttl_seconds=1800)
+# 启动后台清理线程，防止 training_status / training_queues / training_events 无限增长
+_start_cleanup_reaper(training_status, training_queues, training_events, training_lock, ttl_seconds=1800)
+
+
+def _cleanup_stale_gpu_allocations():
+    """
+    应用启动时，将数据库中所有残留的 allocated GPU 记录标记为 released。
+
+    原因：进程重启后所有训练线程均已消亡，其遗留的 allocated 记录是孤立数据，
+    会导致前端始终显示 GPU 被占用。此清理在进程生命周期内只执行一次。
+    """
+    try:
+        db = get_background_db()
+        if db is None:
+            logger.warning("[启动清理] 无法连接数据库，跳过 GPU 占用记录清理")
+            return
+        cursor = db.cursor()
+        cursor.execute("""
+            UPDATE gpu_allocations
+            SET status = 'released', released_at = NOW()
+            WHERE status = 'allocated'
+        """)
+        affected = cursor.rowcount
+        cursor.close()
+        db.close()
+        if affected > 0:
+            logger.info(f"[启动清理] 已释放 {affected} 条残留 GPU 占用记录（上次进程未正常退出）")
+        else:
+            logger.info("[启动清理] 无残留 GPU 占用记录")
+    except Exception as e:
+        logger.warning(f"[启动清理] 清理 GPU 占用记录失败: {e}")
+
+
+_cleanup_stale_gpu_allocations()
 
 # ============================================
 # 模拟训练函数（当 RL4CO 不可用时）
 # ============================================
 
-def simulate_training(config, session_id, user_id):
+def simulate_training(config, session_id, user_id, pause_event=None):
     """模拟强化学习训练过程（当 RL4CO 不可用时）"""
-    queue = training_queues[session_id]
-    
+    with training_lock:
+        queue = training_queues[session_id]
+
     try:
-        training_status[session_id] = {
-            'status': 'running',
-            'progress': 0,
-            'epoch': 0,
-            'loss': 0,
-            'reward': 0,
-            'best_reward': 0
-        }
-        
+        with training_lock:
+            training_status[session_id] = {
+                'status': 'running',
+                'progress': 0,
+                'epoch': 0,
+                'loss': 0,
+                'reward': 0,
+                'best_reward': 0
+            }
+
         epochs = int(config.get('epochs', 10))
         model = config.get('model', 'attention')
         problem = config.get('problem', 'tsp')
-        
+
         queue.put(json.dumps({
             'type': 'info',
             'message': f'[模拟模式] 开始训练 {model.upper()} 模型，问题类型: {problem.upper()}'
         }))
-        
+
+        stopped = False
         for epoch in range(1, epochs + 1):
             time.sleep(0.5)
-            
+
+            # 中止检测（每个 epoch 开始前）
+            with training_lock:
+                if training_status.get(session_id, {}).get('stop_requested'):
+                    training_status[session_id]['status'] = 'stopped'
+                    stopped = True
+                    break
+
             import random
             progress = (epoch / epochs) * 100
             loss = 10 * (1 - epoch / epochs) + random.uniform(0, 0.5)
             reward = -20 + (15 * epoch / epochs) + random.uniform(-1, 1)
-            best_reward = max(training_status[session_id].get('best_reward', float('-inf')), reward)
-            
-            training_status[session_id].update({
-                'progress': progress,
-                'epoch': epoch,
-                'loss': round(loss, 4),
-                'reward': round(reward, 4),
-                'best_reward': round(best_reward, 4)
-            })
-            
+            with training_lock:
+                best_reward = max(training_status[session_id].get('best_reward', float('-inf')), reward)
+                training_status[session_id].update({
+                    'progress': progress,
+                    'epoch': epoch,
+                    'loss': round(loss, 4),
+                    'reward': round(reward, 4),
+                    'best_reward': round(best_reward, 4)
+                })
+
             queue.put(json.dumps({
                 'type': 'progress',
                 'epoch': epoch,
@@ -340,14 +399,56 @@ def simulate_training(config, session_id, user_id):
                 'reward': round(reward, 4),
                 'best_reward': round(best_reward, 4)
             }))
-            
+
             if epoch % 2 == 0 or epoch == epochs:
                 queue.put(json.dumps({
                     'type': 'info',
                     'message': f'Epoch {epoch}/{epochs} - Loss: {loss:.4f}, Reward: {reward:.4f}'
                 }))
-        
-        training_status[session_id]['status'] = 'completed'
+
+            # 暂停检测（每个 epoch 结束后）
+            if pause_event is not None and not pause_event.is_set():
+                with training_lock:
+                    if session_id in training_status:
+                        training_status[session_id]['status'] = 'paused'
+                queue.put(json.dumps({
+                    'type': 'paused',
+                    'message': f'训练已暂停（已完成 Epoch {epoch}/{epochs}）',
+                    'epoch': epoch,
+                    'progress': round(progress, 2)
+                }))
+                pause_event.wait()  # 阻塞，直到 resume 或 stop
+                # 被唤醒后检查是否为中止请求
+                with training_lock:
+                    if training_status.get(session_id, {}).get('stop_requested'):
+                        training_status[session_id]['status'] = 'stopped'
+                        stopped = True
+                        break
+                    if session_id in training_status:
+                        training_status[session_id]['status'] = 'running'
+                if stopped:
+                    break
+                queue.put(json.dumps({
+                    'type': 'resumed',
+                    'message': f'训练已恢复，继续 Epoch {epoch + 1}'
+                }))
+
+        if stopped:
+            queue.put(json.dumps({
+                'type': 'stopped',
+                'message': f'[模拟模式] 训练已中止',
+                'epoch': training_status.get(session_id, {}).get('epoch', 0),
+                'progress': training_status.get(session_id, {}).get('progress', 0)
+            }))
+            return
+
+        with training_lock:
+            training_status[session_id]['status'] = 'completed'
+            final = {
+                'final_loss': training_status[session_id]['loss'],
+                'final_reward': training_status[session_id]['reward'],
+                'best_reward': training_status[session_id]['best_reward']
+            }
         queue.put(json.dumps({
             'type': 'complete',
             'message': '[模拟模式] 训练完成！',
@@ -356,14 +457,13 @@ def simulate_training(config, session_id, user_id):
                 'problem': problem,
                 'strategy': 'REINFORCE',
                 'total_epochs': epochs,
-                'final_loss': training_status[session_id]['loss'],
-                'final_reward': training_status[session_id]['reward'],
-                'best_reward': training_status[session_id]['best_reward']
+                **final
             }
         }))
-        
+
     except Exception as e:
-        training_status[session_id]['status'] = 'error'
+        with training_lock:
+            training_status[session_id]['status'] = 'error'
         queue.put(json.dumps({
             'type': 'error',
             'message': f'训练出错: {str(e)}'
@@ -392,14 +492,16 @@ from app_training import training_bp, init_training_globals
 from app_files import files_bp
 from app_gpu import gpu_bp, init_gpu_globals
 
-# 为训练模块注入全局变量
+# 为训练模块注入全局变量（含线程锁和暂停事件字典）
 init_training_globals(
-    training_status, 
-    training_queues, 
-    RL4CO_AVAILABLE, 
-    real_rl4co_training, 
-    simulate_training, 
-    get_background_db
+    training_status,
+    training_queues,
+    RL4CO_AVAILABLE,
+    real_rl4co_training,
+    simulate_training,
+    get_background_db,
+    lock=training_lock,
+    events_dict=training_events
 )
 
 # 为统计模块注入cached_api装饰器

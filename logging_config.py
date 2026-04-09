@@ -176,7 +176,4 @@ def log_api_call(logger):
     return decorator
 
 
-# 创建默认logger实例
-default_logger = setup_logging()
-
 

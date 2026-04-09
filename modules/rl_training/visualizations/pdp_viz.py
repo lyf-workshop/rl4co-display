@@ -5,11 +5,14 @@ PDP (Pickup and Delivery Problem) 可视化函数
 """
 
 import os
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.animation import FuncAnimation, PillowWriter
 from typing import Optional, Tuple
+
+logger = logging.getLogger('rl4co_display')
 
 
 def create_pdp_route_animation(
@@ -146,11 +149,11 @@ def create_pdp_route_animation(
         
         plt.close(fig)
         
-        print(f"    ✓ 动画已保存: {filepath}")
+        logger.info(f"PDP动画已保存: {filepath}")
         return filepath
-        
+
     except Exception as e:
-        print(f"    ✗ 动画生成失败: {str(e)}")
+        logger.error(f"PDP动画生成失败: {str(e)}")
         import traceback
         traceback.print_exc()
         return None
@@ -292,11 +295,11 @@ def create_pdp_comparison_plot(
         plt.savefig(filepath, dpi=150, bbox_inches='tight')
         plt.close(fig)
         
-        print(f"    ✓ 对比图已保存: {filepath}")
+        logger.info(f"PDP对比图已保存: {filepath}")
         return filepath
-        
+
     except Exception as e:
-        print(f"    ✗ 对比图生成失败: {str(e)}")
+        logger.error(f"PDP对比图生成失败: {str(e)}")
         import traceback
         traceback.print_exc()
         return None

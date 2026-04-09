@@ -170,10 +170,8 @@ def upload_dataset():
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'上传失败: {str(e)}'
-        }), 500
+        logger.error(f"上传数据集失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '上传失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/list_datasets', methods=['GET'])
@@ -223,10 +221,8 @@ def list_datasets():
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'获取数据集列表失败: {str(e)}'
-        }), 500
+        logger.error(f"获取数据集列表失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '获取数据集列表失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/delete_dataset', methods=['POST'])
@@ -268,10 +264,8 @@ def delete_dataset():
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'删除数据集失败: {str(e)}'
-        }), 500
+        logger.error(f"删除数据集失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '删除数据集失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/list_files', methods=['GET'])
@@ -386,10 +380,8 @@ def list_training_files():
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'获取文件列表失败: {str(e)}'
-        }), 500
+        logger.error(f"获取文件列表失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '获取文件列表失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/delete_file', methods=['POST'])
@@ -466,10 +458,8 @@ def delete_training_file():
             }), 404
             
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'删除文件失败: {str(e)}'
-        }), 500
+        logger.error(f"删除文件失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '删除文件失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/download_checkpoint/<filename>')
@@ -517,10 +507,8 @@ def download_checkpoint(filename):
         )
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'下载失败: {str(e)}'
-        }), 500
+        logger.error(f"下载检查点失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '下载失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/delete_session', methods=['POST'])
@@ -581,10 +569,8 @@ def delete_session():
             }), 500
             
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'删除失败: {str(e)}'
-        }), 500
+        logger.error(f"删除会话文件失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '删除失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/delete_by_session', methods=['POST'])
@@ -633,10 +619,8 @@ def delete_by_session():
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'批量删除失败: {str(e)}'
-        }), 500
+        logger.error(f"批量删除文件失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '批量删除失败，请稍后重试'}), 500
 
 
 @files_bp.route('/api/clear_all_files', methods=['POST'])
@@ -708,8 +692,6 @@ def clear_all_files():
         })
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'清空文件失败: {str(e)}'
-        }), 500
+        logger.error(f"清空文件失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': '清空文件失败，请稍后重试'}), 500
 

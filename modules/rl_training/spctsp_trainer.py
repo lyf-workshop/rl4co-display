@@ -34,8 +34,8 @@ class SPCTSPTrainer(PCTSPTrainer):
         prize_required (float): 最低奖励要求，默认 1.0
     """
 
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         # 覆盖 problem_type，确保检查点/文件名正确
         self.problem_type = 'spctsp'
         self.send_message('info', '🎲 SPCTSP 模式：奖励在访问节点后才揭晓（随机性）')
@@ -242,7 +242,7 @@ class SPCTSPTrainer(PCTSPTrainer):
         return summary
 
 
-def train_spctsp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_spctsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     SPCTSP 训练入口函数
 
@@ -254,7 +254,7 @@ def train_spctsp(config, session_id, user_id, queue, training_status, get_backgr
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = SPCTSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = SPCTSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()
 
 

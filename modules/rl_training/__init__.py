@@ -19,8 +19,13 @@ import logging
 
 logger = logging.getLogger('rl4co_display')
 
-# base_trainer 不依赖 rl4co，始终可以导入
-from .base_trainer import BaseTrainer, ProgressCallback
+# base_trainer 依赖 torch；在没有安装 torch 的环境（如纯测试环境）下优雅降级
+try:
+    from .base_trainer import BaseTrainer, ProgressCallback
+except Exception as _base_err:
+    logger.warning(f"base_trainer 导入失败（torch 未安装？）: {_base_err}")
+    BaseTrainer = None
+    ProgressCallback = None
 
 # 以下 Trainer 依赖 rl4co → torchrl，在 Windows 上可能因原生 DLL 问题导入失败。
 # 用 try/except 隔离，确保 Flask 应用和不依赖 rl4co 的测试不受影响。
@@ -48,7 +53,7 @@ except Exception as e:
     train_vrptw = train_pdp = train_op = train_pctsp = train_spctsp = train_ffsp = None
 
 # 向后兼容：提供统一的训练入口
-def real_rl4co_training(config, session_id, user_id, queue, training_status, get_background_db_func):
+def real_rl4co_training(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     统一的强化学习训练入口函数（根据问题类型自动路由）
 
@@ -59,6 +64,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         queue: 消息队列（用于推送进度）
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
+        pause_event: threading.Event，set=运行，clear=暂停（可选）
     """
     if not _RL4CO_TRAINERS_AVAILABLE:
         training_status[session_id] = {'status': 'error', 'progress': 0}
@@ -69,42 +75,42 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         return
 
     problem_type = config.get('problem', 'tsp').lower()
-    
+
     # 根据问题类型路由到对应的训练器
     if problem_type == 'tsp':
-        train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'atsp':
         # ATSP：MatNet 需要 ATSPEnv（提供 cost_matrix），attention 模型用 TSP 训练器即可
         policy = config.get('model', 'attention').lower()
         if policy in ('matnet',):
             from .atsp_trainer import train_atsp
-            train_atsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+            train_atsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         else:
-            train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+            train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'mtsp':
         # mTSP - 多旅行商问题
-        train_mtsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_mtsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'cvrp':
-        train_cvrp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_cvrp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'sdvrp':
-        train_sdvrp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_sdvrp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'vrptw':
-        train_vrptw(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_vrptw(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'pdp':
         # PDP - 取送货问题
-        train_pdp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_pdp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'op':
         # OP - 定向问题
-        train_op(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_op(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'pctsp':
         # PCTSP - 奖励收集旅行商问题
-        train_pctsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_pctsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'spctsp':
         # SPCTSP - 随机奖励收集旅行商问题
-        train_spctsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_spctsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'ffsp':
         # FFSP - 柔性流水车间调度问题
-        train_ffsp(config, session_id, user_id, queue, training_status, get_background_db_func)
+        train_ffsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     else:
         # 未支持的问题类型 - 先初始化状态再设置错误
         training_status[session_id] = {

@@ -231,6 +231,7 @@ def _build_gpu_list():
 # ============================================
 
 @gpu_bp.route('/api/gpu_status')
+@login_required
 def gpu_status():
     """
     查询所有 GPU 的当前状态
@@ -325,3 +326,4 @@ def gpu_release():
     except Exception as e:
         logger.error(f"GPU 释放失败: {e}", exc_info=True)
         return jsonify({'success': False, 'message': f'释放失败: {str(e)}'}), 500
+

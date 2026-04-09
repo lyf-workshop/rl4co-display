@@ -5,15 +5,18 @@ TSP问题专用训练器
 
 import os
 import json
+import logging
 import torch
 from datetime import datetime
+
+logger = logging.getLogger('rl4co_display')
 
 try:
     from rl4co.envs import TSPEnv
     RL4CO_AVAILABLE = True
 except ImportError:
     RL4CO_AVAILABLE = False
-    print("警告: RL4CO 库未安装")
+    logger.warning("RL4CO 库未安装")
 
 from .base_trainer import BaseTrainer
 from .visualizations.tsp_viz import create_tsp_route_animation, create_tsp_comparison_plot
@@ -22,8 +25,8 @@ from .visualizations.tsp_viz import create_tsp_route_animation, create_tsp_compa
 class TSPTrainer(BaseTrainer):
     """TSP问题训练器"""
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         
         # 处理自定义数据集
         self.custom_dataset = None
@@ -142,7 +145,7 @@ class TSPTrainer(BaseTrainer):
                         file_path=plot_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {str(e)}")
             
             plot_paths.append(f"/static/model_plots/user_{self.user_id}/{plot_filename}")
             
@@ -170,7 +173,7 @@ class TSPTrainer(BaseTrainer):
                         file_path=animation_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {str(e)}")
             
             animation_paths.append(f"/static/model_plots/user_{self.user_id}/{animation_filename}")
         
@@ -189,7 +192,7 @@ class TSPTrainer(BaseTrainer):
                     file_path=checkpoint_path
                 )
             except Exception as e:
-                print(f"保存checkpoint记录失败: {str(e)}")
+                logger.warning(f"保存checkpoint记录失败: {str(e)}")
         
         self.send_message('info', f'检查点已保存: {checkpoint_path}')
         
@@ -201,7 +204,7 @@ class TSPTrainer(BaseTrainer):
         }
 
 
-def train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     TSP训练的入口函数
     
@@ -213,7 +216,7 @@ def train_tsp(config, session_id, user_id, queue, training_status, get_backgroun
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = TSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = TSPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()
 
 

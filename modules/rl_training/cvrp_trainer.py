@@ -4,15 +4,18 @@ CVRP问题专用训练器
 """
 
 import os
+import logging
 import torch
 from datetime import datetime
+
+logger = logging.getLogger('rl4co_display')
 
 try:
     from rl4co.envs import CVRPEnv
     RL4CO_AVAILABLE = True
 except ImportError:
     RL4CO_AVAILABLE = False
-    print("警告: RL4CO 库未安装")
+    logger.warning("RL4CO 库未安装")
 
 from .base_trainer import BaseTrainer
 from .visualizations.cvrp_viz import create_cvrp_route_animation, create_cvrp_comparison_plot
@@ -21,8 +24,8 @@ from .visualizations.cvrp_viz import create_cvrp_route_animation, create_cvrp_co
 class CVRPTrainer(BaseTrainer):
     """CVRP问题训练器"""
     
-    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func):
-        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func)
+    def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
+        super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
         
         # CVRP特有的参数
         self.vehicle_capacity = float(config.get('vehicle_capacity', 1.0))
@@ -99,7 +102,7 @@ class CVRPTrainer(BaseTrainer):
                         file_path=plot_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {str(e)}")
             
             plot_paths.append(f"/static/model_plots/user_{self.user_id}/{plot_filename}")
             
@@ -127,7 +130,7 @@ class CVRPTrainer(BaseTrainer):
                         file_path=animation_path
                     )
                 except Exception as e:
-                    print(f"保存文件记录失败: {str(e)}")
+                    logger.warning(f"保存文件记录失败: {str(e)}")
             
             animation_paths.append(f"/static/model_plots/user_{self.user_id}/{animation_filename}")
         
@@ -146,7 +149,7 @@ class CVRPTrainer(BaseTrainer):
                     file_path=checkpoint_path
                 )
             except Exception as e:
-                print(f"保存checkpoint记录失败: {str(e)}")
+                logger.warning(f"保存checkpoint记录失败: {str(e)}")
         
         self.send_message('info', f'检查点已保存: {checkpoint_path}')
         
@@ -158,7 +161,7 @@ class CVRPTrainer(BaseTrainer):
         }
 
 
-def train_cvrp(config, session_id, user_id, queue, training_status, get_background_db_func):
+def train_cvrp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
     """
     CVRP训练的入口函数
     
@@ -170,7 +173,7 @@ def train_cvrp(config, session_id, user_id, queue, training_status, get_backgrou
         training_status: 全局训练状态字典
         get_background_db_func: 获取后台数据库连接的函数
     """
-    trainer = CVRPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func)
+    trainer = CVRPTrainer(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     trainer.train()
 
 

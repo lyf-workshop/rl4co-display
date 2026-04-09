@@ -30,7 +30,10 @@ class TestGpuStatusEndpoint(unittest.TestCase):
 
         # 重新导入 app_gpu 以使 patch 生效
         import importlib
+        import auth_module
         import app_gpu
+        # 将 login_required 替换为透传装饰器，使测试无需真实 session
+        auth_module.login_required = lambda f: f
         importlib.reload(app_gpu)
         app_gpu.PYNVML_AVAILABLE = False
         app_gpu.TORCH_CUDA_AVAILABLE = False  # 同时禁用 torch.cuda 兜底，强制 Mock
@@ -341,6 +344,10 @@ class TestGpuAllocationDb(unittest.TestCase):
 # 4. BaseTrainer GPU 设备选择逻辑测试
 # ============================================================
 
+import importlib
+_torch_available = importlib.util.find_spec('torch') is not None
+
+@unittest.skipUnless(_torch_available, 'torch 未安装，跳过 BaseTrainer 设备选择测试')
 class TestBaseTrainerDeviceSelection(unittest.TestCase):
     """测试 BaseTrainer 在不同 gpu_id 配置下的设备选择"""
 
