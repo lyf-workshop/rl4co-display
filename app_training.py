@@ -149,9 +149,15 @@ def start_training():
         # 创建消息队列和暂停事件（加锁保护并发写）
         pause_event = threading.Event()
         pause_event.set()  # 初始状态：运行中（set=运行，clear=暂停）
+        start_time = time.time()
         with training_lock:
             training_queues[session_id] = Queue()
             training_events[session_id] = pause_event
+            # 初始化心跳时间戳（训练线程会覆盖 status，但这两个时间戳会保留）
+            training_status[session_id] = {
+                '_started_at': start_time,
+                '_last_heartbeat': start_time
+            }
 
         # ========== 写入 GPU 占用记录 ==========
         if gpu_id is not None:
@@ -303,6 +309,17 @@ def resume_training(session_id):
     event.set()  # 重新设置事件 → 训练继续
     logger.info(f"训练恢复请求已发送 (session={session_id})")
     return jsonify({'success': True, 'message': '训练已恢复'})
+
+
+@training_bp.route('/api/training_heartbeat/<session_id>', methods=['POST'])
+@login_required
+def training_heartbeat(session_id):
+    """客户端心跳，表明用户仍在监控此训练（防止无人监管任务占用资源）"""
+    with training_lock:
+        if session_id in training_status:
+            training_status[session_id]['_last_heartbeat'] = time.time()
+            return jsonify({'success': True})
+    return jsonify({'success': False, 'message': '会话不存在'}), 404
 
 
 @training_bp.route('/api/stop_training/<session_id>', methods=['POST'])

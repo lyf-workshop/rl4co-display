@@ -238,12 +238,13 @@ class SimpleCache:
 api_cache = SimpleCache(timeout=300)  # 5分钟缓存
 
 
-def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_seconds=1800):
+def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_seconds=1800, heartbeat_timeout=7200):
     """
-    启动后台守护线程，定期清理过期的训练状态和队列。
+    启动后台守护线程，定期清理过期的训练状态和队列，并终止无人监管的训练。
 
-    每 10 分钟扫描一次 status_dict，将状态为 completed/error 且完成时间
-    超过 ttl_seconds（默认 30 分钟）的条目从三个字典中同时删除。
+    每 10 分钟扫描一次 status_dict：
+    1. 清理已完成/出错/中止且完成时间超过 ttl_seconds（默认30分钟）的会话
+    2. 终止超过 heartbeat_timeout（默认2小时）无心跳的运行中会话（防止资源占用）
     队列通常已由 SSE 生成器的 finally 块提前清理，此处为兜底。
     """
     def _reaper():
@@ -251,6 +252,7 @@ def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_secon
             time.sleep(600)  # 每 10 分钟检查一次
             now = time.time()
             with lock:
+                # ─── 清理已结束的过期会话 ───────────────────────────────
                 expired = [
                     sid for sid, info in list(status_dict.items())
                     if info.get('status') in ('completed', 'error', 'stopped')
@@ -259,12 +261,30 @@ def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_secon
                 for sid in expired:
                     status_dict.pop(sid, None)
                     queues_dict.pop(sid, None)
-                    # 确保事件被 set，防止训练线程（如果还在阻塞中）永久挂起
                     evt = events_dict.pop(sid, None)
                     if evt is not None:
                         evt.set()
+
+                # ─── 终止超时无心跳的运行中会话 ──────────────────────────
+                timeout_sessions = []
+                for sid, info in list(status_dict.items()):
+                    st = info.get('status', '')
+                    if st not in ('running', 'pausing', 'paused'):
+                        continue
+                    last_hb = info.get('_last_heartbeat', info.get('_started_at', now))
+                    if (now - last_hb) > heartbeat_timeout:
+                        timeout_sessions.append(sid)
+                        info['stop_requested'] = True
+                        info['status'] = 'stopping'
+                        # 若当前暂停阻塞，解除阻塞让其检查 stop_requested
+                        evt = events_dict.get(sid)
+                        if evt is not None and not evt.is_set():
+                            evt.set()
+
             if expired:
                 logger.info(f"[Reaper] 已清理 {len(expired)} 个过期会话: {expired}")
+            if timeout_sessions:
+                logger.warning(f"[Reaper] 已中止 {len(timeout_sessions)} 个超时无心跳会话: {timeout_sessions}")
 
     t = threading.Thread(target=_reaper, daemon=True, name='session-reaper')
     t.start()

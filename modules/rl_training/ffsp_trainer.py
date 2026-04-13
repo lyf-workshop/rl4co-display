@@ -89,7 +89,7 @@ class FFSPEnvWithCostMatrix:
         object.__setattr__(self, 'num_machine_total', base_env.num_machine_total)
         object.__setattr__(self, 'flatten_stages', base_env.flatten_stages)
         object.__setattr__(self, 'generator', base_env.generator)
-        object.__setattr__(self, 'device', getattr(base_env, 'device', 'cpu'))
+        object.__setattr__(self, 'device', str(getattr(base_env, 'device', 'cpu')))
         object.__setattr__(self, 'observation_spec', getattr(base_env, 'observation_spec', None))
         object.__setattr__(self, 'action_spec', getattr(base_env, 'action_spec', None))
         object.__setattr__(self, 'reward_spec', getattr(base_env, 'reward_spec', None))
@@ -120,18 +120,32 @@ class FFSPEnvWithCostMatrix:
         return getattr(object.__getattribute__(self, '_base_env'), 'step_cnt', None)
     
     def reset(self, *args, **kwargs):
-        """重写reset方法，添加cost_matrix"""
+        """重写reset方法，添加cost_matrix并确保张量设备一致"""
         base = object.__getattribute__(self, '_base_env')
         td = base.reset(*args, **kwargs)
-        
+
         if 'run_time' in td.keys() and 'cost_matrix' not in td.keys():
             td['cost_matrix'] = td['run_time']
-        
+
+        # 确保输出 TensorDict 与 env 当前设备一致
+        # RL4COTrainer 会把模型移到 GPU，但 base_env.reset() 可能仍生成 CPU 张量
+        device = object.__getattribute__(self, 'device')
+        if device is not None and str(device) not in ('cpu', 'CPU'):
+            td = td.to(device)
+
         return td
     
     def step(self, *args, **kwargs):
-        """代理step方法"""
-        return object.__getattribute__(self, '_base_env').step(*args, **kwargs)
+        """代理step方法。确保返回的 TensorDict 与训练设备一致。"""
+        result = object.__getattribute__(self, '_base_env').step(*args, **kwargs)
+        device = object.__getattribute__(self, 'device')
+        if device is not None and str(device) not in ('cpu', 'CPU'):
+            # result 可能是 TensorDict 或 {"next": TensorDict}
+            if hasattr(result, 'to'):
+                result = result.to(device)
+            elif isinstance(result, dict) and 'next' in result and hasattr(result['next'], 'to'):
+                result['next'] = result['next'].to(device)
+        return result
     
     def get_reward(self, *args, **kwargs):
         """代理get_reward方法"""
@@ -142,8 +156,17 @@ class FFSPEnvWithCostMatrix:
         return object.__getattribute__(self, '_base_env').get_num_starts(td)
     
     def select_start_nodes(self, td, num_starts):
-        """POMO/MatNet 多起点需要"""
-        return object.__getattribute__(self, '_base_env').select_start_nodes(td, num_starts)
+        """POMO/MatNet 多起点需要。
+        base_env.select_start_nodes() 内部会用 torch.arange 等生成 CPU 张量，
+        必须在此显式移到训练设备，否则 decoding.py 的 torch.stack(self.actions) 会因
+        第一个 action（CPU）和后续 actions（CUDA）设备不一致而崩溃。
+        """
+        actions = object.__getattribute__(self, '_base_env').select_start_nodes(td, num_starts)
+        device = object.__getattribute__(self, 'device')
+        if device is not None and str(device) not in ('cpu', 'CPU'):
+            if isinstance(actions, torch.Tensor):
+                actions = actions.to(device)
+        return actions
     
     def pre_step(self, td):
         """MultiStageFFSPPolicy 可能需要"""
@@ -164,10 +187,14 @@ class FFSPEnvWithCostMatrix:
         raise NotImplementedError("Base environment does not have load_data method")
     
     def to(self, device):
-        """代理 to 方法 - 设备转换"""
+        """代理 to 方法 - 设备转换。
+        Lightning/RL4CO 在把模型移到 GPU 时会调用此方法，
+        必须同步更新 self.device，以便 reset() 输出时对齐设备。
+        """
         base = object.__getattribute__(self, '_base_env')
         base.to(device)
-        object.__setattr__(self, 'device', device)
+        # 统一存储为字符串，避免 torch.device vs str 比较出错
+        object.__setattr__(self, 'device', str(device))
         return self
 
 
@@ -212,8 +239,14 @@ class FFSPTrainer(BaseTrainer):
         # 包装环境，添加 cost_matrix 适配器
         # MatNet 的 init_embedding 需要 cost_matrix，而 FFSP 提供 run_time
         env = FFSPEnvWithCostMatrix(base_env)
-        
-        self.send_message('info', 
+
+        # 立即将 env 移到训练设备
+        # RL4CO/Lightning 不会自动对非 nn.Module 的 env 调用 .to()，
+        # 必须在此显式设置，否则 reset() 返回的 TensorDict 始终在 CPU 上
+        env.to(self.device)
+        self.send_message('info', f'FFSP env 已移至设备: {self.device}')
+
+        self.send_message('info',
             f'✅ FFSP环境初始化完成: '
             f'总机器数={self.num_stage * self.num_machine}, '
             f'总操作数={self.num_job * self.num_stage}'

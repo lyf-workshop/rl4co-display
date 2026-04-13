@@ -59,7 +59,7 @@ class PtrNetPolicyWrapper(BasePolicy):
         try:
             # 尝试导入 PtrNet 专用策略（如果存在）
             try:
-                from rl4co.models.nn import PointerNetworkPolicy
+                from rl4co.models import PointerNetworkPolicy
                 
                 policy = PointerNetworkPolicy(
                     env_name=env.name,
@@ -72,7 +72,7 @@ class PtrNetPolicyWrapper(BasePolicy):
                 
             except (ImportError, AttributeError):
                 # RL4CO 没有独立的 PtrNet，使用 AM 的简化版本模拟
-                from rl4co.models.nn import AttentionModelPolicy
+                from rl4co.models import AttentionModelPolicy
                 
                 # 使用最小配置的 AM 来近似 PtrNet 的效果
                 policy = AttentionModelPolicy(

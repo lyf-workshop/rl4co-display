@@ -32,7 +32,7 @@ class AttentionModelPolicyWrapper(BasePolicy):
             AttentionModelPolicy实例
         """
         try:
-            from rl4co.models.nn import AttentionModelPolicy
+            from rl4co.models import AttentionModelPolicy
         except ImportError:
             raise ImportError(
                 "RL4CO库未安装，无法创建AttentionModelPolicy。\n"

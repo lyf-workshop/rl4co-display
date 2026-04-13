@@ -637,6 +637,10 @@ class BaseTrainer:
                 enable_progress_bar=False,
                 enable_model_summary=False,
                 enable_checkpointing=False,
+                # 禁用 Lightning 在第一个 epoch 前强制跑的 sanity validation
+                # 该 check 会跑 2 个完整 val batch（FFSP+POMO 时极慢），
+                # 且对生产训练无实质价值
+                num_sanity_val_steps=0,
             )
             
             self.send_message('info', '开始训练...')
@@ -722,7 +726,11 @@ class BaseTrainer:
                 except Exception as update_error:
                     logger.error(f"更新失败状态失败: {update_error}")
             
-            self.send_message('error', f'训练出错: {str(e)}')
+            # 把完整堆栈也推送到前端，方便诊断
+            import traceback as _tb
+            full_tb = _tb.format_exc()
+            logger.error(f"训练出错 (session={self.session_id}):\n{full_tb}")
+            self.send_message('error', f'训练出错: {str(e)}\n\n{full_tb}')
         
         finally:
             # 关闭后台数据库连接

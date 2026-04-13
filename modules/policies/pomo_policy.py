@@ -41,7 +41,7 @@ class POMOPolicyWrapper(BasePolicy):
         try:
             # 尝试导入POMO专用策略
             try:
-                from rl4co.models.nn import POMOPolicy
+                from rl4co.models import POMOPolicy
                 policy = POMOPolicy(
                     env_name=env.name,
                     embed_dim=self.embed_dim,
@@ -51,7 +51,7 @@ class POMOPolicyWrapper(BasePolicy):
                 )
             except (ImportError, AttributeError):
                 # 降级使用AttentionModelPolicy + POMO解码
-                from rl4co.models.nn import AttentionModelPolicy
+                from rl4co.models import AttentionModelPolicy
                 policy = AttentionModelPolicy(
                     env_name=env.name,
                     embed_dim=self.embed_dim,
