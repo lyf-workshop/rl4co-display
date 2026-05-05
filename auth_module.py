@@ -23,23 +23,41 @@ def _not_initialized(*_args, **_kwargs):
         "请确认 app.py 已调用 auth_module.init_db_accessors()。"
     )
 
-get_db = _not_initialized
-get_user_manager = _not_initialized
-get_session_manager = _not_initialized
-get_file_manager = _not_initialized
+# 内部实现引用，由 init_db_accessors() 替换
+_get_db_impl           = _not_initialized
+_get_user_manager_impl = _not_initialized
+_get_session_manager_impl = _not_initialized
+_get_file_manager_impl = _not_initialized
+
+
+# 稳定的公共包装函数——其函数对象本身永远不变，
+# 所以 "from auth_module import get_db" 在注入前后都能拿到正确实现。
+def get_db(*args, **kwargs):
+    return _get_db_impl(*args, **kwargs)
+
+def get_user_manager(*args, **kwargs):
+    return _get_user_manager_impl(*args, **kwargs)
+
+def get_session_manager(*args, **kwargs):
+    return _get_session_manager_impl(*args, **kwargs)
+
+def get_file_manager(*args, **kwargs):
+    return _get_file_manager_impl(*args, **kwargs)
 
 
 def init_db_accessors(get_db_func, get_user_manager_func,
                       get_session_manager_func, get_file_manager_func):
     """
     由 app.py 在应用启动时调用，将 Flask 请求上下文的数据库访问函数
-    注入到本模块，替代运行时猴子补丁（auth_module.get_db = ...）。
+    注入到本模块。使用内部 _impl 变量存储实现，公共函数保持稳定引用，
+    确保 "from auth_module import get_xxx" 在任何导入顺序下都能正常工作。
     """
-    global get_db, get_user_manager, get_session_manager, get_file_manager
-    get_db = get_db_func
-    get_user_manager = get_user_manager_func
-    get_session_manager = get_session_manager_func
-    get_file_manager = get_file_manager_func
+    global _get_db_impl, _get_user_manager_impl
+    global _get_session_manager_impl, _get_file_manager_impl
+    _get_db_impl           = get_db_func
+    _get_user_manager_impl = get_user_manager_func
+    _get_session_manager_impl = get_session_manager_func
+    _get_file_manager_impl = get_file_manager_func
 
 
 # ============================================

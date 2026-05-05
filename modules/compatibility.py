@@ -56,12 +56,19 @@ SCHEDULING_PROBLEMS_AVAILABLE = [
 # 兼容性规则定义（基于官方文档）
 # ============================================
 
+# ATSP 专用问题列表（排除 atsp，供 Attention/POMO/SymNCO 使用）
+# 原因：ATSPEnv 只提供 cost_matrix，不含 locs；
+# Attention/POMO/SymNCO 的 init_embedding 依赖 locs，运行时会抛出 KeyError。
+# ATSP 只能使用 MatNet（其 init_embedding 直接处理 cost_matrix）。
+_ROUTING_WITHOUT_ATSP = [p for p in ROUTING_PROBLEMS_INTEGRATED if p != 'atsp']
+
 # 策略 → 问题兼容性
 POLICY_PROBLEM_COMPATIBILITY = {
-    # Attention Model：支持所有路由问题（需要对应的 init_embedding）
+    # Attention Model：支持除 ATSP 外的所有路由问题
+    # ATSP 仅能使用 MatNet（ATSPEnv 无 locs，AM 的 init_embedding 会报 KeyError）
     # SPCTSP 也只支持 Attention Model（随机性使 POMO 不适用）
-    'attention': ROUTING_PROBLEMS_INTEGRATED,
-    'am': ROUTING_PROBLEMS_INTEGRATED,  # AM 别名
+    'attention': _ROUTING_WITHOUT_ATSP,
+    'am': _ROUTING_WITHOUT_ATSP,  # AM 别名
 
     # POMO：仅适用对称路由问题（利用旋转对称性），PCTSP 不适用（奖励非对称）
     'pomo': ['tsp', 'mtsp', 'cvrp'],
@@ -104,6 +111,18 @@ POLICY_ALGORITHM_COMPATIBILITY = {
 
 # 警告组合 (技术上可行，但不推荐)
 WARNING_COMBINATIONS = [
+    {
+        'problem': 'atsp',
+        'policy': 'attention',
+        'message': 'Attention Model不支持ATSP：ATSPEnv只提供cost_matrix，无locs坐标，AM的init_embedding无法处理。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'atsp',
+        'policy': 'am',
+        'message': 'Attention Model不支持ATSP：ATSPEnv只提供cost_matrix，无locs坐标，AM的init_embedding无法处理。请使用MatNet',
+        'severity': 'error'
+    },
     {
         'problem': 'atsp',
         'policy': 'pomo',
@@ -306,9 +325,9 @@ RECOMMENDED_COMBINATIONS = {
         'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
     'atsp': {
-        'best': {'policy': 'attention', 'algorithm': 'ppo'},      # ATSP只能用AM（POMO不支持非对称）
-        'fast': {'policy': 'attention', 'algorithm': 'a2c'},
-        'simple': {'policy': 'attention', 'algorithm': 'ppo'},     # ATSP不建议用REINFORCE
+        'best': {'policy': 'matnet', 'algorithm': 'ppo'},      # ATSP只能用MatNet（无locs，AM不可用）
+        'fast': {'policy': 'matnet', 'algorithm': 'a2c'},
+        'simple': {'policy': 'matnet', 'algorithm': 'reinforce'},
     },
     'mtsp': {
         'best': {'policy': 'symnco', 'algorithm': 'reinforce'},   # SymNCO利用对称性，质量最优

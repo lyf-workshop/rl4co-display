@@ -6,8 +6,8 @@
     - base_problem.py: 问题基类
     - tsp.py: 旅行商问题
     - cvrp.py: 车辆路径问题
-    - pctsp.py: 奖励收集TSP (待实现)
-    - op.py: 定向问题 (待实现)
+    - pctsp.py: 奖励收集TSP (规划中，尚未实现)
+    - op.py: 定向问题 (规划中，尚未实现)
     ...
 
 使用方式:

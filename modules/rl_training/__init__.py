@@ -80,13 +80,8 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
     if problem_type == 'tsp':
         train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'atsp':
-        # ATSP：MatNet 需要 ATSPEnv（提供 cost_matrix），attention 模型用 TSP 训练器即可
-        policy = config.get('model', 'attention').lower()
-        if policy in ('matnet',):
-            from .atsp_trainer import train_atsp
-            train_atsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
-        else:
-            train_tsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
+        # ATSP：统一使用 ATSPEnv（含 cost_matrix），所有策略均路由到 ATSPTrainer
+        train_atsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     elif problem_type == 'mtsp':
         # mTSP - 多旅行商问题
         train_mtsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
