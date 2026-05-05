@@ -1802,55 +1802,6 @@ MODEL_DATABASE = {
     }
 }
 
-# ============================================
-    # 构造方法（自回归）
-    # ============================================
-    
-    # TODO: 将 app.py 中第 718-1809 行的 MODEL_DATABASE 内容移动到这里
-    # 包含以下模型：
-    # - AM (Attention Model)
-    # - POMO (Policy Optimization with Multiple Optima)
-    # - SymNCO (Symmetric Neural Combinatorial Optimization)
-    # - MatNet (Matrix Network)
-    # - HAM (Hierarchical Attention Model)
-    # - PolyNet (Polynomial Time Network)
-    # - MTPOMO (Multi-Task POMO)
-    # - MVMoE (Multi-View Mixture of Experts)
-    # - L2D (Learn to Delegate)
-    # - HGNN (Heterogeneous Graph Neural Network)
-    # - DF (Distribution Fitting)
-    # - PtrNet (Pointer Network)
-    
-    # ============================================
-    # 构造方法（非自回归）
-    # ============================================
-    
-    # - DeepACO (Deep Ant Colony Optimization)
-    # - GFACS (Graph-based Fast Adaptive Construction Solver)
-    # - GLOP (Generalized Learning for Optimization Problems)
-    
-    # ============================================
-    # 强化学习算法
-    # ============================================
-    
-    # - REINFORCE
-    # - A2C (Advantage Actor-Critic)
-    # - PPO (Proximal Policy Optimization)
-    
-    # ============================================
-    # 改进方法
-    # ============================================
-    
-    # - DACT (Dual Attention with Cross Transformation)
-    # - N2S (Neural to Symbolic)
-    # - NeuOpt (Neural Optimizer)
-    
-    # ============================================
-    # 传导式强化学习
-    # ============================================
-    
-    # - ActiveSearch (Active Search)
-    # - EAS (Efficient Active Search)
 
 
 

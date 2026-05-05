@@ -7,7 +7,14 @@
       "Bash(python -m pytest tests/ -v --tb=short)",
       "Bash(grep:*)",
       "Bash(python -c \"import ast; ast.parse\\(open\\('app_files.py','r',encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(wc *)",
+      "Bash(chmod +x scripts/update.sh)",
+      "Bash(git fetch *)",
+      "Bash(powershell *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
