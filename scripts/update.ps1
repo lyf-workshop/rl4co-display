@@ -1,19 +1,15 @@
 # RL4CO Display - Auto Update Script
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\update.ps1
 
-$ErrorActionPreference = "Stop"
-
 # Switch to project root (script is in scripts/ subdirectory)
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
 Set-Location $ProjectDir
 
-function Write-Step($n, $msg) {
-    Write-Host "[$n/5] $msg" -ForegroundColor Cyan
-}
-function Write-Ok($msg)   { Write-Host "  [OK] $msg" -ForegroundColor Green }
-function Write-Warn($msg) { Write-Host "  [!!] $msg" -ForegroundColor Yellow }
-function Write-Err($msg)  { Write-Host " [ERR] $msg" -ForegroundColor Red }
+function Write-Step($n, $msg) { Write-Host "[$n/5] $msg" -ForegroundColor Cyan }
+function Write-Ok($msg)        { Write-Host "  [OK] $msg" -ForegroundColor Green }
+function Write-Warn($msg)      { Write-Host "  [!!] $msg" -ForegroundColor Yellow }
+function Write-Err($msg)       { Write-Host " [ERR] $msg" -ForegroundColor Red }
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Blue
@@ -24,22 +20,22 @@ Write-Host ""
 # Check git
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Write-Err "git not found. Please install Git for Windows."
-    exit 1
+    Read-Host "Press Enter to exit"; exit 1
 }
 
 # Check git repo
-try { git rev-parse --git-dir | Out-Null } catch {
+$isRepo = git rev-parse --git-dir 2>$null
+if ($LASTEXITCODE -ne 0) {
     Write-Err "Not a git repository: $ProjectDir"
-    exit 1
+    Read-Host "Press Enter to exit"; exit 1
 }
 
 # Step 1: Fetch
 Write-Step 1 "Fetching latest info from GitHub..."
-try {
-    git fetch origin main 2>&1 | Out-Null
-} catch {
-    Write-Err "Cannot reach GitHub. Check your network connection."
-    exit 1
+git fetch origin main
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "git fetch failed. Check network or GitHub access."
+    Read-Host "Press Enter to exit"; exit 1
 }
 
 $local  = git rev-parse HEAD
@@ -50,8 +46,7 @@ if ($local -eq $remote) {
     Write-Ok "Already up to date. No update needed."
     Write-Host "  Current: $($local.Substring(0,8))" -ForegroundColor Gray
     Write-Host ""
-    Read-Host "Press Enter to exit"
-    exit 0
+    Read-Host "Press Enter to exit"; exit 0
 }
 
 # Step 2: Show incoming commits
@@ -67,9 +62,9 @@ Write-Step 3 "Checking for local changes..."
 $status = git status --porcelain
 $stashed = $false
 if ($status) {
-    Write-Host "  Local changes detected, stashing..." -ForegroundColor Yellow
+    Write-Warn "Local changes detected, stashing..."
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    git stash push -m "auto-stash before update $timestamp" 2>&1 | Out-Null
+    git stash push -m "auto-stash before update $timestamp"
     $stashed = $true
     Write-Ok "Local changes stashed"
 } else {
@@ -85,25 +80,24 @@ if (Test-Path "requirements.txt") {
 # Step 4: Pull
 Write-Host ""
 Write-Step 4 "Pulling latest version..."
-try {
-    git pull origin main
-} catch {
-    Write-Err "Update failed."
+git pull origin main
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "git pull failed."
     if ($stashed) {
-        git stash pop 2>&1 | Out-Null
+        git stash pop
         Write-Warn "Local changes restored from stash."
     }
-    exit 1
+    Read-Host "Press Enter to exit"; exit 1
 }
 
 # Restore stash
 if ($stashed) {
     Write-Host ""
     Write-Host "  Restoring local changes..." -ForegroundColor Cyan
-    $popResult = git stash pop 2>&1
+    git stash pop
     if ($LASTEXITCODE -ne 0) {
-        Write-Warn "Conflict when restoring local changes."
-        Write-Warn "Run 'git stash list' to see stashed content."
+        Write-Warn "Conflict restoring local changes."
+        Write-Warn "Run 'git stash list' to inspect stashed content."
     } else {
         Write-Ok "Local changes restored"
     }
@@ -115,12 +109,12 @@ Write-Step 5 "Checking dependencies..."
 if (Test-Path "requirements.txt") {
     $reqAfter = (Get-FileHash "requirements.txt" -Algorithm SHA256).Hash
     if ($reqBefore -ne $reqAfter) {
-        Write-Host "  requirements.txt changed, updating dependencies..." -ForegroundColor Yellow
-        try {
-            pip install -r requirements.txt --quiet
+        Write-Warn "requirements.txt changed, updating dependencies..."
+        pip install -r requirements.txt --quiet
+        if ($LASTEXITCODE -eq 0) {
             Write-Ok "Dependencies updated"
-        } catch {
-            Write-Warn "Dependency install failed. Run manually: pip install -r requirements.txt"
+        } else {
+            Write-Warn "pip install failed. Run manually: pip install -r requirements.txt"
         }
     } else {
         Write-Ok "Dependencies unchanged, skipping"
