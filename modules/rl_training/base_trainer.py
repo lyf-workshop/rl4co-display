@@ -7,6 +7,7 @@ import os
 import json
 import time
 import logging
+import threading
 import torch
 import numpy as np
 import matplotlib
@@ -141,6 +142,56 @@ class ProgressCallback(Callback):
                 if isinstance(reward_val, torch.Tensor):
                     self.epoch_rewards.append(reward_val.item())
     
+    def _save_plot_async(self, epochs, losses, rewards, best_reward,
+                         plot_path, plot_url, epoch):
+        """在后台线程中渲染并保存训练曲线，避免阻塞 epoch 边界"""
+        def _save():
+            try:
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+                ax1.plot(epochs, losses, 'b-o', linewidth=2, markersize=6, label='Loss')
+                ax1.set_xlabel('Epoch', fontsize=12)
+                ax1.set_ylabel('Loss', fontsize=12)
+                ax1.set_title('训练Loss变化曲线', fontsize=14, fontweight='bold')
+                ax1.grid(True, alpha=0.3, linestyle='--')
+                ax1.legend(loc='upper right', fontsize=10)
+
+                ax2.plot(epochs, rewards, 'g-o', linewidth=2, markersize=6, label='Reward')
+                ax2.set_xlabel('Epoch', fontsize=12)
+                ax2.set_ylabel('Reward', fontsize=12)
+                ax2.set_title('训练Reward变化曲线', fontsize=14, fontweight='bold')
+                ax2.grid(True, alpha=0.3, linestyle='--')
+                ax2.legend(loc='lower right', fontsize=10)
+
+                best_epoch_idx = rewards.index(max(rewards))
+                best_epoch_num = epochs[best_epoch_idx]
+                ax2.axhline(y=best_reward, color='r', linestyle='--', alpha=0.5,
+                            label=f'Best: {best_reward:.4f}')
+                ax2.scatter([best_epoch_num], [best_reward], color='red',
+                            s=100, zorder=5, marker='*')
+                ax2.legend(loc='lower right', fontsize=10)
+
+                plt.tight_layout()
+                plt.savefig(plot_path, dpi=150, bbox_inches="tight")
+                plt.close(fig)
+
+                if self.file_manager:
+                    try:
+                        self.file_manager.save_file_record(
+                            user_id=self.user_id,
+                            session_id=self.session_id,
+                            filename=os.path.basename(plot_path),
+                            file_type='curve',
+                            file_path=plot_path,
+                        )
+                    except Exception as e:
+                        logger.warning(f"保存文件记录失败: {e}")
+            except Exception as e:
+                logger.warning(f"后台绘图线程异常: {e}")
+
+        t = threading.Thread(target=_save, daemon=True)
+        t.start()
+
     def on_train_epoch_end(self, trainer, pl_module):
         """每个训练 epoch 结束时调用"""
         epoch = trainer.current_epoch + 1
@@ -214,74 +265,40 @@ class ProgressCallback(Callback):
         self.history_losses.append(loss)
         self.history_rewards.append(reward)
         
-        # 生成实时训练曲线图
-        try:
-            USER_PLOTS_DIR = get_user_plot_dir(self.user_id)
-            plot_filename = f"training_curves_{self.session_id[:8]}.png"
-            plot_path = os.path.join(USER_PLOTS_DIR, plot_filename)
-            
-            # 创建包含loss和reward的双子图
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-            
-            # 绘制Loss曲线
-            ax1.plot(self.history_epochs, self.history_losses, 'b-o', linewidth=2, markersize=6, label='Loss')
-            ax1.set_xlabel('Epoch', fontsize=12)
-            ax1.set_ylabel('Loss', fontsize=12)
-            ax1.set_title('训练Loss变化曲线', fontsize=14, fontweight='bold')
-            ax1.grid(True, alpha=0.3, linestyle='--')
-            ax1.legend(loc='upper right', fontsize=10)
-            
-            # 绘制Reward曲线
-            ax2.plot(self.history_epochs, self.history_rewards, 'g-o', linewidth=2, markersize=6, label='Reward')
-            ax2.set_xlabel('Epoch', fontsize=12)
-            ax2.set_ylabel('Reward', fontsize=12)
-            ax2.set_title('训练Reward变化曲线', fontsize=14, fontweight='bold')
-            ax2.grid(True, alpha=0.3, linestyle='--')
-            ax2.legend(loc='lower right', fontsize=10)
-            
-            # 在reward图上标注最佳reward
-            best_epoch_idx = self.history_rewards.index(max(self.history_rewards))
-            best_epoch_num = self.history_epochs[best_epoch_idx]
-            ax2.axhline(y=self.best_reward, color='r', linestyle='--', alpha=0.5, label=f'Best: {self.best_reward:.4f}')
-            ax2.scatter([best_epoch_num], [self.best_reward], color='red', s=100, zorder=5, marker='*')
-            ax2.legend(loc='lower right', fontsize=10)
-            
-            plt.tight_layout()
-            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
-            plt.close(fig)
-            
-            # 保存训练曲线文件记录到数据库（file_manager 由 BaseTrainer 注入）
-            if self.file_manager:
-                try:
-                    self.file_manager.save_file_record(
-                        user_id=self.user_id,
-                        session_id=self.session_id,
-                        filename=plot_filename,
-                        file_type='curve',
-                        file_path=plot_path
-                    )
-                except Exception as e:
-                    logger.warning(f"保存文件记录失败: {e}")
-            
-            # 通过队列发送图表路径
-            self.queue.put(json.dumps({
-                'type': 'plot',
-                'plot_url': f"/static/model_plots/user_{self.user_id}/{plot_filename}",
-                'message': f'Epoch {epoch} 训练曲线已更新'
-            }))
-        except Exception as e:
-            self.queue.put(json.dumps({
-                'type': 'warning',
-                'message': f'生成训练曲线失败: {str(e)}'
-            }))
+        # 生成实时训练曲线图（后台线程，不阻塞 epoch 边界）
+        USER_PLOTS_DIR = get_user_plot_dir(self.user_id)
+        plot_filename = f"training_curves_{self.session_id[:8]}.png"
+        plot_path = os.path.join(USER_PLOTS_DIR, plot_filename)
+        plot_url = f"/static/model_plots/user_{self.user_id}/{plot_filename}"
+
+        # 复制历史列表（后台线程读取，避免与训练线程共享引用）
+        self._save_plot_async(
+            epochs=list(self.history_epochs),
+            losses=list(self.history_losses),
+            rewards=list(self.history_rewards),
+            best_reward=self.best_reward,
+            plot_path=plot_path,
+            plot_url=plot_url,
+            epoch=epoch,
+        )
+
+        # 立刻通知前端（图片由后台线程写入，极短时间内可用）
+        self.queue.put(json.dumps({
+            'type': 'plot',
+            'plot_url': plot_url,
+            'message': f'Epoch {epoch} 训练曲线已更新'
+        }))
         
         # 同步更新全局 training_status，供训练结束时 final_results 读取
+        # 使用单次 dict.update() 减少并发读取时看到部分状态的窗口
         if self.training_status is not None and self.session_id in self.training_status:
-            self.training_status[self.session_id]['loss'] = round(loss, 4)
-            self.training_status[self.session_id]['reward'] = round(reward, 4)
-            self.training_status[self.session_id]['best_reward'] = round(self.best_reward, 4)
-            self.training_status[self.session_id]['epoch'] = epoch
-            self.training_status[self.session_id]['progress'] = round(progress, 2)
+            self.training_status[self.session_id].update({
+                'loss': round(loss, 4),
+                'reward': round(reward, 4),
+                'best_reward': round(self.best_reward, 4),
+                'epoch': epoch,
+                'progress': round(progress, 2),
+            })
 
         # 发送进度更新
         self.queue.put(json.dumps({
