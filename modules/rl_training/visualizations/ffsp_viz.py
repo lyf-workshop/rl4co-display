@@ -3,6 +3,7 @@ FFSP问题专用可视化函数
 提供FFSP甘特图、调度对比图等可视化
 """
 
+import io
 import os
 import logging
 import numpy as np
@@ -354,6 +355,134 @@ def create_ffsp_schedule_comparison(td_before, td_after, schedule_before, schedu
             'makespan_after': 0,
             'improvement': 0
         }
+
+
+def create_ffsp_schedule_animation(td, schedule, save_path, title="FFSP调度过程动画", fps=2):
+    """
+    创建FFSP调度过程的动态GIF。
+
+    按作业实际开始时间排序，帧 k 显示前 k 个已排入的操作，
+    最终帧显示完整甘特图。
+
+    参数:
+        td: TensorDict，包含 job_duration 或 run_time
+        schedule: 调度矩阵 [num_machine, num_job+1]，记录每个作业在每台机器上的开始时间
+        save_path: GIF保存路径
+        title: 动画标题
+        fps: 每秒帧数
+    """
+    try:
+        if isinstance(schedule, torch.Tensor):
+            schedule = schedule.cpu().numpy()
+
+        # 提取 job_duration
+        if hasattr(td, 'get'):
+            if 'job_duration' in td.keys():
+                job_duration = td.get('job_duration').cpu().numpy()
+            elif 'run_time' in td.keys():
+                job_duration = td.get('run_time').cpu().numpy()
+            else:
+                raise KeyError(f"TensorDict中没有job_duration或run_time键，可用键: {list(td.keys())}")
+        else:
+            if 'job_duration' in td:
+                job_duration = td['job_duration'].cpu().numpy()
+            elif 'run_time' in td:
+                job_duration = td['run_time'].cpu().numpy()
+            else:
+                raise KeyError("TensorDict中没有job_duration或run_time键")
+
+        if job_duration.ndim == 3:
+            job_duration = job_duration[0]
+
+        num_machines = schedule.shape[0]
+        num_jobs = schedule.shape[1] - 1  # 排除 dummy job
+
+        # 收集所有有效赋值：(start_time, machine_idx, job_idx, duration)
+        assignments = []
+        for machine_idx in range(num_machines):
+            for job_idx in range(num_jobs):
+                start_time = schedule[machine_idx, job_idx]
+                if start_time < 0:
+                    continue
+                try:
+                    if job_duration.shape[0] > job_idx and job_duration.shape[1] > machine_idx:
+                        duration = job_duration[job_idx, machine_idx]
+                        start_val = float(start_time.item() if hasattr(start_time, 'item') else start_time)
+                        dur_val = float(duration.item() if hasattr(duration, 'item') else duration)
+                        assignments.append((start_val, machine_idx, job_idx, dur_val))
+                except Exception:
+                    continue
+
+        if not assignments:
+            logger.warning("create_ffsp_schedule_animation: 没有可动画的调度赋值，跳过")
+            return
+
+        assignments.sort(key=lambda x: x[0])
+        total = len(assignments)
+        makespan = max(s + d for s, _, _, d in assignments)
+        colors = plt.cm.tab20(np.linspace(0, 1, num_jobs))
+        fig_height = max(6, num_machines * 0.6 + 2)
+
+        def _render_frame(shown, frame_title):
+            fig, ax = plt.subplots(figsize=(12, fig_height))
+            for start_val, machine_idx, job_idx, dur_val in shown:
+                rect = Rectangle(
+                    (start_val, machine_idx - 0.4), dur_val, 0.8,
+                    facecolor=colors[job_idx], edgecolor='black',
+                    linewidth=1.5, alpha=0.8
+                )
+                ax.add_patch(rect)
+                if dur_val > makespan * 0.03:
+                    ax.text(
+                        start_val + dur_val / 2, machine_idx, f'J{job_idx}',
+                        ha='center', va='center', fontsize=8,
+                        fontweight='bold', color='white'
+                    )
+            ax.set_xlim(0, makespan * 1.05)
+            ax.set_ylim(-0.5, num_machines - 0.5)
+            ax.set_yticks(range(num_machines))
+            ax.set_yticklabels([f'机器 {i}' for i in range(num_machines)])
+            ax.invert_yaxis()
+            ax.set_xlabel('时间', fontsize=11)
+            ax.set_ylabel('机器', fontsize=11)
+            ax.set_title(frame_title, fontsize=12, fontweight='bold')
+            ax.grid(True, axis='x', alpha=0.3, linestyle='--')
+            plt.tight_layout()
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
+            plt.close(fig)
+            buf.seek(0)
+            return Image.open(buf).copy()
+
+        # 最多生成 40 个中间帧，避免 GIF 过大
+        frame_step = max(1, total // 40)
+        pil_frames = []
+        for k in range(frame_step, total, frame_step):
+            pil_frames.append(_render_frame(
+                assignments[:k],
+                f"{title}\n第 {k}/{total} 个操作已排入"
+            ))
+
+        # 完整甘特图帧，重复 3 次让用户看清
+        final_frame = _render_frame(
+            assignments,
+            f"{title}\n完整调度 | Makespan: {makespan:.1f}"
+        )
+        pil_frames.extend([final_frame] * 3)
+
+        duration_ms = int(1000 / fps)
+        pil_frames[0].save(
+            save_path,
+            save_all=True,
+            append_images=pil_frames[1:],
+            loop=0,
+            duration=duration_ms,
+            optimize=False,
+        )
+        logger.info("FFSP动画已保存: %s (%d 帧)", save_path, len(pil_frames))
+
+    except Exception as e:
+        logger.error("创建FFSP动画时出错: %s", str(e))
 
 
 def create_ffsp_statistics_plot(makespans, save_path, title="FFSP训练收敛曲线"):

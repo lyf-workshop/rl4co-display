@@ -24,7 +24,8 @@ except ImportError:
 from .base_trainer import BaseTrainer
 from .visualizations.ffsp_viz import (
     create_ffsp_gantt_chart,
-    create_ffsp_schedule_comparison
+    create_ffsp_schedule_comparison,
+    create_ffsp_schedule_animation,
 )
 
 
@@ -497,6 +498,56 @@ class FFSPTrainer(BaseTrainer):
                 import traceback
                 self.send_message('info', f'详细错误: {traceback.format_exc()}')
         
+        # 生成调度动画（每个样本一个 GIF）
+        animation_paths = []
+        for i in range(min(3, td_replay.batch_size[0])):
+            try:
+                anim_filename = f"ffsp_animation_{self.session_id[:8]}_{i+1}.gif"
+                anim_path = os.path.join(self.user_plots_dir, anim_filename)
+
+                self.send_message('info', f'正在生成FFSP调度动画 {i+1}/3...')
+
+                if 'schedule' not in td_replay.keys():
+                    self.send_message('info', '⚠️ 无 schedule 键，跳过动画生成')
+                    break
+
+                schedule_single = td_replay['schedule'][i].cpu()
+
+                from tensordict import TensorDict as _TensorDict
+                td_single_keys = {}
+                for key in ['job_duration', 'run_time']:
+                    if key in td_replay.keys():
+                        td_single_keys[key] = td_replay[key][i:i+1]
+                td_single = _TensorDict(td_single_keys, batch_size=[1])
+
+                create_ffsp_schedule_animation(
+                    td_single,
+                    schedule_single,
+                    anim_path,
+                    title=f"FFSP调度过程 (实例 {i+1})",
+                    fps=2,
+                )
+
+                if self.bg_file_manager:
+                    try:
+                        self.bg_file_manager.save_file_record(
+                            user_id=self.user_id,
+                            session_id=self.session_id,
+                            filename=anim_filename,
+                            file_type='animation',
+                            file_path=anim_path,
+                        )
+                    except Exception as e:
+                        logger.warning(f"保存动画文件记录失败: {str(e)}")
+
+                animation_paths.append(f"/static/model_plots/user_{self.user_id}/{anim_filename}")
+                self.send_message('info', f'✅ 动画 {i+1} 已生成')
+
+            except Exception as e:
+                self.send_message('info', f'⚠️ 生成第{i+1}个动画时出错: {str(e)}')
+                import traceback
+                self.send_message('info', f'详细错误: {traceback.format_exc()}')
+
         # 保存检查点
         trainer.save_checkpoint(checkpoint_path)
         
@@ -528,7 +579,7 @@ class FFSPTrainer(BaseTrainer):
         
         return {
             'plot_paths': plot_paths,
-            'animation_paths': [],  # FFSP不生成动画
+            'animation_paths': animation_paths,
             'training_curve': self.training_status[self.session_id].get('plot_url', ''),
             'checkpoint_path': checkpoint_path,
             'metrics': {
