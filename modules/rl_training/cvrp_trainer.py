@@ -37,25 +37,8 @@ class CVRPTrainer(BaseTrainer):
             'num_loc': self.num_loc,
             'vehicle_capacity': self.vehicle_capacity
         })
+        self.send_message('info', f'CVRP训练模式（{self.num_loc}个客户，容量={self.vehicle_capacity}）')
         return env
-    
-    def create_model(self, env, policy):
-        """创建适用于CVRP的RL模型"""
-        from rl4co.models import REINFORCE
-        
-        model = REINFORCE(
-            env,
-            policy,
-            baseline="rollout",
-            batch_size=self.batch_size,
-            train_data_size=10_000,
-            val_data_size=1_000,
-            optimizer_kwargs={"lr": self.learning_rate},
-        )
-        
-        self.send_message('info', f'使用CVRP训练模式（{self.num_loc}个客户，容量={self.vehicle_capacity}）')
-        
-        return model
     
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成CVRP可视化结果"""
