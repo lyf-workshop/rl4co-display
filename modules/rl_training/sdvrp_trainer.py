@@ -59,30 +59,13 @@ class SDVRPTrainer(BaseTrainer):
                 env.allow_split_delivery = True
                 self.send_message('info', f'使用CVRP环境模拟SDVRP（允许分割配送）')
             
+            self.send_message('info',
+                f'SDVRP训练模式（{self.num_loc}个客户，容量={self.vehicle_capacity}，'
+                f'最大分割={self.max_split_per_customer}次）')
             return env
         except Exception as e:
             self.send_message('error', f'环境初始化失败: {str(e)}')
             raise
-    
-    def create_model(self, env, policy):
-        """创建适用于SDVRP的RL模型"""
-        from rl4co.models import REINFORCE
-        
-        model = REINFORCE(
-            env,
-            policy,
-            baseline="rollout",
-            batch_size=self.batch_size,
-            train_data_size=10_000,
-            val_data_size=1_000,
-            optimizer_kwargs={"lr": self.learning_rate},
-        )
-        
-        self.send_message('info', 
-            f'使用SDVRP训练模式（{self.num_loc}个客户，容量={self.vehicle_capacity}，'
-            f'最大分割={self.max_split_per_customer}次）')
-        
-        return model
     
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成SDVRP可视化（包含分割配送分析）"""
