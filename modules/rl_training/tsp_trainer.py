@@ -60,39 +60,17 @@ class TSPTrainer(BaseTrainer):
         return env
     
     def create_model(self, env, policy):
-        """创建适用于TSP的RL模型"""
-        from rl4co.models import REINFORCE
-        
+        """创建适用于TSP的RL模型（委托给BaseTrainer使用算法注册表）"""
         if self.custom_dataset is not None:
-            # 使用自定义数据集
-            coords_tensor = torch.tensor(self.custom_dataset, dtype=torch.float32)
-            
-            model = REINFORCE(
-                env,
-                policy,
-                baseline="rollout",
-                batch_size=min(self.batch_size, len(self.custom_dataset)),
-                train_data_size=min(10_000, len(self.custom_dataset) * 20),
-                val_data_size=min(1_000, len(self.custom_dataset) * 2),
-                optimizer_kwargs={"lr": self.learning_rate},
-            )
-            
-            self.send_message('info', f'使用自定义TSP数据集训练模式（{len(self.custom_dataset)}个城市）')
+            n = len(self.custom_dataset)
+            # 根据数据集规模调整训练数据量，覆盖 config 供算法注册表读取
+            self.config['batch_size'] = min(self.batch_size, n)
+            self.config['train_data_size'] = min(10_000, n * 20)
+            self.config['val_data_size'] = min(1_000, n * 2)
+            self.send_message('info', f'使用自定义TSP数据集训练模式（{n}个城市）')
         else:
-            # 使用随机生成数据集
-            model = REINFORCE(
-                env,
-                policy,
-                baseline="rollout",
-                batch_size=self.batch_size,
-                train_data_size=10_000,
-                val_data_size=1_000,
-                optimizer_kwargs={"lr": self.learning_rate},
-            )
-            
             self.send_message('info', f'使用随机生成TSP数据集训练模式（{self.num_loc}个城市）')
-        
-        return model
+        return super().create_model(env, policy)
     
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成TSP可视化结果"""
