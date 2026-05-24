@@ -30,7 +30,27 @@ class CVRPTrainer(BaseTrainer):
         # CVRP特有的参数
         self.vehicle_capacity = float(config.get('vehicle_capacity', 1.0))
         self.num_vehicles = int(config.get('num_vehicles', 1))
-    
+        self.load_custom_dataset()
+
+    def _inject_custom_data(self, td):
+        """将自定义数据集注入 TensorDict。"""
+        data = self.custom_dataset_data
+        coords = torch.tensor(data['coordinates'], dtype=torch.float32)  # [N, 2]
+
+        if data.get('depot'):
+            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        else:
+            depot = td['locs'][0, 0].cpu()
+
+        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)  # [N+1, 2]
+        td['locs'] = locs.unsqueeze(0).to(self.device)
+
+        if data.get('demands'):
+            demand = torch.tensor(data['demands'], dtype=torch.float32)  # [N]
+            td['demand'] = demand.unsqueeze(0).to(self.device)
+
+        return td
+
     def initialize_environment(self):
         """初始化CVRP环境"""
         env = CVRPEnv(generator_params={
@@ -46,7 +66,12 @@ class CVRPTrainer(BaseTrainer):
         policy = model.policy.to(self.device)
         
         # 生成测试数据
-        td_init = env.reset(batch_size=[3]).to(self.device)
+        if self.custom_dataset_data:
+            td_init = env.reset(batch_size=[1]).to(self.device)
+            td_init = self._inject_custom_data(td_init)
+            self.send_message('info', f'✅ 在上传的CVRP数据集上进行测试（{self.num_loc}个客户）')
+        else:
+            td_init = env.reset(batch_size=[3]).to(self.device)
         
         # 未训练模型测试
         out_untrained = policy(td_init.clone(), phase="test", decode_type="sampling", return_actions=True)
