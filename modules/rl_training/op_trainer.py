@@ -52,7 +52,26 @@ class OPTrainer(BaseTrainer):
         # 发送配置信息
         self.send_message('info', f'📋 OP配置: {self.op_num_loc}个地点, 最大路径长度: {self.max_length}')
         self.send_message('info', f'📋 奖励类型: {self.prize_type}')
-    
+        self.load_custom_dataset()
+
+    def _inject_custom_data(self, td):
+        data = self.custom_dataset_data
+        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+
+        if data.get('depot'):
+            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        else:
+            depot = td['locs'][0, 0].cpu()
+
+        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
+        td['locs'] = locs.unsqueeze(0).to(self.device)
+
+        if data.get('prizes'):
+            prize = torch.tensor([0.0] + data['prizes'], dtype=torch.float32)
+            td['prize'] = prize.unsqueeze(0).to(self.device)
+
+        return td
+
     def initialize_environment(self):
         """
         初始化 OP 环境
@@ -114,11 +133,17 @@ class OPTrainer(BaseTrainer):
         
         try:
             # 定义测试实例数量和可视化数量
-            num_test_instances = min(3, self.batch_size)
-            num_visualizations = min(3, num_test_instances)
-            
-            # 生成测试数据
-            td = env.reset(batch_size=[num_test_instances])
+            if self.custom_dataset_data:
+                td = env.reset(batch_size=[1]).to(self.device)
+                td = self._inject_custom_data(td)
+                num_test_instances = 1
+                num_visualizations = 1
+                self.send_message('info', f'✅ 在上传的OP数据集上进行测试（{self.num_loc}个地点）')
+            else:
+                num_test_instances = min(3, self.batch_size)
+                num_visualizations = min(3, num_test_instances)
+                # 生成测试数据
+                td = env.reset(batch_size=[num_test_instances])
             
             # 使用模型进行推理
             model.eval()

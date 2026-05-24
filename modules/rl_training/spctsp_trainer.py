@@ -40,6 +40,32 @@ class SPCTSPTrainer(PCTSPTrainer):
         self.problem_type = 'spctsp'
         self.send_message('info', '🎲 SPCTSP 模式：奖励在访问节点后才揭晓（随机性）')
         self.send_message('info', '   期望奖励 (deterministic_prize) 预先可见，真实奖励 (real_prize) 访问后才知')
+        self.load_custom_dataset()
+
+    def _inject_custom_data(self, td):
+        data = self.custom_dataset_data
+        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+
+        if data.get('depot'):
+            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        else:
+            depot = td['locs'][0, 0].cpu()
+
+        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
+        td['locs'] = locs.unsqueeze(0).to(self.device)
+
+        if data.get('prizes'):
+            prizes = data['prizes']
+            det_prize = torch.tensor(prizes, dtype=torch.float32)          # [N]
+            td['deterministic_prize'] = det_prize.unsqueeze(0).to(self.device)
+            real_prize = torch.tensor([0.0] + prizes, dtype=torch.float32) # [N+1]
+            td['real_prize'] = real_prize.unsqueeze(0).to(self.device)
+
+        if data.get('penalties'):
+            penalty = torch.tensor([0.0] + data['penalties'], dtype=torch.float32)
+            td['penalty'] = penalty.unsqueeze(0).to(self.device)
+
+        return td
 
     def initialize_environment(self):
         """
@@ -93,10 +119,16 @@ class SPCTSPTrainer(PCTSPTrainer):
         plot_paths = []
 
         try:
-            num_test = min(3, self.batch_size)
-            num_vis = min(3, num_test)
-
-            td = env.reset(batch_size=[num_test])
+            if self.custom_dataset_data:
+                td = env.reset(batch_size=[1]).to(self.device)
+                td = self._inject_custom_data(td)
+                num_test = 1
+                num_vis = 1
+                self.send_message('info', f'✅ 在上传的SPCTSP数据集上进行测试（{self.num_loc}个客户节点）')
+            else:
+                num_test = min(3, self.batch_size)
+                num_vis = min(3, num_test)
+                td = env.reset(batch_size=[num_test])
 
             model.eval()
             with torch.no_grad():

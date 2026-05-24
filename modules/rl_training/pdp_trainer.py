@@ -47,7 +47,24 @@ class PDPTrainer(BaseTrainer):
         self.num_pairs = self.pdp_num_loc // 2
         
         self.send_message('info', f'📋 PDP配置: {self.pdp_num_loc}个地点 ({self.num_pairs}对取送货), 强制从depot开始: {self.force_start_at_depot}')
-    
+        self.load_custom_dataset()
+        if self.custom_dataset_data:
+            self.pdp_num_loc = self.num_loc
+            self.num_pairs = self.pdp_num_loc // 2
+
+    def _inject_custom_data(self, td):
+        data = self.custom_dataset_data
+        coords = torch.tensor(data['coordinates'], dtype=torch.float32)  # [N, 2]
+
+        if data.get('depot'):
+            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        else:
+            depot = td['depot'][0].cpu()  # PDP 有独立 depot key
+
+        td['locs'] = coords.unsqueeze(0).to(self.device)   # [1, N, 2]
+        td['depot'] = depot.unsqueeze(0).to(self.device)   # [1, 2]
+        return td
+
     def initialize_environment(self):
         """
         初始化 PDP 环境
@@ -103,11 +120,17 @@ class PDPTrainer(BaseTrainer):
         
         try:
             # 定义测试实例数量和可视化数量
-            num_test_instances = min(3, self.batch_size)  # 最多3个实例
-            num_visualizations = min(3, num_test_instances)  # 最多生成3个可视化
-            
-            # 生成测试数据
-            td = env.reset(batch_size=[num_test_instances])
+            if self.custom_dataset_data:
+                td = env.reset(batch_size=[1]).to(self.device)
+                td = self._inject_custom_data(td)
+                num_test_instances = 1
+                num_visualizations = 1
+                self.send_message('info', f'✅ 在上传的PDP数据集上进行测试（{self.num_loc}个节点，{self.num_pairs}对取送货）')
+            else:
+                num_test_instances = min(3, self.batch_size)  # 最多3个实例
+                num_visualizations = min(3, num_test_instances)  # 最多生成3个可视化
+                # 生成测试数据
+                td = env.reset(batch_size=[num_test_instances])
             
             # 使用模型进行推理
             model.eval()

@@ -36,7 +36,36 @@ class VRPTWTrainer(BaseTrainer):
         self.time_window_width = float(config.get('time_window_width', 100.0))
         self.service_time = float(config.get('service_time', 10.0))
         self.max_time = float(config.get('max_time', 480.0))
-    
+        self.load_custom_dataset()
+
+    def _inject_custom_data(self, td):
+        data = self.custom_dataset_data
+        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+
+        if data.get('depot'):
+            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        else:
+            depot = td['locs'][0, 0].cpu()
+
+        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
+        td['locs'] = locs.unsqueeze(0).to(self.device)
+
+        if data.get('demands'):
+            demand = torch.tensor([0.0] + data['demands'], dtype=torch.float32)
+            td['demand'] = demand.unsqueeze(0).to(self.device)
+
+        if data.get('time_windows'):
+            depot_tw = td['time_windows'][0, 0:1].cpu()  # 保留 env 生成的 depot 时间窗
+            customer_tw = torch.tensor(data['time_windows'], dtype=torch.float32)
+            full_tw = torch.cat([depot_tw, customer_tw], dim=0)
+            td['time_windows'] = full_tw.unsqueeze(0).to(self.device)
+
+        if data.get('service_times'):
+            st = torch.tensor([0.0] + data['service_times'], dtype=torch.float32)
+            td['service_time'] = st.unsqueeze(0).to(self.device)
+
+        return td
+
     def validate_config(self):
         """验证VRPTW特定配置"""
         valid, msg = super().validate_config()
@@ -87,6 +116,9 @@ class VRPTWTrainer(BaseTrainer):
             # 生成测试数据
             with torch.no_grad():
                 td_init = env.reset(batch_size=[1]).to(self.device)
+                if self.custom_dataset_data:
+                    td_init = self._inject_custom_data(td_init)
+                    self.send_message('info', f'✅ 在上传的VRPTW数据集上进行测试（{self.num_loc}个客户）')
                 
                 # 训练前（随机策略）- 使用简单的随机顺序
                 actions_before = torch.randperm(self.num_loc)[:self.num_loc]

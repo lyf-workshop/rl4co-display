@@ -55,6 +55,29 @@ class PCTSPTrainer(BaseTrainer):
 
         self.send_message('info', f'📋 PCTSP 配置: {self.pctsp_num_loc} 个客户节点')
         self.send_message('info', f'📋 惩罚系数: {self.penalty_factor}, 最低奖励要求: {self.prize_required}')
+        self.load_custom_dataset()
+
+    def _inject_custom_data(self, td):
+        data = self.custom_dataset_data
+        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+
+        if data.get('depot'):
+            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        else:
+            depot = td['locs'][0, 0].cpu()
+
+        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
+        td['locs'] = locs.unsqueeze(0).to(self.device)
+
+        if data.get('prizes'):
+            real_prize = torch.tensor([0.0] + data['prizes'], dtype=torch.float32)
+            td['real_prize'] = real_prize.unsqueeze(0).to(self.device)
+
+        if data.get('penalties'):
+            penalty = torch.tensor([0.0] + data['penalties'], dtype=torch.float32)
+            td['penalty'] = penalty.unsqueeze(0).to(self.device)
+
+        return td
 
     def initialize_environment(self):
         """
@@ -106,10 +129,16 @@ class PCTSPTrainer(BaseTrainer):
         plot_paths = []
 
         try:
-            num_test = min(3, self.batch_size)
-            num_vis = min(3, num_test)
-
-            td = env.reset(batch_size=[num_test])
+            if self.custom_dataset_data:
+                td = env.reset(batch_size=[1]).to(self.device)
+                td = self._inject_custom_data(td)
+                num_test = 1
+                num_vis = 1
+                self.send_message('info', f'✅ 在上传的PCTSP数据集上进行测试（{self.num_loc}个客户节点）')
+            else:
+                num_test = min(3, self.batch_size)
+                num_vis = min(3, num_test)
+                td = env.reset(batch_size=[num_test])
 
             model.eval()
             with torch.no_grad():
