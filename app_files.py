@@ -23,62 +23,99 @@ files_bp = Blueprint('files', __name__)
 logger = logging.getLogger('rl4co_display')
 
 
-def parse_dataset(content, file_ext):
-    """解析不同格式的TSP数据集文件"""
+def parse_dataset(content, file_ext, problem_type='tsp'):
+    """解析数据集文件，返回包含 coordinates 等字段的 dict，失败返回 None。"""
     try:
+        # --- 解析原始坐标 ---
         if file_ext == 'json':
-            # JSON格式: {"coordinates": [[x1,y1], [x2,y2], ...]}
             data = json.loads(content)
-            if 'coordinates' in data:
-                return data['coordinates']
-            else:
+            if 'coordinates' not in data:
                 return None
-                
+            coordinates = data['coordinates']
         elif file_ext == 'txt':
-            # TXT格式: 每行一个坐标对 "x y"
             coordinates = []
-            lines = content.strip().split('\n')
-            for line in lines:
+            for line in content.strip().split('\n'):
                 line = line.strip()
-                if line and not line.startswith('#'):  # 跳过空行和注释
+                if line and not line.startswith('#'):
                     parts = line.split()
                     if len(parts) >= 2:
                         try:
-                            x = float(parts[0])
-                            y = float(parts[1])
-                            coordinates.append([x, y])
+                            coordinates.append([float(parts[0]), float(parts[1])])
                         except ValueError:
                             continue
-            return coordinates if len(coordinates) > 0 else None
-            
+            if not coordinates:
+                return None
+            data = {}
         elif file_ext == 'tsp':
-            # TSPLIB格式
             coordinates = []
-            in_coord_section = False
-            lines = content.strip().split('\n')
-            
-            for line in lines:
+            in_section = False
+            for line in content.strip().split('\n'):
                 line = line.strip()
-                
                 if line.startswith('NODE_COORD_SECTION'):
-                    in_coord_section = True
+                    in_section = True
                     continue
-                    
                 if line in ['EOF', 'DISPLAY_DATA_SECTION', 'EDGE_WEIGHT_SECTION']:
                     break
-                    
-                if in_coord_section and line:
+                if in_section and line:
                     parts = line.split()
-                    if len(parts) >= 3:  # TSPLIB格式: index x y
+                    if len(parts) >= 3:
                         try:
-                            x = float(parts[1])
-                            y = float(parts[2])
-                            coordinates.append([x, y])
+                            coordinates.append([float(parts[1]), float(parts[2])])
                         except (ValueError, IndexError):
                             continue
-            
-            return coordinates if len(coordinates) > 0 else None
-            
+            if not coordinates:
+                return None
+            data = {}
+        else:
+            return None
+
+        if not coordinates:
+            return None
+
+        # --- 问题类型专用校验 ---
+        if problem_type == 'pdp':
+            if len(coordinates) % 2 != 0:
+                return None  # PDP 坐标数必须是偶数
+
+        # --- 构建结果 dict ---
+        result = {'coordinates': coordinates}
+
+        # depot（可选，所有问题通用）
+        if isinstance(data, dict) and data.get('depot'):
+            result['depot'] = data['depot']
+
+        # demands（CVRP / SDVRP / VRPTW）
+        if problem_type in ('cvrp', 'sdvrp', 'vrptw') and isinstance(data, dict) and data.get('demands'):
+            demands = data['demands']
+            if any(d <= 0 or d > 1 for d in demands):
+                return None  # demands 必须在 (0, 1]
+            result['demands'] = demands
+
+        # prizes（OP / PCTSP / SPCTSP）
+        if problem_type in ('op', 'pctsp', 'spctsp') and isinstance(data, dict) and data.get('prizes'):
+            prizes = data['prizes']
+            if any(p < 0 for p in prizes):
+                return None  # prizes 不能为负
+            result['prizes'] = prizes
+
+        # penalties（PCTSP / SPCTSP）
+        if problem_type in ('pctsp', 'spctsp') and isinstance(data, dict) and data.get('penalties'):
+            result['penalties'] = data['penalties']
+
+        # time_windows（VRPTW）
+        if problem_type == 'vrptw' and isinstance(data, dict) and data.get('time_windows'):
+            tws = data['time_windows']
+            for tw in tws:
+                if len(tw) != 2 or tw[0] >= tw[1]:
+                    return None
+            result['time_windows'] = tws
+
+        # service_times（VRPTW）
+        if problem_type == 'vrptw' and isinstance(data, dict) and data.get('service_times'):
+            result['service_times'] = data['service_times']
+
+        return result
+
     except Exception as e:
         logger.error(f"解析数据集错误: {str(e)}", exc_info=True)
         return None
@@ -87,7 +124,7 @@ def parse_dataset(content, file_ext):
 @files_bp.route('/api/upload_dataset', methods=['POST'])
 @login_required
 def upload_dataset():
-    """处理TSP数据集上传 - 需要登录"""
+    """处理数据集上传 - 需要登录"""
     try:
         user_id = get_current_user_id()
         if not user_id:
@@ -95,77 +132,82 @@ def upload_dataset():
                 'success': False,
                 'message': '请先登录'
             }), 401
-        
+
         # 检查是否有文件上传
         if 'dataset' not in request.files:
             return jsonify({
                 'success': False,
                 'message': '没有找到上传的文件'
             }), 400
-        
+
         file = request.files['dataset']
-        
+
         if file.filename == '':
             return jsonify({
                 'success': False,
                 'message': '未选择文件'
             }), 400
-        
-        # 获取文件扩展名
+
+        # 获取文件扩展名和问题类型
         filename = file.filename
         file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-        
+        problem_type = request.form.get('problem_type', 'tsp').lower()
+
         if file_ext not in ['txt', 'json', 'tsp']:
             return jsonify({
                 'success': False,
                 'message': f'不支持的文件格式: {file_ext}，仅支持 .txt, .json, .tsp'
             }), 400
-        
-        # 读取文件内容
+
+        # 读取并解析文件
         file_content = file.read().decode('utf-8')
-        
-        # 解析数据集
-        coordinates = parse_dataset(file_content, file_ext)
-        
-        if coordinates is None or len(coordinates) == 0:
+        parsed = parse_dataset(file_content, file_ext, problem_type)
+
+        if parsed is None or not parsed.get('coordinates'):
             return jsonify({
                 'success': False,
                 'message': '解析数据集失败，请检查文件格式'
             }), 400
-        
-        # 生成数据集ID
+
+        coordinates = parsed['coordinates']
+
+        # 生成数据集ID并保存
         dataset_id = str(uuid.uuid4())
-        
-        # 创建用户数据集目录
         user_dataset_dir = os.path.join('datasets', f'user_{user_id}')
         os.makedirs(user_dataset_dir, exist_ok=True)
-        
-        # 保存数据集为JSON格式
+
+        dataset_record = {
+            'dataset_id': dataset_id,
+            'user_id': user_id,
+            'problem_type': problem_type,
+            'filename': filename,
+            'coordinates': coordinates,
+            'num_loc': len(coordinates),
+            'upload_time': datetime.now().isoformat(),
+        }
+        for field in ('depot', 'demands', 'prizes', 'penalties', 'time_windows', 'service_times'):
+            if field in parsed:
+                dataset_record[field] = parsed[field]
+
         dataset_path = os.path.join(user_dataset_dir, f'{dataset_id}.json')
         with open(dataset_path, 'w') as f:
-            json.dump({
-                'dataset_id': dataset_id,
-                'user_id': user_id,
-                'filename': filename,
-                'coordinates': coordinates,
-                'num_cities': len(coordinates),
-                'upload_time': datetime.now().isoformat()
-            }, f)
-        
+            json.dump(dataset_record, f)
+
         # 计算坐标范围
         coords_array = np.array(coordinates)
         coord_min = coords_array.min(axis=0)
         coord_max = coords_array.max(axis=0)
         coord_range = f"X: [{coord_min[0]:.2f}, {coord_max[0]:.2f}], Y: [{coord_min[1]:.2f}, {coord_max[1]:.2f}]"
-        
+
         return jsonify({
             'success': True,
-            'message': f'数据集上传成功！包含 {len(coordinates)} 个城市',
+            'message': f'数据集上传成功！包含 {len(coordinates)} 个节点',
             'dataset_id': dataset_id,
             'dataset_info': {
                 'filename': filename,
-                'num_cities': len(coordinates),
-                'coord_range': coord_range
+                'problem_type': problem_type,
+                'num_loc': len(coordinates),
+                'coord_range': coord_range,
             }
         })
         
@@ -206,7 +248,8 @@ def list_datasets():
                         datasets.append({
                             'dataset_id': dataset_data.get('dataset_id'),
                             'filename': dataset_data.get('filename'),
-                            'num_cities': dataset_data.get('num_cities'),
+                            'problem_type': dataset_data.get('problem_type', 'tsp'),
+                            'num_loc': dataset_data.get('num_loc', dataset_data.get('num_cities', 0)),
                             'upload_time': dataset_data.get('upload_time')
                         })
                 except Exception as e:
