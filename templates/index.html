@@ -1128,12 +1128,12 @@
               </div>
             </section>
 
-            <!-- 第5步：数据集（可选，仅TSP） -->
+            <!-- 第4步：数据集（可选） -->
             <section class="config-section" style="grid-template-columns: 1fr;">
               <div class="config-card" style="background: #f8f9fa;">
                 <h3><span class="icon">📁</span> 第4步：数据集（可选）</h3>
-                <p style="color: #666; margin-bottom: 1rem; font-size: 0.95rem;">
-                    💡 默认使用随机生成数据集。如需使用自定义TSP数据集，请在此上传。
+                <p id="dataset-description" style="color: #666; margin-bottom: 1rem; font-size: 0.95rem;">
+                    💡 默认使用随机生成数据集。如需使用自定义数据集，请在此上传。
                 </p>
                 
                 <div class="form-group">
@@ -1153,7 +1153,7 @@
                         </p>
                     </div>
                     
-                    <button type="button" class="start-button" onclick="uploadDataset()" style="font-size: 1rem; padding: 0.8rem;">
+                    <button type="button" id="dataset-upload-btn" class="start-button" onclick="uploadDataset()" style="font-size: 1rem; padding: 0.8rem;">
                         📤 上传数据集
                     </button>
                     
@@ -1162,10 +1162,10 @@
                     <div id="dataset-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #667eea;">
                         <h4 style="color: #667eea; margin-bottom: 0.5rem; font-size: 1rem;">✅ 数据集已上传</h4>
                         <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>文件名:</strong> <span id="dataset-filename"></span></p>
-                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>城市数量:</strong> <span id="dataset-size"></span></p>
+                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>节点数量:</strong> <span id="dataset-size"></span></p>
                     </div>
                     
-                    <button type="button" class="start-button" onclick="showDatasetManager()" style="margin-top: 1rem; font-size: 0.9rem; padding: 0.6rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    <button type="button" id="dataset-manager-btn" class="start-button" onclick="showDatasetManager()" style="margin-top: 1rem; font-size: 0.9rem; padding: 0.6rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
                         📂 管理已上传数据集
                     </button>
                 </div>
@@ -2484,6 +2484,49 @@
             if (this.value > 2048) this.value = 2048;
         });
 
+        // 各问题类型的数据集说明文字
+        const DATASET_DESCRIPTIONS = {
+            tsp:    '💡 支持格式：JSON（含 coordinates 字段）、TXT（每行 x y）、TSP（TSPLIB 格式）。',
+            cvrp:   '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot（仓库坐标）、demands（需求量，值域 0-1）。',
+            sdvrp:  '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot（仓库坐标）、demands（需求量，值域 0-1）。',
+            mtsp:   '💡 上传 JSON 文件。必填：coordinates（城市坐标列表）。可选：depot（仓库坐标）。',
+            op:     '💡 上传 JSON 文件。必填：coordinates（地点坐标列表）。可选：depot（仓库坐标）、prizes（各地点奖励值，≥0）。',
+            pdp:    '💡 上传 JSON 文件。必填：coordinates（节点坐标，数量必须是偶数，前半为取货点，后半为送货点）。可选：depot（仓库坐标）。',
+            pctsp:  '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot、prizes（奖励）、penalties（惩罚）。',
+            spctsp: '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot、prizes（期望奖励）、penalties（惩罚）。',
+            vrptw:  '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot、demands（需求量，值域 0-1）、time_windows（每项 [start, end]）、service_times（服务时长）。',
+            atsp:   '⛔ ATSP 使用代价矩阵而非坐标，暂不支持上传自定义数据集。',
+            ffsp:   '⛔ FFSP 使用作业工时矩阵而非坐标，暂不支持上传自定义数据集。',
+        };
+
+        function updateDatasetSection(problemType) {
+            const unsupported = ['atsp', 'ffsp'];
+            const disabled = unsupported.includes(problemType);
+
+            const desc = DATASET_DESCRIPTIONS[problemType] || DATASET_DESCRIPTIONS['tsp'];
+            const descEl = document.getElementById('dataset-description');
+            if (descEl) {
+                descEl.textContent = desc;
+                descEl.style.color = disabled ? '#dc3545' : '#666';
+            }
+
+            const modeEl = document.getElementById('dataset-mode');
+            const fileEl = document.getElementById('dataset-file');
+            const uploadBtn = document.getElementById('dataset-upload-btn');
+            const managerBtn = document.getElementById('dataset-manager-btn');
+
+            if (modeEl) modeEl.disabled = disabled;
+            if (fileEl) fileEl.disabled = disabled;
+            if (uploadBtn) uploadBtn.disabled = disabled;
+            if (managerBtn) managerBtn.disabled = disabled;
+
+            if (disabled) {
+                if (modeEl) modeEl.value = 'random';
+                const uploadSection = document.getElementById('dataset-upload-section');
+                if (uploadSection) uploadSection.style.display = 'none';
+            }
+        }
+
         // 切换数据集上传区域显示
         function toggleDatasetUpload() {
             const mode = document.getElementById('dataset-mode').value;
@@ -2511,6 +2554,7 @@
             const file = fileInput.files[0];
             const formData = new FormData();
             formData.append('dataset', file);
+            formData.append('problem_type', document.getElementById('problem-select').value);
             
             // 显示上传中状态
             uploadStatus.className = 'status-message show';
@@ -2533,7 +2577,7 @@
                     // 显示数据集信息
                     datasetInfo.style.display = 'block';
                     document.getElementById('dataset-filename').textContent = result.dataset_info.filename;
-                    document.getElementById('dataset-size').textContent = result.dataset_info.num_cities + ' 个城市';
+                    document.getElementById('dataset-size').textContent = (result.dataset_info.num_loc || result.dataset_info.num_cities) + ' 个节点';
                     document.getElementById('dataset-range').textContent = result.dataset_info.coord_range;
                     
                     // 保存数据集ID到全局变量
@@ -2566,27 +2610,39 @@
                     if (result.datasets.length === 0) {
                         listDiv.innerHTML = '<p style="text-align: center; color: #999;">还没有上传任何数据集</p>';
                     } else {
+                        const currentProblem = document.getElementById('problem-select').value;
+                        const sorted = [...result.datasets].sort((a, b) => {
+                            const aMatch = (a.problem_type || 'tsp') === currentProblem ? 0 : 1;
+                            const bMatch = (b.problem_type || 'tsp') === currentProblem ? 0 : 1;
+                            return aMatch - bMatch;
+                        });
                         let html = '<div style="display: grid; gap: 1rem;">';
-                        result.datasets.forEach(dataset => {
+                        sorted.forEach(dataset => {
                             const uploadTime = new Date(dataset.upload_time).toLocaleString('zh-CN');
+                            const numLoc = dataset.num_loc || dataset.num_cities || '?';
+                            const ptLabel = (dataset.problem_type || 'tsp').toUpperCase();
+                            const matched = (dataset.problem_type || 'tsp') === currentProblem;
                             html += `
-                                <div style="border: 2px solid #e0e0e0; border-radius: 8px; padding: 1rem; background: #f8f9fa;">
+                                <div style="border: 2px solid ${matched ? '#667eea' : '#e0e0e0'}; border-radius: 8px; padding: 1rem; background: #f8f9fa; opacity: ${matched ? 1 : 0.5};">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <div style="flex: 1;">
-                                            <h4 style="margin: 0 0 0.5rem 0; color: #333;">📁 ${dataset.filename}</h4>
+                                            <div style="margin-bottom: 0.4rem;">
+                                                <span style="display:inline-block; padding:2px 8px; border-radius:12px; background:#667eea; color:#fff; font-size:0.75rem; margin-right:0.5rem;">${ptLabel}</span>
+                                                <strong style="color: #333;">📁 ${dataset.filename}</strong>
+                                            </div>
                                             <p style="margin: 0.3rem 0; color: #666; font-size: 0.9rem;">
-                                                <strong>城市数量:</strong> ${dataset.num_cities}
+                                                <strong>节点数量:</strong> ${numLoc}
                                             </p>
-                                            <p style="margin: 0.3rem 0; color: #999; font-size: 0.85rem;">
-                                                上传时间: ${uploadTime}
-                                            </p>
+                                            <p style="margin: 0.3rem 0; color: #999; font-size: 0.85rem;">上传时间: ${uploadTime}</p>
+                                            ${!matched ? '<p style="margin: 0.2rem 0; color: #dc3545; font-size: 0.8rem;">⚠️ 与当前问题类型不匹配</p>' : ''}
                                         </div>
                                         <div>
-                                            <button onclick="selectDataset('${dataset.dataset_id}', '${dataset.filename}', ${dataset.num_cities})" 
-                                                    style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 0.5rem;">
+                                            <button onclick="selectDataset('${dataset.dataset_id}', '${dataset.filename}', ${numLoc})"
+                                                    ${!matched ? 'disabled title="请切换到对应问题类型后再选择"' : ''}
+                                                    style="padding: 0.5rem 1rem; background: ${matched ? '#667eea' : '#aaa'}; color: white; border: none; border-radius: 5px; cursor: ${matched ? 'pointer' : 'not-allowed'}; margin-right: 0.5rem;">
                                                 选择
                                             </button>
-                                            <button onclick="deleteDataset('${dataset.dataset_id}')" 
+                                            <button onclick="deleteDataset('${dataset.dataset_id}')"
                                                     style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
                                                 删除
                                             </button>
@@ -2716,6 +2772,7 @@
                     this.showProblemSpecificParams();
                     this.updateAvailableOptions();
                     this.validateConfiguration();
+                    updateDatasetSection(e.target.value);
                 });
                 
                 document.getElementById('model-select').addEventListener('change', (e) => {
@@ -3048,7 +3105,10 @@
         let compatibilityManager;
         document.addEventListener('DOMContentLoaded', () => {
             compatibilityManager = new CompatibilityManager();
-            
+
+            // 初始化数据集区域（根据默认问题类型）
+            updateDatasetSection(document.getElementById('problem-select').value);
+
             // FFSP 参数实时更新逻辑
             const updateFFSPScale = () => {
                 const numStage = document.getElementById('num-stage');
