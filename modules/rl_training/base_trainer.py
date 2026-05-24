@@ -432,7 +432,10 @@ class BaseTrainer:
             self.devices = "auto"
             if gpu_id is not None and not torch.cuda.is_available():
                 logger.warning("当前环境不支持 CUDA，已自动切换到 CPU 训练")
-    
+
+        # 自定义数据集（由子类调用 load_custom_dataset() 填充）
+        self.custom_dataset_data = None
+
     def send_message(self, msg_type, message, **kwargs):
         """发送消息到队列"""
         msg = {
@@ -442,6 +445,40 @@ class BaseTrainer:
         }
         self.queue.put(json.dumps(msg))
     
+    def load_custom_dataset(self):
+        """加载用户上传的自定义数据集（各 trainer 在 __init__ 末尾调用）。"""
+        dataset_mode = self.config.get('dataset_mode', 'random')
+        dataset_id = self.config.get('dataset_id', None)
+        problem_type = self.config.get('problem', 'tsp')
+
+        self.custom_dataset_data = None
+
+        if dataset_mode != 'upload' or not dataset_id:
+            return
+
+        path = os.path.join('datasets', f'user_{self.user_id}', f'{dataset_id}.json')
+        if not os.path.exists(path):
+            self.send_message('info', '⚠️ 数据集文件不存在，将使用随机生成')
+            return
+
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+        except Exception as e:
+            self.send_message('info', f'⚠️ 读取数据集失败: {e}，将使用随机生成')
+            return
+
+        stored_type = data.get('problem_type', 'tsp')
+        if stored_type != problem_type:
+            self.send_message('info',
+                f'⚠️ 数据集类型({stored_type})与当前问题({problem_type})不匹配，将使用随机生成')
+            return
+
+        self.custom_dataset_data = data
+        self.num_loc = len(data['coordinates'])
+        self.send_message('info',
+            f'✅ 已加载自定义数据集: {data["filename"]} ({self.num_loc} 个节点)')
+
     def initialize_environment(self):
         """初始化环境（子类实现）"""
         raise NotImplementedError("子类必须实现 initialize_environment 方法")

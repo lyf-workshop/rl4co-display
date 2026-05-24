@@ -27,32 +27,13 @@ class TSPTrainer(BaseTrainer):
     
     def __init__(self, config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
         super().__init__(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
-        
-        # 处理自定义数据集
-        self.custom_dataset = None
         self.load_custom_dataset()
-    
-    def load_custom_dataset(self):
-        """加载用户上传的TSP数据集"""
-        dataset_mode = self.config.get('dataset_mode', 'random')
-        dataset_id = self.config.get('dataset_id', None)
-        
-        if dataset_mode == 'upload' and dataset_id:
-            dataset_path = os.path.join('datasets', f'user_{self.user_id}', f'{dataset_id}.json')
-            if os.path.exists(dataset_path):
-                try:
-                    with open(dataset_path, 'r') as f:
-                        dataset_data = json.load(f)
-                        self.custom_dataset = dataset_data['coordinates']
-                        self.num_loc = len(self.custom_dataset)
-                        self.send_message('info', f'✅ 已加载自定义TSP数据集: {dataset_data["filename"]} ({self.num_loc}个城市)')
-                except Exception as e:
-                    self.send_message('info', f'⚠️ 加载数据集失败: {str(e)}，将使用随机生成')
-                    self.custom_dataset = None
-            else:
-                self.send_message('info', '⚠️ 数据集文件不存在，将使用随机生成')
-        elif dataset_mode == 'upload':
-            self.send_message('info', '⚠️ 未找到数据集ID，将使用随机生成')
+
+    @property
+    def custom_dataset(self):
+        if self.custom_dataset_data:
+            return self.custom_dataset_data['coordinates']
+        return None
     
     def initialize_environment(self):
         """初始化TSP环境"""
