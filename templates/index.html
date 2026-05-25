@@ -935,6 +935,8 @@
                             <option value="attention" selected>Attention Model（经典，快速）</option>
                             <option value="pomo">POMO（高质量，多起点）</option>
                             <option value="symnco">SymNCO（对称优化，最高质量）🆕</option>
+                            <option value="mdam">MDAM（多解码器，高质量）🆕</option>
+                            <option value="deepaco">DeepACO（蚁群优化，混合方法）🆕</option>
                             <option value="ham">HAM（异构注意力，PDP专用）</option>
                             <option value="matnet">MatNet（调度专用，矩阵注意力）</option>
                             <option value="ptrnet">Pointer Network（开创性，教学）</option>
@@ -1030,6 +1032,33 @@
                         </div>
                         <div class="alert" style="background-color: #f3e5f5; border-left: 4px solid #9c27b0; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
                             💡 <strong>SymNCO</strong> 利用二面体8对称增强和三种自定义损失（问题对称性 L<sub>ps</sub>、解对称性 L<sub>ss</sub>、不变性 L<sub>inv</sub>），无需额外选择训练算法，适合 TSP / mTSP / CVRP。
+                        </div>
+                    </div>
+
+                    <!-- DeepACO特有参数（条件显示） -->
+                    <div id="deepaco-params" class="form-group advanced-params" style="display: none;">
+                        <div class="params-grid">
+                            <div class="form-group">
+                                <label for="n-ants">🐜 蚂蚁数量（n_ants）</label>
+                                <input type="number" id="n-ants" name="n_ants" class="form-control"
+                                       value="30" min="5" max="200">
+                                <p class="description">ACO搜索的蚂蚁数量，越多质量越高但越慢（推荐30）</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="n-iterations-train">🔁 训练迭代次数</label>
+                                <input type="number" id="n-iterations-train" name="n_iterations_train" class="form-control"
+                                       value="1" min="1" max="10">
+                                <p class="description">训练时每步ACO迭代数（推荐1，过多会显著增加训练时间）</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="n-iterations-test">🔍 测试迭代次数</label>
+                                <input type="number" id="n-iterations-test" name="n_iterations_test" class="form-control"
+                                       value="5" min="1" max="20">
+                                <p class="description">测试/验证时ACO迭代数（推荐5，更多迭代=更优解）</p>
+                            </div>
+                        </div>
+                        <div class="alert" style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
+                            🐜 <strong>DeepACO</strong> 将GNN学习到的信息素热图与蚁群算法结合：GNN编码器输出启发式矩阵，AntSystem利用该矩阵执行多蚂蚁搜索，展示深度学习与元启发式融合的混合范式。仅支持REINFORCE训练。
                         </div>
                     </div>
                 </div>
@@ -1961,6 +1990,16 @@
                 if (hamFF) config.feedforward_hidden = parseInt(hamFF.value);
             }
 
+            // 添加DeepACO特有参数
+            if (model === 'deepaco') {
+                const nAnts = document.getElementById('n-ants');
+                const nIterTrain = document.getElementById('n-iterations-train');
+                const nIterTest = document.getElementById('n-iterations-test');
+                if (nAnts) config.n_ants = parseInt(nAnts.value);
+                if (nIterTrain) config.n_iterations_train = parseInt(nIterTrain.value);
+                if (nIterTest) config.n_iterations_test = parseInt(nIterTest.value);
+            }
+
             try {
                 // 发送训练请求到后端
                 const response = await fetch('/api/start_training', {
@@ -2886,7 +2925,9 @@
                     'symnco': '利用二面体8对称增强+多损失训练（L_ps+L_ss+L_inv），TSP/mTSP/CVRP最高质量',
                     'ham': '异构注意力模型，区分depot/pickup/delivery节点，PDP取送货问题首选',
                     'matnet': '矩阵注意力网络，专为非对称距离矩阵和调度问题设计，ATSP/FFSP首选',
-                    'ptrnet': '开创性的Seq2Seq模型（2015），首个深度学习CO方法，适合学习和研究'
+                    'ptrnet': '开创性的Seq2Seq模型（2015），首个深度学习CO方法，适合学习和研究',
+                    'mdam': '多解码器注意力模型：多个解码器并行解码后取最优路径，与AM兼容性相同但解质量更高',
+                    'deepaco': '深度蚁群优化：GNN学习信息素热图，AntSystem执行搜索，展示混合AI+元启发式范式'
                 };
                 const desc = document.getElementById('model-description');
                 if (desc) desc.textContent = descriptions[this.currentPolicy] || '';
@@ -2915,11 +2956,16 @@
                 if (symncoParams) {
                     symncoParams.style.display = this.currentPolicy === 'symnco' ? 'block' : 'none';
                 }
-                // SymNCO 使用内置训练算法，锁定算法下拉框
+                const deepacoParams = document.getElementById('deepaco-params');
+                if (deepacoParams) {
+                    deepacoParams.style.display = this.currentPolicy === 'deepaco' ? 'block' : 'none';
+                }
+                // SymNCO/MDAM/DeepACO 使用内置训练算法，锁定算法下拉框
                 const algoSelect = document.getElementById('algorithm-select');
                 if (algoSelect) {
-                    algoSelect.disabled = this.currentPolicy === 'symnco';
-                    if (this.currentPolicy === 'symnco') {
+                    const reinforce_only = ['symnco', 'mdam', 'deepaco'];
+                    algoSelect.disabled = reinforce_only.includes(this.currentPolicy);
+                    if (reinforce_only.includes(this.currentPolicy)) {
                         algoSelect.value = 'reinforce';
                         this.currentAlgorithm = 'reinforce';
                     }
@@ -2994,6 +3040,8 @@
                     'ham':       ['pdp'],
                     'matnet':    ['atsp', 'ffsp'],
                     'ptrnet':    ['tsp', 'cvrp'],
+                    'mdam':      ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
+                    'deepaco':   ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op'],
                 };
 
                 const PROBLEM_NAMES = {
@@ -3041,12 +3089,15 @@
                     'ham':       ['reinforce', 'ppo', 'a2c'],
                     'matnet':    ['reinforce', 'ppo', 'a2c'],
                     'ptrnet':    ['reinforce'],
+                    'mdam':      ['reinforce'],
+                    'deepaco':   ['reinforce'],
                 };
 
                 const POLICY_NAMES = {
                     'attention': 'Attention Model', 'pomo': 'POMO',
                     'symnco': 'SymNCO', 'ham': 'HAM',
                     'matnet': 'MatNet', 'ptrnet': 'Pointer Network',
+                    'mdam': 'MDAM', 'deepaco': 'DeepACO',
                 };
 
                 const algoSelect = document.getElementById('algorithm-select');
