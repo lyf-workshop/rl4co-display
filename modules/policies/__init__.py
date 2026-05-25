@@ -17,6 +17,8 @@ from .ptrnet_policy import PtrNetPolicyWrapper
 from .matnet_policy import MatNetPolicyWrapper
 from .ham_policy import HAMPolicyWrapper
 from .symnco_policy import SymNCOPolicyWrapper
+from .mdam_policy import MDAMPolicyWrapper
+from .deepaco_policy import DeepACOPolicyWrapper
 
 # 策略注册表
 POLICY_REGISTRY = {
@@ -28,6 +30,8 @@ POLICY_REGISTRY = {
     'matnet': MatNetPolicyWrapper,  # MatNet - 支持ATSP和FFSP
     'ham': HAMPolicyWrapper,  # HAM - PDP专用异构注意力
     'symnco': SymNCOPolicyWrapper,  # SymNCO - 对称性神经CO，利用二面体对称增强
+    'mdam': MDAMPolicyWrapper,  # MDAM - 多解码器注意力，兼容性与AM相同
+    'deepaco': DeepACOPolicyWrapper,  # DeepACO - 深度蚁群优化
 }
 
 # 策略元信息
@@ -144,6 +148,40 @@ POLICY_INFO = {
             'symnco_beta': {'default': 1.0, 'range': [0.0, 2.0]},
         }
     },
+    'mdam': {
+        'name': 'MDAM',
+        'full_name': 'Multi-Decoder Attention Model',
+        'cn_name': '多解码器注意力模型',
+        'type': 'multi-decoder-constructive',
+        'year': 2021,
+        'status': 'active',
+        'description': '多解码器并行生成多条路径，取最优解，与AM相同兼容性但解质量更高',
+        'advantages': ['解质量高于AM', '兼容性广', '训练稳定', '推理多样化'],
+        'disadvantages': ['推理略慢（多解码器）', '不支持PPO/A2C'],
+        'suitable_for': ['TSP', 'CVRP', 'mTSP', 'OP', 'PDP', 'PCTSP', 'SPCTSP', 'VRPTW', 'SDVRP'],
+        'params': {
+            'embed_dim': {'default': 128, 'range': [64, 256]},
+            'num_encoder_layers': {'default': 3, 'range': [1, 6]},
+            'num_heads': {'default': 8, 'range': [4, 16]},
+        }
+    },
+    'deepaco': {
+        'name': 'DeepACO',
+        'full_name': 'Deep Ant Colony Optimization',
+        'cn_name': '深度蚁群优化',
+        'type': 'hybrid-aco',
+        'year': 2023,
+        'status': 'active',
+        'description': '深度学习+蚁群算法混合：GNN学习信息素热图，ACO执行搜索，展示不同于纯RL的混合范式',
+        'advantages': ['混合范式，教育价值高', '热图可解释性强', '支持ACO后处理'],
+        'disadvantages': ['推理较慢（ACO迭代）', '不支持PPO/A2C', '问题支持范围较窄'],
+        'suitable_for': ['TSP', 'CVRP', 'mTSP', 'OP'],
+        'params': {
+            'n_ants': {'default': 30, 'range': [5, 200]},
+            'n_iterations_train': {'default': 1, 'range': [1, 10]},
+            'n_iterations_test': {'default': 5, 'range': [1, 20]},
+        }
+    },
 }
 
 
@@ -211,6 +249,8 @@ __all__ = [
     'MatNetPolicyWrapper',
     'HAMPolicyWrapper',
     'SymNCOPolicyWrapper',
+    'MDAMPolicyWrapper',
+    'DeepACOPolicyWrapper',
     'POLICY_REGISTRY',
     'POLICY_INFO',
     'get_policy_class',

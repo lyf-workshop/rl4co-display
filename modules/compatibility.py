@@ -86,6 +86,15 @@ POLICY_PROBLEM_COMPATIBILITY = {
     # SymNCO：对称性神经CO，基于AM+投影头，利用二面体8对称增强
     # 与POMO相同的问题范围：需要二维坐标的对称性问题
     'symnco': ['tsp', 'mtsp', 'cvrp'],
+
+    # MDAM：多解码器AM，兼容性与AM相同（不含ATSP/FFSP）
+    'mdam': _ROUTING_WITHOUT_ATSP,
+
+    # DeepACO：深度蚁群优化，非自回归+ACO
+    # 支持标准路由问题（不含 ATSP/FFSP/PDP/PCTSP/SPCTSP）
+    # 原因：DeepACO的NARGNNEncoder基于坐标图；PDP的前驱约束和PCTSP/SPCTSP的
+    # 奖励收集逻辑与ACO搜索的兼容性未在官方文档中验证
+    'deepaco': ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op'],
 }
 
 # 算法 → 问题兼容性（官方文档：REINFORCE, PPO, A2C 都是通用算法）
@@ -107,6 +116,10 @@ POLICY_ALGORITHM_COMPATIBILITY = {
     # SymNCO内置自定义多损失训练算法（基于REINFORCE的问题/解对称性+不变性损失）
     # 不支持外部PPO/A2C，因其训练逻辑不兼容
     'symnco': ['reinforce'],
+    # MDAM内置REINFORCE子类，PPO/A2C的外部训练循环与之不兼容
+    'mdam': ['reinforce'],
+    # DeepACO内置REINFORCE子类，PPO/A2C的外部训练循环与之不兼容
+    'deepaco': ['reinforce'],
 }
 
 # 警告组合 (技术上可行，但不推荐)
@@ -313,6 +326,74 @@ WARNING_COMBINATIONS = [
         'policy': 'symnco',
         'algorithm': 'a2c',
         'message': 'SymNCO使用内置的自定义多损失训练算法，不支持外部A2C算法。算法选项将被忽略',
+        'severity': 'warning'
+    },
+    # MDAM 不兼容警告
+    {
+        'problem': 'atsp',
+        'policy': 'mdam',
+        'message': 'MDAM不支持ATSP：ATSPEnv只提供cost_matrix，无locs坐标，MDAM无法处理。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'policy': 'mdam',
+        'message': 'MDAM不支持FFSP调度问题。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'policy': 'mdam',
+        'algorithm': 'ppo',
+        'message': 'MDAM使用内置多解码器REINFORCE子类，不支持外部PPO算法。算法选项将被忽略',
+        'severity': 'warning'
+    },
+    {
+        'policy': 'mdam',
+        'algorithm': 'a2c',
+        'message': 'MDAM使用内置多解码器REINFORCE子类，不支持外部A2C算法。算法选项将被忽略',
+        'severity': 'warning'
+    },
+    # DeepACO 不兼容警告
+    {
+        'problem': 'atsp',
+        'policy': 'deepaco',
+        'message': 'DeepACO不支持ATSP：ATSPEnv只提供cost_matrix，无locs坐标。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'ffsp',
+        'policy': 'deepaco',
+        'message': 'DeepACO不支持FFSP调度问题。请使用MatNet',
+        'severity': 'error'
+    },
+    {
+        'problem': 'pctsp',
+        'policy': 'deepaco',
+        'message': 'DeepACO对奖励收集类问题（PCTSP）的兼容性未经验证。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'spctsp',
+        'policy': 'deepaco',
+        'message': 'DeepACO对随机奖励收集（SPCTSP）的兼容性未经验证。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
+        'problem': 'pdp',
+        'policy': 'deepaco',
+        'message': 'DeepACO对取送货问题（PDP）的前驱约束兼容性未经验证。请使用HAM',
+        'severity': 'error'
+    },
+    {
+        'policy': 'deepaco',
+        'algorithm': 'ppo',
+        'message': 'DeepACO使用内置蚁群REINFORCE子类，不支持外部PPO算法。算法选项将被忽略',
+        'severity': 'warning'
+    },
+    {
+        'policy': 'deepaco',
+        'algorithm': 'a2c',
+        'message': 'DeepACO使用内置蚁群REINFORCE子类，不支持外部A2C算法。算法选项将被忽略',
         'severity': 'warning'
     },
 ]
