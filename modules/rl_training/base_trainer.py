@@ -585,11 +585,63 @@ class BaseTrainer:
         )
         return model
 
+    def _create_mdam_model(self, env, policy):
+        """为 MDAM 策略创建专用训练模型（内置多解码器 REINFORCE）"""
+        try:
+            from rl4co.models.zoo.mdam import MDAM
+        except ImportError:
+            raise ImportError(
+                "RL4CO库未安装或当前版本不包含MDAM。\n"
+                "请安装最新版: pip install rl4co"
+            )
+
+        model = MDAM(
+            env,
+            policy,
+            baseline=self.config.get('baseline', 'rollout'),
+            batch_size=self.batch_size,
+            train_data_size=10_000,
+            val_data_size=1_000,
+            optimizer_kwargs={'lr': self.learning_rate},
+        )
+        self.send_message('info', '✅ MDAM模型创建成功（多解码器注意力）')
+        return model
+
+    def _create_deepaco_model(self, env, policy):
+        """为 DeepACO 策略创建专用训练模型（深度蚁群 REINFORCE 子类）"""
+        try:
+            from rl4co.models.zoo.deepaco import DeepACO
+        except ImportError:
+            raise ImportError(
+                "RL4CO库未安装或当前版本不包含DeepACO。\n"
+                "请安装最新版: pip install rl4co"
+            )
+
+        model = DeepACO(
+            env,
+            policy,
+            baseline='no',  # DeepACO 内部实现共享基线，跳过外部 baseline
+            batch_size=self.batch_size,
+            train_data_size=10_000,
+            val_data_size=1_000,
+            optimizer_kwargs={'lr': self.learning_rate},
+        )
+        self.send_message('info', '✅ DeepACO模型创建成功（深度蚁群优化）')
+        return model
+
     def create_model(self, env, policy):
         """创建RL模型（支持多种算法）"""
         # SymNCO 使用内置的自定义多损失训练算法，跳过算法注册表
         if self.policy_name == 'symnco':
             return self._create_symnco_model(env, policy)
+
+        # MDAM 使用内置的多解码器 REINFORCE 子类
+        if self.policy_name == 'mdam':
+            return self._create_mdam_model(env, policy)
+
+        # DeepACO 使用内置的蚁群 REINFORCE 子类
+        if self.policy_name == 'deepaco':
+            return self._create_deepaco_model(env, policy)
 
         # ========== 使用新的算法注册表（如果可用） ==========
         if MODULES_AVAILABLE:
