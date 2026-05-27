@@ -7,7 +7,7 @@
 class OllamaChatEmbedded {
     constructor() {
         this.config = {
-            apiUrl: 'http://localhost:11434/api',
+            apiUrl: 'http://127.0.0.1:11434/api',
             defaultModel: 'llama2',
             storageKey: 'ollama_chat_history_embedded',
             maxHistoryLength: 50

@@ -41,6 +41,22 @@ class DeepACOPolicyWrapper(BasePolicy):
         返回:
             DeepACOPolicy 实例
         """
+        # 前置检查：DeepACOPolicy 内部使用 NARGNNEncoder → GNNLayer，需要 torch_geometric
+        try:
+            import torch_geometric  # noqa: F401
+        except ImportError:
+            raise AssertionError(
+                "DeepACO 策略需要 torch_geometric 库，但未找到。\n"
+                "请按以下步骤安装：\n"
+                "  1. 确认 PyTorch 版本: python -c \"import torch; print(torch.__version__)\"\n"
+                "  2. 前往 https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html\n"
+                "     选择对应版本安装命令\n"
+                "  3. 例如（CUDA 11.8 + PyTorch 2.x）:\n"
+                "     pip install torch_geometric\n"
+                "     pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv "
+                "-f https://data.pyg.org/whl/torch-2.0.0+cu118.html"
+            )
+
         try:
             from rl4co.models.zoo.deepaco import DeepACOPolicy
         except ImportError:

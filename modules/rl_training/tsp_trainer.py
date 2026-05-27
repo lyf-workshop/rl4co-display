@@ -57,7 +57,18 @@ class TSPTrainer(BaseTrainer):
         """生成TSP可视化结果"""
         # 训练后测试并生成可视化
         policy = model.policy.to(self.device)
-        
+
+        # 判断是否为非自回归策略（DeepACO 等）
+        # 非自回归策略在 test 阶段走 ACO 路径，decode_type 无效；
+        # 需要用真正的随机游走作为基线，而不是再跑一遍 ACO
+        is_nar_policy = False
+        try:
+            from rl4co.models.zoo.deepaco import DeepACOPolicy
+            if isinstance(policy, DeepACOPolicy):
+                is_nar_policy = True
+        except ImportError:
+            pass
+
         # 如果使用了自定义数据集，在该数据集上测试
         if self.custom_dataset is not None:
             td_init = env.reset(batch_size=[1]).to(self.device)
@@ -66,31 +77,52 @@ class TSPTrainer(BaseTrainer):
             self.send_message('info', f'✅ 在上传的TSP数据集上进行测试（{len(self.custom_dataset)}个城市）')
         else:
             td_init = env.reset(batch_size=[3]).to(self.device)
-        
-        # 未训练模型测试（使用随机策略）
-        out_untrained = policy(td_init.clone(), phase="test", decode_type="sampling", return_actions=True)
-        actions_untrained = out_untrained['actions'].cpu().detach()
-        rewards_untrained = out_untrained['reward'].cpu().detach()
-        
-        # 训练后模型测试
-        out_trained = policy(td_init.clone(), phase="test", decode_type="greedy", return_actions=True)
-        actions_trained = out_trained['actions'].cpu().detach()
-        rewards_trained = out_trained['reward'].cpu().detach()
+
+        if is_nar_policy:
+            # ── DeepACO（非自回归）：左图用随机游走基线，右图用 ACO 结果 ──
+            # 随机基线：对每个实例生成一条随机排列的路线
+            batch_size = td_init.batch_size[0]
+            num_loc = td_init['locs'].shape[1]
+            rand_actions = torch.stack(
+                [torch.randperm(num_loc, device=self.device) for _ in range(batch_size)]
+            )  # [batch, num_loc]
+            rand_rewards = env.get_reward(td_init, rand_actions)  # [batch]
+            actions_untrained = rand_actions.cpu()
+            rewards_untrained = rand_rewards.cpu()
+
+            # 训练后的 ACO 推断（greedy 参数对 DeepACO test 无效，只是保持接口一致）
+            out_trained = policy(td_init.clone(), phase="test", decode_type="greedy", return_actions=True)
+            actions_trained = out_trained['actions'].cpu().detach()
+            rewards_trained = out_trained['reward'].cpu().detach()
+        else:
+            # ── 自回归策略（AM / POMO / SymNCO 等）：采样 vs 贪心 ──
+            # 未训练模型测试（使用随机策略）
+            out_untrained = policy(td_init.clone(), phase="test", decode_type="sampling", return_actions=True)
+            actions_untrained = out_untrained['actions'].cpu().detach()
+            rewards_untrained = out_untrained['reward'].cpu().detach()
+
+            # 训练后模型测试
+            out_trained = policy(td_init.clone(), phase="test", decode_type="greedy", return_actions=True)
+            actions_trained = out_trained['actions'].cpu().detach()
+            rewards_trained = out_trained['reward'].cpu().detach()
         
         # 生成对比图和动画
         plot_paths = []
         animation_paths = []
-        
+        # 根据策略类型调整左图标签
+        left_label = "Random (ACO Baseline)" if is_nar_policy else "Random"
+
         for i, td in enumerate(td_init):
             # 生成静态对比图
             plot_filename = f"tsp_comparison_{self.session_id[:8]}_{i+1}.png"
             plot_path = os.path.join(self.user_plots_dir, plot_filename)
-            
+
             create_tsp_comparison_plot(
-                env, td, 
+                env, td,
                 actions_untrained[i], rewards_untrained[i],
                 actions_trained[i], rewards_trained[i],
-                plot_path, index=i+1
+                plot_path, index=i+1,
+                left_label=left_label
             )
             
             # 保存文件记录到数据库

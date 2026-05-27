@@ -238,6 +238,39 @@ class SimpleCache:
 api_cache = SimpleCache(timeout=300)  # 5分钟缓存
 
 
+# ============================================
+# 安全响应头
+# ============================================
+
+@app.after_request
+def add_security_headers(response):
+    # Anti-clickjacking
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    # 禁止 MIME 类型嗅探
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # 隐藏 Werkzeug/Python 版本号
+    response.headers['Server'] = 'RL4CO'
+    # 防止完整 URL（含路径/查询参数）通过 Referer 头泄露给第三方（如 jsDelivr CDN）
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    # Content Security Policy
+    # 注：模板大量使用内联脚本和内联样式，因此保留 unsafe-inline；
+    #     外部脚本仅允许 cdn.jsdelivr.net（benchmark 页的 ECharts）
+    csp = '; '.join([
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob:",
+        "connect-src 'self'",
+        "font-src 'self'",
+        "media-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+    ])
+    response.headers['Content-Security-Policy'] = csp
+    return response
+
+
 def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_seconds=1800, heartbeat_timeout=7200):
     """
     启动后台守护线程，定期清理过期的训练状态和队列，并终止无人监管的训练。

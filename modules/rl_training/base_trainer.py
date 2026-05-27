@@ -485,24 +485,41 @@ class BaseTrainer:
     
     def create_policy(self, env):
         """创建策略网络（支持多种策略模型）"""
+        # DeepACO / MDAM 等专用策略依赖特定库（如 torch_geometric），
+        # 若创建失败不能降级为 AttentionModelPolicy，否则会产生策略类型不匹配，
+        # 导致训练时出现张量维度错误。
+        SPECIALIZED_POLICIES = {'deepaco', 'mdam'}
+
         # ========== 使用新的策略注册表（如果可用） ==========
         if MODULES_AVAILABLE:
             try:
                 PolicyClass = get_policy_class(self.policy_name)
                 policy_wrapper = PolicyClass(self.config)
-                
+
                 # 验证配置
                 valid, error_msg = policy_wrapper.validate_config()
                 if not valid:
                     self.send_message('error', f'策略配置无效: {error_msg}')
                     raise ValueError(error_msg)
-                
+
                 policy = policy_wrapper.create_policy(env)
                 self.send_message('info', f'✅ 策略网络: {policy_wrapper.policy_name.upper()}')
                 return policy
             except Exception as e:
+                if self.policy_name in SPECIALIZED_POLICIES:
+                    # 专用策略不能降级，直接抛出带明确提示的异常
+                    dep_hint = (
+                        "\n💡 DeepACO 需要 torch_geometric，请先安装：\n"
+                        "   pip install torch_geometric\n"
+                        "   参考：https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html"
+                        if self.policy_name == 'deepaco' else ""
+                    )
+                    raise RuntimeError(
+                        f"{self.policy_name.upper()} 策略初始化失败，无法降级到其他模式。\n"
+                        f"原因: {e}{dep_hint}"
+                    ) from e
                 self.send_message('warning', f'使用新策略模块失败，降级到传统模式: {str(e)}')
-                # 降级到传统模式
+                # 降级到传统模式（仅适用于非专用策略）
         
         # ========== 传统模式（向后兼容） ==========
         from rl4co.models import AttentionModelPolicy
@@ -610,17 +627,28 @@ class BaseTrainer:
     def _create_deepaco_model(self, env, policy):
         """为 DeepACO 策略创建专用训练模型（深度蚁群 REINFORCE 子类）"""
         try:
-            from rl4co.models.zoo.deepaco import DeepACO
+            from rl4co.models.zoo.deepaco import DeepACO, DeepACOPolicy
         except ImportError:
             raise ImportError(
                 "RL4CO库未安装或当前版本不包含DeepACO。\n"
                 "请安装最新版: pip install rl4co"
             )
 
+        # 验证策略类型：必须是 DeepACOPolicy，否则奖励张量维度不匹配
+        # （AttentionModelPolicy 等标准策略返回 [B]，DeepACO 期望 [B, n_ants]）
+        if not isinstance(policy, DeepACOPolicy):
+            raise TypeError(
+                f"DeepACO 模型需要 DeepACOPolicy 策略，但当前策略类型为 "
+                f"{type(policy).__name__}。\n"
+                f"请检查 DeepACO 的依赖项是否已安装（需要 torch_geometric）。\n"
+                f"安装命令: pip install torch_geometric"
+            )
+
         model = DeepACO(
             env,
             policy,
-            baseline='no',  # DeepACO 内部实现共享基线，跳过外部 baseline
+            baseline='no',           # DeepACO 内部实现共享基线，跳过外部 baseline
+            train_with_local_search=False,  # 与 DeepACOPolicy 默认值保持一致
             batch_size=self.batch_size,
             train_data_size=10_000,
             val_data_size=1_000,

@@ -179,31 +179,34 @@ def create_tsp_route_animation(td, actions, save_path, title="TSP路线生成过
     )
 
 
-def create_tsp_comparison_plot(env, td, actions_untrained, rewards_untrained, 
-                               actions_trained, rewards_trained, save_path, index=1):
+def create_tsp_comparison_plot(env, td, actions_untrained, rewards_untrained,
+                               actions_trained, rewards_trained, save_path, index=1,
+                               left_label="Random"):
     """
-    创建TSP路线对比图（训练前vs训练后）
-    
+    创建TSP路线对比图（基线 vs 训练后）
+
     参数:
         env: TSP环境
         td: TensorDict
-        actions_untrained: 未训练模型的动作序列
-        rewards_untrained: 未训练模型的奖励
+        actions_untrained: 基线模型的动作序列
+        rewards_untrained: 基线模型的奖励
         actions_trained: 训练后模型的动作序列
         rewards_trained: 训练后模型的奖励
         save_path: 保存路径
         index: 图片索引（用于多实例）
+        left_label: 左图标题前缀，默认"Random"；
+                    DeepACO 等非自回归策略传 "Random (ACO Baseline)"
     """
     fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-    
-    # 渲染未训练和训练后的路线
+
+    # 渲染基线和训练后的路线
     env.render(td, actions_untrained, ax=axs[0])
     env.render(td, actions_trained, ax=axs[1])
-    
+
     # 设置标题
-    axs[0].set_title(f"Random | Cost = {-rewards_untrained.item():.3f}")
-    axs[1].set_title(f"Trained | Cost = {-rewards_trained.item():.3f}")
-    
+    axs[0].set_title(f"{left_label} | Cost = {-rewards_untrained.item():.3f}")
+    axs[1].set_title(f"Trained (ACO) | Cost = {-rewards_trained.item():.3f}")
+
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
