@@ -417,13 +417,26 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
      * 支持多种格式：```rl4co_config、```json、```、甚至裸 JSON
      */
     _extractConfig(text) {
-        // 剥离思考块，避免误从 <think> 草稿中提取配置
-        const stripped = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+        // 先从主响应（剥离思考块后）提取，优先级最高
+        const mainText = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+        const fromMain = this._extractConfigFromText(mainText);
+        if (fromMain) return fromMain;
 
+        // 主响应无配置时，从 <think> 块中提取
+        // 针对 deepseek-r1 等推理模型把配置写在思考过程中的情况
+        const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/i);
+        if (thinkMatch) {
+            return this._extractConfigFromText(thinkMatch[1]);
+        }
+
+        return null;
+    }
+
+    _extractConfigFromText(text) {
         // 匹配所有代码块: ```lang\n...\n``` 或 ```\n...\n```
         const codeBlockRegex = /```(\w*)\s*\n([\s\S]*?)```/g;
         let match;
-        while ((match = codeBlockRegex.exec(stripped)) !== null) {
+        while ((match = codeBlockRegex.exec(text)) !== null) {
             try {
                 const config = JSON.parse(match[2].trim());
                 if (config.problem && (config.model || config.algorithm)) {
@@ -435,7 +448,7 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
         // 兜底：尝试匹配裸 JSON 对象（没有代码块包裹）
         const jsonRegex = /\{[\s\S]*?"problem"\s*:\s*"[^"]+?"[\s\S]*?\}/g;
         let jsonMatch;
-        while ((jsonMatch = jsonRegex.exec(stripped)) !== null) {
+        while ((jsonMatch = jsonRegex.exec(text)) !== null) {
             try {
                 const config = JSON.parse(jsonMatch[0]);
                 if (config.problem && (config.model || config.algorithm)) {
@@ -579,10 +592,13 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
         const setSelect = (id, val) => {
             const el = document.getElementById(id);
             if (!el || val === undefined || val === null) return;
-            // 确认 option 存在再赋值
+            // 确认 option 存在再赋值；disabled option 临时启用确保赋值成功
             const option = Array.from(el.options).find(o => o.value === String(val));
             if (option) {
+                const wasDisabled = option.disabled;
+                option.disabled = false;
                 el.value = option.value;
+                option.disabled = wasDisabled;
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             }
         };
