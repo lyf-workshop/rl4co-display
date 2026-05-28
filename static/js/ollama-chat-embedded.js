@@ -417,10 +417,13 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
      * 支持多种格式：```rl4co_config、```json、```、甚至裸 JSON
      */
     _extractConfig(text) {
+        // 剥离思考块，避免误从 <think> 草稿中提取配置
+        const stripped = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
         // 匹配所有代码块: ```lang\n...\n``` 或 ```\n...\n```
         const codeBlockRegex = /```(\w*)\s*\n([\s\S]*?)```/g;
         let match;
-        while ((match = codeBlockRegex.exec(text)) !== null) {
+        while ((match = codeBlockRegex.exec(stripped)) !== null) {
             try {
                 const config = JSON.parse(match[2].trim());
                 if (config.problem && (config.model || config.algorithm)) {
@@ -432,7 +435,7 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
         // 兜底：尝试匹配裸 JSON 对象（没有代码块包裹）
         const jsonRegex = /\{[\s\S]*?"problem"\s*:\s*"[^"]+?"[\s\S]*?\}/g;
         let jsonMatch;
-        while ((jsonMatch = jsonRegex.exec(text)) !== null) {
+        while ((jsonMatch = jsonRegex.exec(stripped)) !== null) {
             try {
                 const config = JSON.parse(jsonMatch[0]);
                 if (config.problem && (config.model || config.algorithm)) {
@@ -725,8 +728,11 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
      * 格式化消息内容
      */
     formatMessage(content) {
+        // 剥离 <think>...</think> 推理块（deepseek-r1 等推理模型的内部思考过程，不展示给用户）
+        let processed = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
         // 移除包含训练配置的代码块（配置会通过专用按钮呈现）
-        let cleaned = content.replace(/```(\w*)\s*\n([\s\S]*?)```/g, (match, lang, code) => {
+        let cleaned = processed.replace(/```(\w*)\s*\n([\s\S]*?)```/g, (match, lang, code) => {
             try {
                 const parsed = JSON.parse(code.trim());
                 if (parsed.problem && (parsed.model || parsed.algorithm)) {
