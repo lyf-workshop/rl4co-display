@@ -252,7 +252,8 @@ def training_progress(session_id):
                 else:
                     logger.debug(f"SSE 连接关闭 (session={session_id})，训练仍在运行，保留队列供重连")
 
-    return Response(generate(), mimetype='text/event-stream')
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'X-Accel-Buffering': 'no'})
 
 
 @training_bp.route('/api/training_status/<session_id>')

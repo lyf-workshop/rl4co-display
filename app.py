@@ -544,6 +544,7 @@ from app_compat import compat_bp
 from app_training import training_bp, init_training_globals
 from app_files import files_bp
 from app_gpu import gpu_bp, init_gpu_globals
+from app_ollama import ollama_bp
 
 # 为训练模块注入全局变量（含线程锁和暂停事件字典）
 init_training_globals(
@@ -572,6 +573,7 @@ app.register_blueprint(compat_bp)  # 兼容性API：/api/compatibility/*
 app.register_blueprint(training_bp) # 训练API：/api/start_training, /api/training_progress等
 app.register_blueprint(files_bp)   # 文件管理API：/api/upload_dataset, /api/list_files等
 app.register_blueprint(gpu_bp)     # GPU管理API：/api/gpu_status, /api/gpu_allocate等
+app.register_blueprint(ollama_bp)  # Ollama代理：/api/ollama/tags, /api/ollama/chat
 
 logger.info("✓ 所有Blueprint模块已注册")
 

@@ -19,7 +19,10 @@ class A2CAlgorithm(BaseAlgorithm):
     """
     
     def _init_algorithm_params(self):
-        """初始化A2C特定参数"""
+        """初始化A2C特定参数（兼容 RL4CO 0.6.0 API）"""
+        # RL4CO 0.6.0 的 A2C 使用独立的 actor/critic 优化器 kwargs
+        self.actor_lr = float(self.config.get('learning_rate', 1e-4))
+        # 旧属性保留（向后兼容）
         self.value_loss_coef = float(self.config.get('value_loss_coef', 0.5))
         self.entropy_coef = float(self.config.get('entropy_coef', 0.01))
         self.use_gae = self.config.get('use_gae', True)
@@ -47,15 +50,16 @@ class A2CAlgorithm(BaseAlgorithm):
                 "请确保RL4CO版本支持A2C算法"
             )
         
+        # critic embed_dim 必须与 policy embed_dim 一致，否则维度不匹配
+        embed_dim = int(self.config.get('embed_dim', 128))
         model = A2C(
             env,
             policy,
-            value_loss_coef=self.value_loss_coef,
-            entropy_coef=self.entropy_coef,
+            critic_kwargs={'embed_dim': embed_dim},
             batch_size=self.batch_size,
             train_data_size=self.train_data_size,
             val_data_size=self.val_data_size,
-            optimizer_kwargs={"lr": self.learning_rate},
+            actor_optimizer_kwargs={"lr": self.actor_lr},
         )
         
         return model

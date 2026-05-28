@@ -19,12 +19,26 @@ class PPOAlgorithm(BaseAlgorithm):
     """
     
     def _init_algorithm_params(self):
-        """初始化PPO特定参数"""
-        self.clip_ratio = float(self.config.get('clip_ratio', 0.2))
-        self.value_loss_coef = float(self.config.get('value_loss_coef', 0.5))
-        self.entropy_coef = float(self.config.get('entropy_coef', 0.01))
-        self.epochs_per_update = int(self.config.get('epochs_per_update', 4))
+        """初始化PPO特定参数（兼容 RL4CO 0.6.0 API）"""
+        # RL4CO 0.6.0 参数名（旧名保留为别名，优先取新名）
+        self.clip_range = float(
+            self.config.get('clip_range', self.config.get('clip_ratio', 0.2))
+        )
+        self.vf_lambda = float(
+            self.config.get('vf_lambda', self.config.get('value_loss_coef', 0.5))
+        )
+        self.entropy_lambda = float(
+            self.config.get('entropy_lambda', self.config.get('entropy_coef', 0.01))
+        )
+        self.ppo_epochs = int(
+            self.config.get('ppo_epochs', self.config.get('epochs_per_update', 2))
+        )
         self.gae_lambda = float(self.config.get('gae_lambda', 0.95))
+        # 旧属性别名（向后兼容，防止其他地方读取）
+        self.clip_ratio = self.clip_range
+        self.value_loss_coef = self.vf_lambda
+        self.entropy_coef = self.entropy_lambda
+        self.epochs_per_update = self.ppo_epochs
     
     def get_algorithm_name(self) -> str:
         return 'ppo'
@@ -48,13 +62,16 @@ class PPOAlgorithm(BaseAlgorithm):
                 "请确保RL4CO版本支持PPO算法"
             )
         
+        # critic embed_dim 必须与 policy embed_dim 一致，否则维度不匹配
+        embed_dim = int(self.config.get('embed_dim', 128))
         model = PPO(
             env,
             policy,
-            clip_ratio=self.clip_ratio,
-            value_loss_coef=self.value_loss_coef,
-            entropy_coef=self.entropy_coef,
-            epochs_per_update=self.epochs_per_update,
+            critic_kwargs={'embed_dim': embed_dim},
+            clip_range=self.clip_range,
+            vf_lambda=self.vf_lambda,
+            entropy_lambda=self.entropy_lambda,
+            ppo_epochs=self.ppo_epochs,
             batch_size=self.batch_size,
             train_data_size=self.train_data_size,
             val_data_size=self.val_data_size,

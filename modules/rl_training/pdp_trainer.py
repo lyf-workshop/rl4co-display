@@ -132,11 +132,20 @@ class PDPTrainer(BaseTrainer):
                 # 生成测试数据
                 td = env.reset(batch_size=[num_test_instances])
             
-            # 使用模型进行推理
+            # 未训练基线推断（与训练后共享同一批测试数据）
             model.eval()
+            untrained_policy = self.create_untrained_policy_copy(model)
+            with torch.no_grad():
+                out_baseline = self._run_policy(untrained_policy, td.clone(), env,
+                                                phase="test", decode_type="greedy",
+                                                return_actions=True)
+            rew_baseline = out_baseline.get('reward', out_baseline.get('cost', None))
+            mean_before = float(rew_baseline.cpu().mean()) if rew_baseline is not None else 0.0
+
+            # 训练后模型推断
             with torch.no_grad():
                 out = model(td.clone(), phase="test", decode_type="greedy", return_actions=True)
-            
+
             # 提取数据
             locs = td['locs'].cpu().numpy()  # [batch, num_loc, 2]
             
@@ -150,9 +159,19 @@ class PDPTrainer(BaseTrainer):
             
             actions = out['actions'].cpu().numpy()  # [batch, seq_len]
             costs = out.get('reward', out.get('cost', None))
-            
+
             if costs is not None:
                 costs = -costs.cpu().numpy()  # 转换为正的成本
+                mean_after = float(costs.mean())
+                # mean_before 来自未训练基线（也是成本，取负）
+                mean_before_cost = -mean_before if mean_before != 0.0 else 0.0
+                delta_pct = ((mean_before_cost - mean_after) / mean_before_cost * 100
+                             if mean_before_cost != 0 else 0.0)
+                self.send_message(
+                    'info',
+                    f'📊 PDP对比: 未训练平均成本 {mean_before_cost:.4f} → '
+                    f'训练后 {mean_after:.4f} (改进 {delta_pct:.1f}%)'
+                )
             else:
                 costs = np.zeros(locs.shape[0])
             

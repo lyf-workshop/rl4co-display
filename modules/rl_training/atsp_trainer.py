@@ -65,12 +65,15 @@ class ATSPTrainer(BaseTrainer):
             policy  = model.policy.to(self.device)
             td_init = env.reset(batch_size=[1]).to(self.device)
 
-            out_random = policy(
-                td_init.clone(), phase="test", decode_type="sampling", return_actions=True
-            )
-            out_greedy = policy(
-                td_init.clone(), phase="test", decode_type="greedy",   return_actions=True
-            )
+            # 训练前基线（未训练权重）vs 训练后（训练权重），均用贪心解码
+            untrained_policy = self.create_untrained_policy_copy(model)
+            with torch.no_grad():
+                out_random = self._run_policy(untrained_policy, td_init.clone(), env,
+                                              phase="test", decode_type="greedy",
+                                              return_actions=True)
+                out_greedy = self._run_policy(policy, td_init.clone(), env,
+                                              phase="test", decode_type="greedy",
+                                              return_actions=True)
 
             cost_matrix    = td_init['cost_matrix'][0].cpu()
             actions_random = out_random['actions'][0].cpu()

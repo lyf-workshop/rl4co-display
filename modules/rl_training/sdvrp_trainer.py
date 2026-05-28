@@ -89,26 +89,27 @@ class SDVRPTrainer(BaseTrainer):
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成SDVRP可视化（包含分割配送分析）"""
         try:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            policy = model.policy.to(device)
-            
+            policy = model.policy.to(self.device)
+
             # 生成测试数据
             if self.custom_dataset_data:
-                td_init = env.reset(batch_size=[1]).to(device)
-                td_init = self._inject_custom_data(td_init, device)
+                td_init = env.reset(batch_size=[1]).to(self.device)
+                td_init = self._inject_custom_data(td_init, self.device)
                 self.send_message('info', f'✅ 在上传的SDVRP数据集上进行测试（{self.num_loc}个客户）')
             else:
-                td_init = env.reset(batch_size=[3]).to(device)
-            
-            # 未训练模型测试
-            out_untrained = policy(td_init.clone(), phase="test", 
-                                  decode_type="sampling", return_actions=True)
+                td_init = env.reset(batch_size=[3]).to(self.device)
+
+            # 训练前基线（未训练权重 + 贪心解码）vs 训练后模型（训练权重 + 贪心解码）
+            untrained_policy = self.create_untrained_policy_copy(model)
+            with torch.no_grad():
+                out_untrained = self._run_policy(untrained_policy, td_init.clone(), env,
+                                                 phase="test", decode_type="greedy",
+                                                 return_actions=True)
+                out_trained = self._run_policy(policy, td_init.clone(), env,
+                                               phase="test", decode_type="greedy",
+                                               return_actions=True)
             actions_untrained = out_untrained['actions'].cpu().detach()
             rewards_untrained = out_untrained['reward'].cpu().detach()
-            
-            # 训练后模型测试
-            out_trained = policy(td_init.clone(), phase="test", 
-                                decode_type="greedy", return_actions=True)
             actions_trained = out_trained['actions'].cpu().detach()
             rewards_trained = out_trained['reward'].cpu().detach()
             

@@ -364,16 +364,19 @@ class FFSPTrainer(BaseTrainer):
         # 必须将env传给policy，否则policy会创建新的env（step_cnt=None导致TypeError）
         td_init = env.reset(batch_size=[3]).to(self.device)
         
-        # 未训练模型测试（使用随机策略）
-        self.send_message('info', '正在测试训练前的调度质量...')
-        out_untrained = policy(td_init.clone(), env, phase="test", decode_type="sampling", return_actions=True)
-        
-        # 重新reset环境（上一次policy调用会修改env的step_cnt等状态）
+        # 未训练基线（初始随机权重 + 贪心解码）
+        untrained_policy = self.create_untrained_policy_copy(model)
+        self.send_message('info', '正在测试训练前的调度质量（未训练权重）...')
+        out_untrained = untrained_policy(td_init.clone(), env, phase="test",
+                                         decode_type="greedy", return_actions=True)
+
+        # 重新reset环境（policy调用会修改 env 内部状态 step_cnt 等）
         td_init = env.reset(batch_size=[3]).to(self.device)
-        
-        # 训练后模型测试（使用greedy策略）
+
+        # 训练后模型测试（贪心解码）
         self.send_message('info', '正在测试训练后的调度质量...')
-        out_trained = policy(td_init.clone(), env, phase="test", decode_type="greedy", return_actions=True)
+        out_trained = policy(td_init.clone(), env, phase="test",
+                             decode_type="greedy", return_actions=True)
         
         # 提取调度结果和actions
         try:

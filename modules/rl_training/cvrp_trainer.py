@@ -73,13 +73,17 @@ class CVRPTrainer(BaseTrainer):
         else:
             td_init = env.reset(batch_size=[3]).to(self.device)
         
-        # 未训练模型测试
-        out_untrained = policy(td_init.clone(), phase="test", decode_type="sampling", return_actions=True)
+        # 训练前基线（未训练权重 + 贪心解码）vs 训练后模型（训练权重 + 贪心解码）
+        untrained_policy = self.create_untrained_policy_copy(model)
+        with torch.no_grad():
+            out_untrained = self._run_policy(untrained_policy, td_init.clone(), env,
+                                             phase="test", decode_type="greedy",
+                                             return_actions=True)
+            out_trained = self._run_policy(policy, td_init.clone(), env,
+                                           phase="test", decode_type="greedy",
+                                           return_actions=True)
         actions_untrained = out_untrained['actions'].cpu().detach()
         rewards_untrained = out_untrained['reward'].cpu().detach()
-        
-        # 训练后模型测试
-        out_trained = policy(td_init.clone(), phase="test", decode_type="greedy", return_actions=True)
         actions_trained = out_trained['actions'].cpu().detach()
         rewards_trained = out_trained['reward'].cpu().detach()
         

@@ -130,7 +130,17 @@ class SPCTSPTrainer(PCTSPTrainer):
                 num_vis = min(3, num_test)
                 td = env.reset(batch_size=[num_test])
 
+            # 未训练基线推断
             model.eval()
+            untrained_policy = self.create_untrained_policy_copy(model)
+            with torch.no_grad():
+                out_baseline = self._run_policy(untrained_policy, td.clone(), env,
+                                                phase="test", decode_type="greedy",
+                                                return_actions=True)
+            rew_baseline = out_baseline.get('reward', out_baseline.get('cost', None))
+            mean_before = float(rew_baseline.cpu().mean()) if rew_baseline is not None else 0.0
+
+            # 训练后模型推断
             with torch.no_grad():
                 out = model(td.clone(), phase="test", decode_type="greedy", return_actions=True)
 
@@ -150,6 +160,15 @@ class SPCTSPTrainer(PCTSPTrainer):
             actions_all = out['actions'].cpu().numpy()
             rewards_raw = out.get('reward', out.get('cost', None))
             rewards_all = rewards_raw.cpu().numpy() if rewards_raw is not None else np.zeros(num_test)
+
+            # 打印训练前/后对比
+            mean_after = float(rewards_all.mean())
+            delta = mean_after - mean_before
+            self.send_message(
+                'info',
+                f'📊 SPCTSP对比: 未训练平均奖励 {mean_before:.4f} → '
+                f'训练后 {mean_after:.4f} (Δ {delta:+.4f})'
+            )
 
             for i in range(num_vis):
                 try:

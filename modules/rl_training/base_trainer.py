@@ -106,9 +106,33 @@ class ProgressCallback(Callback):
         self.history_losses = []
         self.history_rewards = []
         self.history_epochs = []
-    
+        self._epoch_start_time = 0.0
+        self._last_batch_msg_time = 0.0
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        """记录 epoch 开始时间，用于 batch 进度消息的耗时计算"""
+        self._epoch_start_time = time.time()
+        self._last_batch_msg_time = 0.0
+
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-        """每个 batch 结束时收集指标"""
+        """每个 batch 结束时收集指标，并按时间间隔推送进度消息"""
+        now = time.time()
+        # 每 20 秒推送一次 batch 级进度，避免用户误以为训练卡死
+        if now - self._last_batch_msg_time >= 20:
+            total_batches = trainer.num_training_batches
+            elapsed = int(now - self._epoch_start_time) if self._epoch_start_time else 0
+            minutes, seconds = divmod(elapsed, 60)
+            epoch = trainer.current_epoch + 1
+            self.queue.put(json.dumps({
+                'type': 'info',
+                'message': (
+                    f'⏳ Epoch {epoch}/{self.total_epochs} 训练中 '
+                    f'(batch {batch_idx + 1}/{total_batches}, '
+                    f'已用时 {minutes}分{seconds:02d}秒)'
+                )
+            }))
+            self._last_batch_msg_time = now
+
         # 尝试从多个源头获取 loss 和 reward
         loss_collected = False
         reward_collected = False
@@ -144,7 +168,12 @@ class ProgressCallback(Callback):
     
     def _save_plot_async(self, epochs, losses, rewards, best_reward,
                          plot_path, plot_url, epoch):
-        """在后台线程中渲染并保存训练曲线，避免阻塞 epoch 边界"""
+        """
+        在后台线程中渲染并保存训练曲线。
+
+        重要：前端通知在 plt.savefig() 完成后才发出，避免前端读到未写完的旧文件。
+        通知 URL 附带毫秒时间戳（?t=...）防止浏览器缓存旧图。
+        """
         def _save():
             try:
                 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
@@ -174,6 +203,14 @@ class ProgressCallback(Callback):
                 plt.tight_layout()
                 plt.savefig(plot_path, dpi=150, bbox_inches="tight")
                 plt.close(fig)
+
+                # ── 文件写完后才通知前端 ──────────────────────────────────────
+                # 此时文件已落盘，前端收到通知后 img.src 追加自己的时间戳即可防缓存
+                self.queue.put(json.dumps({
+                    'type': 'plot',
+                    'plot_url': plot_url,
+                    'message': f'Epoch {epoch} 训练曲线已更新'
+                }))
 
                 if self.file_manager:
                     try:
@@ -272,6 +309,7 @@ class ProgressCallback(Callback):
         plot_url = f"/static/model_plots/user_{self.user_id}/{plot_filename}"
 
         # 复制历史列表（后台线程读取，避免与训练线程共享引用）
+        # 注意：'plot' 通知在后台线程 savefig() 完成后才发出，不在此处发送
         self._save_plot_async(
             epochs=list(self.history_epochs),
             losses=list(self.history_losses),
@@ -282,13 +320,6 @@ class ProgressCallback(Callback):
             epoch=epoch,
         )
 
-        # 立刻通知前端（图片由后台线程写入，极短时间内可用）
-        self.queue.put(json.dumps({
-            'type': 'plot',
-            'plot_url': plot_url,
-            'message': f'Epoch {epoch} 训练曲线已更新'
-        }))
-        
         # 同步更新全局 training_status，供训练结束时 final_results 读取
         # 使用单次 dict.update() 减少并发读取时看到部分状态的窗口
         if self.training_status is not None and self.session_id in self.training_status:
@@ -298,9 +329,10 @@ class ProgressCallback(Callback):
                 'best_reward': round(self.best_reward, 4),
                 'epoch': epoch,
                 'progress': round(progress, 2),
+                'plot_url': plot_url,  # 基础 URL，供状态查询使用
             })
 
-        # 发送进度更新
+        # 发送进度更新（不含 plot_url，曲线更新通过 'plot' 消息单独推送）
         self.queue.put(json.dumps({
             'type': 'progress',
             'epoch': epoch,
@@ -309,7 +341,6 @@ class ProgressCallback(Callback):
             'loss': round(loss, 4),
             'reward': round(reward, 4),
             'best_reward': round(self.best_reward, 4),
-            'plot_url': f"/static/model_plots/user_{self.user_id}/training_curves_{self.session_id[:8]}.png"
         }))
         
         # 发送详细信息
@@ -391,6 +422,9 @@ class BaseTrainer:
         self.batch_size = int(config.get('batch_size', 512))
         self.learning_rate = float(config.get('learning_rate', 1e-4))
         self.num_loc = 50  # 默认问题规模
+        # 训练/验证集大小（各内置模型可使用，不再硬编码 10_000）
+        self.train_data_size = int(config.get('train_data_size', 10_000))
+        self.val_data_size   = int(config.get('val_data_size', 1_000))
         
         # ========== 新增：从配置中获取算法和策略名称 ==========
         self.algorithm_name = config.get('algorithm', 'reinforce').lower()
@@ -435,6 +469,9 @@ class BaseTrainer:
 
         # 自定义数据集（由子类调用 load_custom_dataset() 填充）
         self.custom_dataset_data = None
+
+        # 训练前初始权重快照（在 train() 中保存，供可视化时生成"未训练基线"使用）
+        self.initial_policy_state_dict = None
 
     def send_message(self, msg_type, message, **kwargs):
         """发送消息到队列"""
@@ -589,8 +626,8 @@ class BaseTrainer:
             alpha=alpha,
             beta=beta,
             batch_size=self.batch_size,
-            train_data_size=10_000,
-            val_data_size=1_000,
+            train_data_size=self.train_data_size,
+            val_data_size=self.val_data_size,
             optimizer_kwargs={'lr': self.learning_rate},
         )
 
@@ -617,8 +654,8 @@ class BaseTrainer:
             policy,
             baseline=self.config.get('baseline', 'rollout'),
             batch_size=self.batch_size,
-            train_data_size=10_000,
-            val_data_size=1_000,
+            train_data_size=self.train_data_size,
+            val_data_size=self.val_data_size,
             optimizer_kwargs={'lr': self.learning_rate},
         )
         self.send_message('info', '✅ MDAM模型创建成功（多解码器注意力）')
@@ -650,8 +687,8 @@ class BaseTrainer:
             baseline='no',           # DeepACO 内部实现共享基线，跳过外部 baseline
             train_with_local_search=False,  # 与 DeepACOPolicy 默认值保持一致
             batch_size=self.batch_size,
-            train_data_size=10_000,
-            val_data_size=1_000,
+            train_data_size=self.train_data_size,
+            val_data_size=self.val_data_size,
             optimizer_kwargs={'lr': self.learning_rate},
         )
         self.send_message('info', '✅ DeepACO模型创建成功（深度蚁群优化）')
@@ -697,8 +734,8 @@ class BaseTrainer:
             policy,
             baseline=self.config.get('baseline', 'rollout'),
             batch_size=self.batch_size,
-            train_data_size=10_000,
-            val_data_size=1_000,
+            train_data_size=self.train_data_size,
+            val_data_size=self.val_data_size,
             optimizer_kwargs={"lr": self.learning_rate},
         )
         self.send_message('info', f'使用REINFORCE算法 (传统模式)')
@@ -728,7 +765,15 @@ class BaseTrainer:
             # 创建策略和模型
             policy = self.create_policy(env)
             model = self.create_model(env, policy)
-            
+
+            # 保存初始权重快照（训练开始前），供可视化时生成"未训练基线"推断
+            import copy as _copy
+            try:
+                self.initial_policy_state_dict = _copy.deepcopy(model.policy.state_dict())
+                self.send_message('info', '📸 已保存初始权重快照（用于训练前/后对比）')
+            except Exception as _snap_err:
+                logger.warning(f"保存初始权重快照失败，对比基线将降级: {_snap_err}")
+
             # 检查点管理
             # 每次训练后会将模型保存到此路径（problem_type + model_type 唯一标识）
             checkpoint_path = os.path.join(self.user_checkpoints_dir, f"{self.problem_type}-{self.model_type}.ckpt")
@@ -874,6 +919,57 @@ class BaseTrainer:
                 except Exception as e:
                     logger.warning(f"关闭后台数据库连接时出错: {e}")
     
+    def create_untrained_policy_copy(self, model):
+        """
+        创建一个加载了训练前初始权重的策略副本。
+
+        在 generate_visualizations() 中调用，用于生成"训练前"基线推断结果，
+        与训练后模型形成真实对比（而非用采样解码来伪造基线）。
+
+        对所有策略类型均有效：
+        - 自回归策略（AM/POMO/SymNCO）：贪心解码 + 随机权重 → 低质量解
+        - 非自回归策略（DeepACO）：ACO 搜索 + 未训练热图 → 近随机解
+
+        参数:
+            model: 已完成训练的 RL 模型（model.policy 是训练后策略）
+
+        返回:
+            policy: 加载了初始权重的策略副本（eval 模式，已移至 self.device）
+        """
+        import copy
+        untrained_policy = copy.deepcopy(model.policy)
+        if self.initial_policy_state_dict is not None:
+            untrained_policy.load_state_dict(self.initial_policy_state_dict)
+        else:
+            logger.warning("initial_policy_state_dict 不可用，基线推断将使用当前（训练后）权重")
+        untrained_policy.eval()
+        return untrained_policy.to(self.device)
+
+    def _run_policy(self, policy, td, env, **kwargs):
+        """
+        调用策略 forward，自动适配是否需要传递 env 参数。
+
+        不同策略的接口差异：
+        - AttentionModelPolicy / POMO / SymNCO / DeepACO:
+              forward(td, ...)   或   forward(td, env=None, ...)
+        - PointerNetworkPolicy 等:
+              forward(td, env, ...)   —— env 是必选位置参数
+
+        本方法通过 inspect 检测签名，在调用前决定是否传入 env，
+        避免对每个策略硬编码分支。
+        """
+        import inspect
+        try:
+            params = inspect.signature(policy.forward).parameters
+            env_param = params.get('env')
+            if env_param is not None and env_param.default is inspect.Parameter.empty:
+                # env 是必选参数（无默认值）→ 必须传入
+                return policy(td, env, **kwargs)
+        except (ValueError, TypeError):
+            pass
+        # 其他情况：env 可选或不存在 → 不传入
+        return policy(td, **kwargs)
+
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成可视化结果（子类实现）"""
         raise NotImplementedError("子类必须实现 generate_visualizations 方法")

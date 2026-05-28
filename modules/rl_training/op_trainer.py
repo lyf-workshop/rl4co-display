@@ -145,11 +145,23 @@ class OPTrainer(BaseTrainer):
                 # 生成测试数据
                 td = env.reset(batch_size=[num_test_instances])
             
-            # 使用模型进行推理
+            # 未训练基线推断（与训练后共享同一批测试数据）
             model.eval()
+            untrained_policy = self.create_untrained_policy_copy(model)
+            with torch.no_grad():
+                out_baseline = self._run_policy(untrained_policy, td.clone(), env,
+                                                phase="test", decode_type="greedy",
+                                                return_actions=True)
+            rewards_baseline = out_baseline['reward']
+            if rewards_baseline is not None:
+                mean_before = float(rewards_baseline.cpu().mean())
+            else:
+                mean_before = 0.0
+
+            # 训练后模型推断
             with torch.no_grad():
                 out = model(td.clone(), phase="test", decode_type="greedy", return_actions=True)
-            
+
             # 提取数据
             locs = td['locs'].cpu().numpy()  # [batch, num_loc+1, 2] (包含depot)
             prize = td['prize'].cpu().numpy()  # [batch, num_loc+1]
@@ -166,9 +178,16 @@ class OPTrainer(BaseTrainer):
             
             actions = out['actions'].cpu().numpy()  # [batch, seq_len]
             rewards = out.get('reward', out.get('cost', None))
-            
+
             if rewards is not None:
                 rewards = rewards.cpu().numpy()  # OP 中 reward 是正的（最大化）
+                mean_after = float(rewards.mean())
+                delta = mean_after - mean_before
+                self.send_message(
+                    'info',
+                    f'📊 OP对比: 未训练平均奖励 {mean_before:.4f} → '
+                    f'训练后 {mean_after:.4f} (Δ {delta:+.4f})'
+                )
             else:
                 rewards = np.zeros(locs.shape[0])
             

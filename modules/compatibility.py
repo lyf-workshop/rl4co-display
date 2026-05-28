@@ -74,8 +74,10 @@ POLICY_PROBLEM_COMPATIBILITY = {
     'pomo': ['tsp', 'mtsp', 'cvrp'],
     
     # Pointer Network：基础路由问题（历史方法，性能有限）
-    'ptrnet': ['tsp', 'cvrp'],
-    'ptr': ['tsp', 'cvrp'],  # PtrNet 别名
+    # RL4CO 0.6.0 中 PtrNet 底层实现仅注册了 TSP 的 init_embedding，
+    # 传入 CVRPEnv 时会触发 AssertionError: Only the Euclidean TSP env is implemented
+    'ptrnet': ['tsp'],
+    'ptr': ['tsp'],  # PtrNet 别名
     
     # MatNet：专为非对称和调度问题设计（矩阵注意力）
     'matnet': ['atsp', 'ffsp'],  # ATSP和FFSP
@@ -87,14 +89,18 @@ POLICY_PROBLEM_COMPATIBILITY = {
     # 与POMO相同的问题范围：需要二维坐标的对称性问题
     'symnco': ['tsp', 'mtsp', 'cvrp'],
 
-    # MDAM：多解码器AM，兼容性与AM相同（不含ATSP/FFSP）
-    'mdam': _ROUTING_WITHOUT_ATSP,
+    # MDAM：多解码器AM，兼容标准路由问题
+    # 实测 MTSP 因 reward key 缺失报 KeyError，SDVRP 因张量尺寸不匹配报错，
+    # 已从兼容列表中移除，避免用户运行时出错
+    'mdam': ['tsp', 'cvrp', 'op', 'pdp', 'pctsp', 'spctsp', 'vrptw'],
 
     # DeepACO：深度蚁群优化，非自回归+ACO
-    # 支持标准路由问题（不含 ATSP/FFSP/PDP/PCTSP/SPCTSP）
+    # 支持标准路由问题（不含 ATSP/FFSP/PDP/PCTSP/SPCTSP/VRPTW）
     # 原因：DeepACO的NARGNNEncoder基于坐标图；PDP的前驱约束和PCTSP/SPCTSP的
-    # 奖励收集逻辑与ACO搜索的兼容性未在官方文档中验证
-    'deepaco': ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op'],
+    # 奖励收集逻辑与ACO搜索的兼容性未在官方文档中验证；
+    # VRPTW在RL4CO 0.6.0中对应CVRPTWEnv，而DeepACO的NARGNNEncoder
+    # 未注册'cvrptw'环境名称，会触发 ValueError: Unknown environment name 'cvrptw'
+    'deepaco': ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'op'],
 }
 
 # 算法 → 问题兼容性（官方文档：REINFORCE, PPO, A2C 都是通用算法）
@@ -111,7 +117,10 @@ POLICY_ALGORITHM_COMPATIBILITY = {
     'pomo': ['reinforce', 'ppo', 'a2c'],
     'ptrnet': ['reinforce'],  # PtrNet 通常只使用 REINFORCE（经典组合）
     'ptr': ['reinforce'],
-    'matnet': ['reinforce', 'ppo', 'a2c'],  # MatNet支持所有通用算法
+    # MatNet（ATSP/FFSP）：内部继承 POMO，使用 REINFORCE；
+    # PPO/A2C 需要 CriticNetwork 处理 encoder 输出，但 MatNet encoder
+    # 返回的张量格式与 CriticNetwork 不兼容（None 输入），仅支持 REINFORCE
+    'matnet': ['reinforce'],
     'ham': ['reinforce', 'ppo', 'a2c'],  # HAM支持所有通用算法
     # SymNCO内置自定义多损失训练算法（基于REINFORCE的问题/解对称性+不变性损失）
     # 不支持外部PPO/A2C，因其训练逻辑不兼容
@@ -379,6 +388,12 @@ WARNING_COMBINATIONS = [
         'severity': 'error'
     },
     {
+        'problem': 'vrptw',
+        'policy': 'deepaco',
+        'message': 'DeepACO与VRPTW不兼容：RL4CO 0.6.0中VRPTW对应CVRPTWEnv，DeepACO的NARGNNEncoder未注册该环境名称，会触发ValueError。请使用Attention Model',
+        'severity': 'error'
+    },
+    {
         'problem': 'pdp',
         'policy': 'deepaco',
         'message': 'DeepACO对取送货问题（PDP）的前驱约束兼容性未经验证。请使用HAM',
@@ -396,6 +411,39 @@ WARNING_COMBINATIONS = [
         'message': 'DeepACO使用内置蚁群REINFORCE子类，不支持外部A2C算法。算法选项将被忽略',
         'severity': 'warning'
     },
+    # MatNet + PPO/A2C 实测不兼容（CriticNetwork 无法处理 MatNet encoder 输出）
+    {
+        'policy': 'matnet',
+        'algorithm': 'ppo',
+        'message': 'MatNet继承自POMO，内置REINFORCE；PPO的CriticNetwork无法处理MatNet encoder输出（None输入），仅支持REINFORCE',
+        'severity': 'error'
+    },
+    {
+        'policy': 'matnet',
+        'algorithm': 'a2c',
+        'message': 'MatNet继承自POMO，内置REINFORCE；A2C的CriticNetwork无法处理MatNet encoder输出（None输入），仅支持REINFORCE',
+        'severity': 'error'
+    },
+    # PtrNet 实测只支持 TSP（RL4CO 0.6.0 中 CVRP 触发 AssertionError）
+    {
+        'problem': 'cvrp',
+        'policy': 'ptrnet',
+        'message': 'RL4CO 0.6.0中PtrNet实现仅支持TSP（CVRPEnv会触发AssertionError）。请使用Attention Model',
+        'severity': 'error'
+    },
+    # MDAM + MTSP/SDVRP 实测不兼容
+    {
+        'problem': 'mtsp',
+        'policy': 'mdam',
+        'message': 'MDAM与MTSPEnv不兼容（reward key缺失）。请使用Attention Model或POMO',
+        'severity': 'error'
+    },
+    {
+        'problem': 'sdvrp',
+        'policy': 'mdam',
+        'message': 'MDAM与SDVRPEnv不兼容（张量尺寸不匹配）。请使用Attention Model',
+        'severity': 'error'
+    },
 ]
 
 # 推荐组合 (根据问题类型)
@@ -406,8 +454,9 @@ RECOMMENDED_COMBINATIONS = {
         'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
     'atsp': {
-        'best': {'policy': 'matnet', 'algorithm': 'ppo'},      # ATSP只能用MatNet（无locs，AM不可用）
-        'fast': {'policy': 'matnet', 'algorithm': 'a2c'},
+        # ATSP只能用MatNet；MatNet内置REINFORCE（PPO/A2C与MatNet encoder不兼容）
+        'best': {'policy': 'matnet', 'algorithm': 'reinforce'},
+        'fast': {'policy': 'matnet', 'algorithm': 'reinforce'},
         'simple': {'policy': 'matnet', 'algorithm': 'reinforce'},
     },
     'mtsp': {
@@ -451,8 +500,9 @@ RECOMMENDED_COMBINATIONS = {
         'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '简单易用配置'},
     },
     'ffsp': {
-        'best': {'policy': 'matnet', 'algorithm': 'ppo', 'description': '最佳质量配置（复杂调度推荐）'},
-        'fast': {'policy': 'matnet', 'algorithm': 'a2c', 'description': '快速收敛配置'},
+        # FFSP 只能用 MatNet + REINFORCE（MatNet 内置 POMO/REINFORCE，不兼容外部 PPO/A2C）
+        'best': {'policy': 'matnet', 'algorithm': 'reinforce', 'description': '最佳质量配置（MatNet + REINFORCE）'},
+        'fast': {'policy': 'matnet', 'algorithm': 'reinforce', 'description': '唯一有效算法'},
         'simple': {'policy': 'matnet', 'algorithm': 'reinforce', 'description': '简单易用配置'},
     },
 }

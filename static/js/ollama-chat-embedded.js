@@ -7,7 +7,7 @@
 class OllamaChatEmbedded {
     constructor() {
         this.config = {
-            apiUrl: 'http://127.0.0.1:11434/api',
+            apiUrl: '/api/ollama',   // 走 Flask 代理，绕过 CORS 和 CSP 限制
             defaultModel: 'llama2',
             storageKey: 'ollama_chat_history_embedded',
             maxHistoryLength: 50

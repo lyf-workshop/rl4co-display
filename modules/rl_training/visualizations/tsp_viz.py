@@ -205,7 +205,7 @@ def create_tsp_comparison_plot(env, td, actions_untrained, rewards_untrained,
 
     # 设置标题
     axs[0].set_title(f"{left_label} | Cost = {-rewards_untrained.item():.3f}")
-    axs[1].set_title(f"Trained (ACO) | Cost = {-rewards_trained.item():.3f}")
+    axs[1].set_title(f"Trained (Greedy) | Cost = {-rewards_trained.item():.3f}")
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches="tight")

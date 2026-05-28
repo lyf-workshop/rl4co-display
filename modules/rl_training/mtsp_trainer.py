@@ -99,13 +99,30 @@ class MTSPTrainer(BaseTrainer):
                 td = env.reset(batch_size=[num_test_instances])
             td = td.to(device)
             
-            # 使用模型生成路径
+            # 未训练基线推断（与训练后共享同一批测试数据）
+            untrained_policy = self.create_untrained_policy_copy(model)
+            with torch.no_grad():
+                out_baseline = self._run_policy(untrained_policy, td.clone(), env,
+                                                phase='test', decode_type='greedy')
+            rewards_baseline = out_baseline['reward'].cpu().numpy()
+
+            # 训练后模型推断
             with torch.no_grad():
                 out = model(td.clone(), phase='test', decode_type='greedy')
-            
+
             # 提取动作和奖励
             actions = out['actions'].cpu().numpy()
             rewards = out['reward'].cpu().numpy()
+
+            # 打印训练前/后对比摘要
+            mean_before = float(rewards_baseline.mean())
+            mean_after  = float(rewards.mean())
+            delta = mean_after - mean_before
+            self.send_message(
+                'info',
+                f'📊 mTSP对比: 未训练平均奖励 {mean_before:.4f} → '
+                f'训练后 {mean_after:.4f} (Δ {delta:+.4f})'
+            )
             locs = td['locs'].cpu().numpy()
             
             # 为每个测试实例创建可视化

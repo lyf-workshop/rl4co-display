@@ -28,7 +28,7 @@ class SymNCOPolicyWrapper(BasePolicy):
 
     def _init_policy_params(self):
         """初始化 SymNCO 特定参数"""
-        self.num_augment = int(self.config.get('num_augment', 8))
+        self.num_augment = int(self.config.get('num_augment', 4))
         self.num_starts = int(self.config.get('num_starts', 0))
         self.alpha = float(self.config.get('symnco_alpha', 0.2))
         self.beta = float(self.config.get('symnco_beta', 1.0))

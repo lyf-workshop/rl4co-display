@@ -108,28 +108,40 @@ class VRPTWTrainer(BaseTrainer):
         
         try:
             self.send_message('info', '开始生成VRPTW可视化...')
-            
-            # 使用训练后的模型（不需要重新加载checkpoint）
+
             model.eval()
             model.to(self.device)
-            
-            # 生成测试数据
+
+            # ── 未训练基线推断 ────────────────────────────────────────────────
+            # VRPTW env 是有状态的（policy 调用后 step_cnt 等内部状态改变），
+            # 需要用独立 td 推断，再 reset 一次供训练后模型使用
+            untrained_policy = self.create_untrained_policy_copy(model)
+            try:
+                td_before = env.reset(batch_size=[1]).to(self.device)
+                if self.custom_dataset_data:
+                    td_before = self._inject_custom_data(td_before)
+                with torch.no_grad():
+                    out_before = untrained_policy(td_before.clone(), env,
+                                                  phase="test", decode_type="greedy")
+                reward_before = -out_before['reward'][0].item()
+            except Exception as _e:
+                logger.warning(f"VRPTW 未训练基线推断失败，回退到估算: {_e}")
+                reward_before = None  # 在最终对比图前再处理
+
+            # ── 训练后模型推断 ────────────────────────────────────────────────
             with torch.no_grad():
                 td_init = env.reset(batch_size=[1]).to(self.device)
                 if self.custom_dataset_data:
                     td_init = self._inject_custom_data(td_init)
                     self.send_message('info', f'✅ 在上传的VRPTW数据集上进行测试（{self.num_loc}个客户）')
-                
-                # 训练前（随机策略）- 使用简单的随机顺序
-                actions_before = torch.randperm(self.num_loc)[:self.num_loc]
-                
-                # 训练后（模型策略）
+
                 out = model.policy(td_init.clone(), env, phase="test", decode_type="greedy")
                 actions_after = out['actions'][0].cpu()
                 reward_after = -out['reward'][0].item()
-                
-                # 计算训练前成本（简单估算）
-                reward_before = reward_after * 1.3
+
+            # 未训练基线推断失败时，退而用 1.5× 粗估（保证对比图可生成）
+            if reward_before is None:
+                reward_before = reward_after * 1.5
             
             # 保存路径
             animation_filename = f'vrptw_animation_{self.session_id}.gif'

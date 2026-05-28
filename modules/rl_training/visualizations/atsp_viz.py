@@ -121,8 +121,8 @@ def create_atsp_comparison_plot(cost_matrix, actions_random, actions_trained,
     vmin, vmax = float(cost_matrix.min()), float(cost_matrix.max())
 
     configs = [
-        (axes[0], actions_random,  '训练前（随机采样）', 'red'),
-        (axes[1], actions_trained, '训练后（贪心解码）', 'blue'),
+        (axes[0], actions_random,  '训练前（未训练模型）', 'red'),
+        (axes[1], actions_trained, '训练后（贪心解码）',   'blue'),
     ]
 
     for ax, actions, label, color in configs:
