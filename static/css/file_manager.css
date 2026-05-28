@@ -1,0 +1,464 @@
+/* 主容器 */
+.container {
+    max-width: 1400px;
+    margin: 100px auto 50px;
+    padding: 0 2rem;
+}
+
+.page-header {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.page-header .subtitle {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+.content-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.header-icon {
+    font-size: 2.5rem;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    transition: transform 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
+.action-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.section {
+    margin-bottom: 3rem;
+}
+
+.section-title {
+    font-size: 1.8rem;
+    color: #333;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 3px solid #667eea;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 600;
+}
+
+/* 训练会话卡片容器 */
+.sessions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(800px, 1fr));
+    gap: 30px;
+}
+
+/* 训练会话卡片 */
+.session-card {
+    background: white;
+    border: 3px solid #e9ecef;
+    border-radius: 20px;
+    padding: 30px;
+    transition: all 0.3s;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.session-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 10px 35px rgba(102, 126, 234, 0.25);
+    transform: translateY(-5px);
+}
+
+/* 会话头部 */
+.session-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+}
+
+.session-info {
+    flex: 1;
+}
+
+.session-title {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.session-meta {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.session-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-completed {
+    background: #28a745;
+    color: white;
+}
+
+.status-running {
+    background: #ffc107;
+    color: #333;
+}
+
+.status-failed {
+    background: #dc3545;
+    color: white;
+}
+
+/* 文件网格（在会话卡片内） */
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.file-item {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.file-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+    transform: translateY(-3px);
+}
+
+/* 文件预览图 */
+.file-preview-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.file-preview-img:hover {
+    transform: scale(1.05);
+}
+
+/* 文件信息区域 */
+.file-item-info {
+    padding: 15px;
+    text-align: center;
+}
+
+/* 占位图（文件不存在时） */
+.file-placeholder {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    opacity: 0.5;
+}
+
+.file-placeholder-icon {
+    font-size: 60px;
+    margin-bottom: 10px;
+}
+
+.file-card {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.file-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.file-type-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.badge-comparison {
+    background: #17a2b8;
+    color: white;
+}
+
+.badge-animation {
+    background: #28a745;
+    color: white;
+}
+
+.badge-curve {
+    background: #ffc107;
+    color: #333;
+}
+
+.badge-checkpoint {
+    background: #dc3545;
+    color: white;
+}
+
+.file-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.file-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+    word-break: break-all;
+    padding-right: 100px;
+}
+
+.file-info {
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 15px;
+}
+
+.file-preview {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background: #e9ecef;
+}
+
+.file-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 14px;
+    flex: 1;
+}
+
+.btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #138496;
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #6c757d;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.empty-state-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+}
+
+.modal-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+}
+
+.modal-title {
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.modal-message {
+    font-size: 16px;
+    color: #6c757d;
+    margin-bottom: 30px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
