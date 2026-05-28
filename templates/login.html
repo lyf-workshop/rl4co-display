@@ -1,394 +1,397 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 - RL4CO 强化学习平台 | 山西大学</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
 
-        body {
-            font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+{% block title %}登录 - RL4CO 强化学习平台 | 山西大学{% endblock %}
 
+{% block nav %}{% endblock %}
+
+{% block head %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .login-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        max-width: 1000px;
+        width: 100%;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .left-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 3rem;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .logo-section {
+        margin-bottom: 2rem;
+    }
+
+    .logo-section h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .logo-section .subtitle {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        margin-bottom: 0.5rem;
+    }
+
+    .university-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        margin-top: 1rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .features-list {
+        margin-top: 2rem;
+        text-align: left;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        margin: 1rem 0;
+        font-size: 0.95rem;
+    }
+
+    .feature-item::before {
+        content: "✓";
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        margin-right: 0.8rem;
+        text-align: center;
+        line-height: 24px;
+        font-weight: bold;
+    }
+
+    .right-panel {
+        padding: 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+    }
+
+    .form-header h2 {
+        color: #333;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-header p {
+        color: #666;
+        font-size: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 0.9rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        background: white;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .submit-button {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .submit-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .submit-button:active {
+        transform: translateY(0);
+    }
+
+    .form-footer {
+        margin-top: 1.5rem;
+        text-align: center;
+        color: #666;
+    }
+
+    .form-footer a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+
+    .form-footer a:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 1.5rem 0;
+        color: #999;
+        font-size: 0.9rem;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #e0e0e0;
+    }
+
+    .divider::before {
+        margin-right: 1rem;
+    }
+
+    .divider::after {
+        margin-left: 1rem;
+    }
+
+    @media (max-width: 768px) {
         .login-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            max-width: 1000px;
-            width: 100%;
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            grid-template-columns: 1fr;
         }
 
         .left-panel {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 3rem;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .logo-section {
-            margin-bottom: 2rem;
-        }
-
-        .logo-section h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .logo-section .subtitle {
-            font-size: 1.1rem;
-            opacity: 0.95;
-            margin-bottom: 0.5rem;
-        }
-
-        .university-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.5rem 1.5rem;
-            border-radius: 50px;
-            font-weight: 600;
-            margin-top: 1rem;
-            backdrop-filter: blur(10px);
+            padding: 2rem;
         }
 
         .features-list {
-            margin-top: 2rem;
-            text-align: left;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            margin: 1rem 0;
-            font-size: 0.95rem;
-        }
-
-        .feature-item::before {
-            content: "✓";
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            margin-right: 0.8rem;
-            text-align: center;
-            line-height: 24px;
-            font-weight: bold;
+            display: none;
         }
 
         .right-panel {
-            padding: 3rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            padding: 2rem;
         }
+    }
 
-        .form-header {
-            margin-bottom: 2rem;
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
         }
-
-        .form-header h2 {
-            color: #333;
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-header p {
-            color: #666;
-            font-size: 1rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            color: #333;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 0.95rem;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.9rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s;
-            background: white;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .submit-button {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .submit-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        .submit-button:active {
+        to {
+            opacity: 1;
             transform: translateY(0);
         }
+    }
 
-        .form-footer {
-            margin-top: 1.5rem;
-            text-align: center;
-            color: #666;
-        }
+    .login-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
 
-        .form-footer a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s;
-        }
+    .alert {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
 
-        .form-footer a:hover {
-            color: #764ba2;
-            text-decoration: underline;
-        }
+    .alert-success {
+        background: #c6f6d5;
+        color: #22543d;
+        border: 1px solid #9ae6b4;
+    }
 
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 1.5rem 0;
-            color: #999;
-            font-size: 0.9rem;
-        }
+    .alert-error {
+        background: #fed7d7;
+        color: #742a2a;
+        border: 1px solid #fc8181;
+    }
 
-        .divider::before,
-        .divider::after {
-            content: "";
-            flex: 1;
-            height: 1px;
-            background: #e0e0e0;
-        }
+    .loading {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.6s linear infinite;
+        margin-left: 10px;
+        vertical-align: middle;
+    }
 
-        .divider::before {
-            margin-right: 1rem;
-        }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
 
-        .divider::after {
-            margin-left: 1rem;
-        }
+    .submit-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
 
-        @media (max-width: 768px) {
-            .login-container {
-                grid-template-columns: 1fr;
-            }
-
-            .left-panel {
-                padding: 2rem;
-            }
-
-            .features-list {
-                display: none;
-            }
-
-            .right-panel {
-                padding: 2rem;
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .login-container {
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        .alert {
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .alert-success {
-            background: #c6f6d5;
-            color: #22543d;
-            border: 1px solid #9ae6b4;
-        }
-
-        .alert-error {
-            background: #fed7d7;
-            color: #742a2a;
-            border: 1px solid #fc8181;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 0.6s linear infinite;
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .submit-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="left-panel">
-            <div class="logo-section">
-                <h1>🚀 RL4CO</h1>
-                <p class="subtitle">强化学习组合优化平台</p>
-                <p class="subtitle">Reinforcement Learning for CO</p>
-                <div class="university-badge">🎓 山西大学 · RL4CO</div>
-            </div>
-            <div class="features-list">
-                <div class="feature-item">多种先进的强化学习模型</div>
-                <div class="feature-item">实时训练进度监控</div>
-                <div class="feature-item">灵活的策略配置选项</div>
-                <div class="feature-item">学术研究与教学应用</div>
-            </div>
+{% block content %}
+<div class="login-container">
+    <div class="left-panel">
+        <div class="logo-section">
+            <h1>🚀 RL4CO</h1>
+            <p class="subtitle">强化学习组合优化平台</p>
+            <p class="subtitle">Reinforcement Learning for CO</p>
+            <div class="university-badge">🎓 山西大学 · RL4CO</div>
         </div>
-
-        <div class="right-panel">
-            <div class="form-header">
-                <h2>欢迎回来</h2>
-                <p>登录您的账户以继续使用平台</p>
-            </div>
-
-            <div id="alert" class="alert" style="display: none;"></div>
-
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="username">用户名</label>
-                    <input type="text" id="username" name="username" placeholder="请输入您的用户名" required autocomplete="username" />
-                </div>
-
-                <div class="form-group">
-                    <label for="password">密码</label>
-                    <input type="password" id="password" name="password" placeholder="请输入您的密码" required autocomplete="current-password" />
-                </div>
-
-                <button type="submit" class="submit-button" id="submitBtn">登录</button>
-            </form>
-
-            <div class="divider">或</div>
-
-            <div class="form-footer">
-                <p>还没有账户？<a href="/register">立即注册</a></p>
-            </div>
+        <div class="features-list">
+            <div class="feature-item">多种先进的强化学习模型</div>
+            <div class="feature-item">实时训练进度监控</div>
+            <div class="feature-item">灵活的策略配置选项</div>
+            <div class="feature-item">学术研究与教学应用</div>
         </div>
     </div>
 
-    <script>
-        const form = document.getElementById('loginForm');
-        const alert = document.getElementById('alert');
-        const submitBtn = document.getElementById('submitBtn');
+    <div class="right-panel">
+        <div class="form-header">
+            <h2>欢迎回来</h2>
+            <p>登录您的账户以继续使用平台</p>
+        </div>
 
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        <div id="alert" class="alert" style="display: none;"></div>
 
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" placeholder="请输入您的用户名" required autocomplete="username" />
+            </div>
 
-            // 禁用按钮，显示加载状态
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '登录中<span class="loading"></span>';
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" placeholder="请输入您的密码" required autocomplete="current-password" />
+            </div>
 
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
-                });
+            <button type="submit" class="submit-button" id="submitBtn">登录</button>
+        </form>
 
-                const result = await response.json();
+        <div class="divider">或</div>
 
-                if (result.success) {
-                    showAlert('登录成功！正在跳转...', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
-                } else {
-                    showAlert(result.message || '登录失败，请检查用户名和密码', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '登录';
-                }
-            } catch (error) {
-                console.error('登录错误:', error);
-                showAlert('网络错误，请检查连接后重试', 'error');
+        <div class="form-footer">
+            <p>还没有账户？<a href="/register">立即注册</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.getElementById('loginForm');
+    const alert = document.getElementById('alert');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        // 禁用按钮，显示加载状态
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '登录中<span class="loading"></span>';
+
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('登录成功！正在跳转...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+            } else {
+                showAlert(result.message || '登录失败，请检查用户名和密码', 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '登录';
             }
-        });
-
-        // 显示提示信息
-        function showAlert(message, type) {
-            alert.textContent = message;
-            alert.className = `alert alert-${type}`;
-            alert.style.display = 'block';
-            
-            // 3秒后自动隐藏
-            setTimeout(() => {
-                if (type === 'error') {
-                    alert.style.display = 'none';
-                }
-            }, 3000);
+        } catch (error) {
+            console.error('登录错误:', error);
+            showAlert('网络错误，请检查连接后重试', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '登录';
         }
-    </script>
-</body>
-</html>
+    });
+
+    // 显示提示信息
+    function showAlert(message, type) {
+        alert.textContent = message;
+        alert.className = `alert alert-${type}`;
+        alert.style.display = 'block';
+
+        // 3秒后自动隐藏
+        setTimeout(() => {
+            if (type === 'error') {
+                alert.style.display = 'none';
+            }
+        }, 3000);
+    }
+</script>
+{% endblock %}
