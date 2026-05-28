@@ -101,26 +101,31 @@ class OllamaChatEmbedded {
 - FFSP额外参数：num_stage（加工阶段数，2-6），num_machine（每阶段机器数，2-8），num_job（工件数，10-50），min_time（最小加工时间，1-5），max_time（最大加工时间，5-20），flatten_stages（true/false）
 - SymNCO额外参数：num_augment（对称增强数量，1-10，推荐8），num_starts（多起点数量，0-50，默认0），symnco_alpha（不变性损失权重，默认0.2），symnco_beta（解对称损失权重，默认1.0）
 
-## 输出格式要求
-当你分析出用户的问题类型并确定了配置后，请在回答末尾输出一个 JSON 配置块，格式如下：
+## 输出格式要求（严格遵守）
+当你分析出用户的问题类型并确定了配置后，**必须**在回答末尾输出一个 JSON 配置块。
 
-\`\`\`rl4co_config
+格式规则：
+1. 使用三个反引号（\`\`\`）开头和结尾，语言标签为 json
+2. JSON 内所有 key 和字符串 value 必须用英文双引号包裹
+3. 数字不加引号，小数必须写完整（如 0.0001，不能写 .0001）
+
+示例（严格按此格式）：
+\`\`\`json
 {
-  "problem": "问题类型",
-  "model": "模型名",
-  "algorithm": "算法名",
+  "problem": "tsp",
+  "model": "symnco",
+  "algorithm": "reinforce",
   "num_loc": 50,
-  "epochs": 10,
+  "epochs": 15,
   "batch_size": 512,
   "learning_rate": 0.0001
 }
 \`\`\`
 
-JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，把特殊参数也加入 JSON。
-
 ## 注意事项
 - 先用自然语言解释你的分析过程和推荐理由
 - JSON 配置块放在回答的最后
+- JSON 代码块必须格式正确，不能有缺引号、缺冒号等语法错误
 - 如果用户的描述不够清晰，先询问关键信息再给出配置
 - 如果用户只是闲聊或问知识性问题，正常回答即可，不需要输出 JSON
 - 回复请使用中文`;
@@ -433,31 +438,85 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
     }
 
     _extractConfigFromText(text) {
-        // 匹配所有代码块: ```lang\n...\n``` 或 ```\n...\n```
-        const codeBlockRegex = /```(\w*)\s*\n([\s\S]*?)```/g;
+        // 支持 2~3 个反引号、任意语言标签（json / rl4co_config / rl4_config 等）
+        const codeBlockRegex = /`{2,3}(\w*)\s*\n([\s\S]*?)`{2,3}/g;
         let match;
         while ((match = codeBlockRegex.exec(text)) !== null) {
-            try {
-                const config = JSON.parse(match[2].trim());
-                if (config.problem && (config.model || config.algorithm)) {
-                    return config;
-                }
-            } catch (e) { /* 不是有效的配置 JSON，继续尝试下一个代码块 */ }
+            const config = this._parseJsonLoose(match[2].trim());
+            if (config && config.problem && (config.model || config.algorithm)) {
+                return config;
+            }
         }
 
         // 兜底：尝试匹配裸 JSON 对象（没有代码块包裹）
-        const jsonRegex = /\{[\s\S]*?"problem"\s*:\s*"[^"]+?"[\s\S]*?\}/g;
+        const jsonRegex = /\{[^{}]*(?:"problem"|problem)[^{}]*\}/g;
         let jsonMatch;
         while ((jsonMatch = jsonRegex.exec(text)) !== null) {
-            try {
-                const config = JSON.parse(jsonMatch[0]);
-                if (config.problem && (config.model || config.algorithm)) {
-                    return config;
-                }
-            } catch (e) { /* 继续 */ }
+            const config = this._parseJsonLoose(jsonMatch[0]);
+            if (config && config.problem && (config.model || config.algorithm)) {
+                return config;
+            }
         }
 
         return null;
+    }
+
+    /**
+     * 宽容 JSON 解析：先尝试标准解析，失败时做常见 LLM 格式修复再试
+     */
+    _parseJsonLoose(raw) {
+        // 1. 标准解析
+        try { return JSON.parse(raw); } catch (_) {}
+
+        // 2. 修复常见 LLM 格式问题后再试
+        let s = raw;
+
+        // 修复 key 缺少开头引号：  num_loc": 50  →  "num_loc": 50
+        s = s.replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*"?\s*:)/g, '$1"$2"$3');
+
+        // 修复 value 缺少开头引号：  "key":word"  →  "key":"word"
+        s = s.replace(/:\s*([a-zA-Z_]\w*)"(\s*[,}])/g, ': "$1"$2');
+
+        // 修复缺少冒号：  "key" "value"  →  "key": "value"
+        s = s.replace(/"(\s+)"/g, '": "');
+
+        // 修复小数缺少前导零：  .0001  →  0.0001
+        s = s.replace(/:\s*\.(\d)/g, ': 0.$1');
+
+        // 修复末尾缺少闭合引号：  "key": "val\n  →  "key": "val"
+        s = s.replace(/"([^"\n]+)(\n\s*["}])/g, '"$1"$2');
+
+        // 修复重复冒号：  ": :  →  :
+        s = s.replace(/:\s*:/g, ':');
+
+        try { return JSON.parse(s); } catch (_) {}
+
+        // 3. 最后兜底：正则逐字段提取，容忍结构性残缺
+        return this._extractKeyValues(raw);
+    }
+
+    /**
+     * 从残缺 JSON 文本里逐字段抽取 key-value
+     */
+    _extractKeyValues(text) {
+        const VALID_KEYS = new Set([
+            'problem', 'model', 'algorithm', 'num_loc', 'epochs',
+            'batch_size', 'learning_rate', 'vehicle_capacity', 'num_agents',
+            'cost_type', 'time_window_width', 'service_time', 'max_processing_time',
+            'hard_time_windows', 'max_length', 'prize_type', 'penalty_factor',
+            'prize_required', 'num_stage', 'num_machine', 'num_job',
+        ]);
+        const config = {};
+        // 匹配 "key": "value"  或  "key": number
+        const re = /"?(\w+)"?\s*[":]\s*"?([^",\n}]+)"?/g;
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            const key = m[1].trim();
+            if (!VALID_KEYS.has(key)) continue;
+            const rawVal = m[2].trim().replace(/^["']|["']$/g, '');
+            config[key] = isNaN(rawVal) ? rawVal : Number(rawVal);
+        }
+        return Object.keys(config).length > 0 ? config : null;
     }
 
     /**
@@ -747,14 +806,12 @@ JSON 中只包含需要设置的字段。对于有特殊参数的问题类型，
         // 剥离 <think>...</think> 推理块（deepseek-r1 等推理模型的内部思考过程，不展示给用户）
         let processed = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-        // 移除包含训练配置的代码块（配置会通过专用按钮呈现）
-        let cleaned = processed.replace(/```(\w*)\s*\n([\s\S]*?)```/g, (match, lang, code) => {
-            try {
-                const parsed = JSON.parse(code.trim());
-                if (parsed.problem && (parsed.model || parsed.algorithm)) {
-                    return '';
-                }
-            } catch (e) { /* 不是配置 JSON，保留原样 */ }
+        // 移除包含训练配置的代码块（配置会通过专用按钮呈现），支持 2~3 个反引号
+        let cleaned = processed.replace(/`{2,3}(\w*)\s*\n([\s\S]*?)`{2,3}/g, (match, lang, code) => {
+            const parsed = this._parseJsonLoose(code.trim());
+            if (parsed && parsed.problem && (parsed.model || parsed.algorithm)) {
+                return '';
+            }
             return match;
         }).trim();
 
