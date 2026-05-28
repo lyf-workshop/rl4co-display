@@ -1,12 +1,8 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>RL4CO - 强化学习优化平台 | 山西大学</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 统一导航样式 -->
-<link rel="stylesheet" href="/static/css/navigation.css">
-    <!-- Ollama智能助手样式 - 增强版嵌入式 -->
+{% extends "base.html" %}
+
+{% block title %}RL4CO - 强化学习优化平台 | 山西大学{% endblock %}
+
+{% block head %}
 <link rel="stylesheet" href="/static/css/ollama-chat-embedded-enhanced.css">
     <style>
         * {
@@ -492,24 +488,9 @@
             }
         }
     </style>
-</head>-->
-<body>
-        <!-- 统一导航栏 -->
-    <header class="header">
-        <nav class="nav">
-            <div class="logo-section">
-                <div class="university-badge">🎓 山西大学 · RL4CO</div>
-            </div>
-            <div class="nav-links">
-                <a href="/" {% if active_page == 'home' %}class="active"{% endif %}>🏠 训练首页</a>
-                <a href="/benchmark" {% if active_page == 'benchmark' %}class="active"{% endif %}>📊 算法对比</a>
-                <a href="/model_info" {% if active_page == 'model_info' %}class="active"{% endif %}>📚 模型知识库</a>
-                <a href="/file_manager" {% if active_page == 'file_manager' %}class="active"{% endif %}>🗂️ 文件管理</a>
-                <a href="/profile" {% if active_page == 'profile' %}class="active"{% endif %}>👤 我的账户</a>
-            </div>
-        </nav>
-    </header>
+{% endblock %}
 
+{% block content %}
     <div class="main-container-with-chat">
         <!-- 左侧：主内容区域 -->
         <div class="main-content-area">
@@ -1363,7 +1344,9 @@
             <p>RL4CO - Reinforcement Learning for Combinatorial Optimization Platform</p>
             <p style="margin-top: 1rem; color: #999;">© 2025 Shanxi University. All Rights Reserved.</p>
     </footer>
+{% endblock %}
 
+{% block scripts %}
     <script>
         // 平滑滚动效果
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -3222,10 +3205,6 @@
             }
         }
     </script>
-    
-<!-- 统一导航逻辑 -->
-<script src="/static/js/navigation.js"></script>
-<!-- Ollama智能助手脚本 - 嵌入式版本 -->
+
 <script src="/static/js/ollama-chat-embedded.js"></script>
-</body>
-</html>
+{% endblock %}
