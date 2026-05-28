@@ -1,0 +1,23 @@
+/* RL4CO Display — 全局基础样式 */
+
+:root {
+    --color-primary: #667eea;
+    --color-secondary: #764ba2;
+    --gradient-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --font-main: "Microsoft YaHei", "Segoe UI", sans-serif;
+    --radius-card: 20px;
+    --shadow-card: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-main);
+    background: var(--gradient-bg);
+    color: #333;
+    min-height: 100vh;
+}
