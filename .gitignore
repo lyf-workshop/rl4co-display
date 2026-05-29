@@ -189,6 +189,9 @@ data/datasets/
 
 # ========== 项目特定配置 ==========
 
+# 测试生成物
+tests/validation_results_*
+
 # 训练输出文件（旧配置，保留兼容）
 static/model_plots/*.png
 static/model_plots/*.gif

@@ -30,7 +30,7 @@ def register_page():
 
 
 @auth_bp.route('/res')
-def Index_res():
+def res_redirect():
     """旧版注册页面 - 重定向到新页面"""
     return redirect(url_for('auth.register_page'))
 
