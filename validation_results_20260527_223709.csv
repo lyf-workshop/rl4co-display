@@ -1,0 +1,4 @@
+problem,policy,algorithm,status,duration_s,error
+tsp,attention,a2c,PASS,1.87,
+tsp,attention,ppo,PASS,4.57,
+tsp,attention,reinforce,PASS,0.73,

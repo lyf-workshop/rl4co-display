@@ -1,0 +1,466 @@
+[
+  {
+    "problem": "atsp",
+    "policy": "matnet",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.4
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.64
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 7.17
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.96
+  },
+  {
+    "problem": "cvrp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.57
+  },
+  {
+    "problem": "cvrp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 7.61
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.12
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 13.01
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.5
+  },
+  {
+    "problem": "cvrp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.76
+  },
+  {
+    "problem": "ffsp",
+    "policy": "matnet",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "AssertionError: num_starts must be > 1 during training\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 488, in run_one\n    trainer.fit(model)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\utils\\trainer.py\", line 146, in fit\n    super().fit(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 584, in fit\n    call._call_and_handle_interrupt(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 49, in _call_and_handle_interrupt\n    return trainer_fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 630, in _fit_impl\n    self._run(model, ckpt_path=ckpt_path, weights_only=weights_only)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1079, in _run\n    results = self._run_stage()\n              ^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1123, in _run_stage\n    self.fit_loop.run()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\fit_loop.py\", line 217, in run\n    self.advance()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\fit_loop.py\", line 465, in advance\n    self.epoch_loop.run(self._data_fetcher)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\training_epoch_loop.py\", line 153, in run\n    self.advance(data_fetcher)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\training_epoch_loop.py\", line 352, in advance\n    batch_output = self.automatic_optimization.run(trainer.optimizers[0], batch_idx, kwargs)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 192, in run\n    self._optimizer_step(batch_idx, closure)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 270, in _optimizer_step\n    call._call_lightning_module_hook(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 177, in _call_lightning_module_hook\n    output = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\core\\module.py\", line 1368, in optimizer_step\n    optimizer.step(closure=optimizer_closure)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\core\\optimizer.py\", line 154, in step\n    step_output = self._strategy.optimizer_step(self._optimizer, closure, **kwargs)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\strategies\\strategy.py\", line 239, in optimizer_step\n    return self.precision_plugin.optimizer_step(optimizer, model=model, closure=closure, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\plugins\\precision\\amp.py\", line 76, in optimizer_step\n    return super().optimizer_step(optimizer, model=model, closure=closure, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\plugins\\precision\\precision.py\", line 123, in optimizer_step\n    return optimizer.step(closure=closure, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\optim\\optimizer.py\", line 533, in wrapper\n    out = func(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\optim\\optimizer.py\", line 81, in _use_grad\n    ret = func(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\optim\\adam.py\", line 227, in step\n    loss = closure()\n           ^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\plugins\\precision\\precision.py\", line 109, in _wrap_closure\n    closure_result = closure()\n                     ^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 146, in __call__\n    self._result = self.closure(*args, **kwargs)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\utils\\_contextlib.py\", line 124, in decorate_context\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 131, in closure\n    step_output = self._step_fn()\n                  ^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 319, in _training_step\n    training_step_output = call._call_strategy_hook(trainer, \"training_step\", *kwargs.values())\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 329, in _call_strategy_hook\n    output = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\strategies\\strategy.py\", line 391, in training_step\n    return self.lightning_module.training_step(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\common\\base.py\", line 258, in training_step\n    return self.shared_step(batch, batch_idx, phase=\"train\")\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\pomo\\model.py\", line 110, in shared_step\n    assert n_start > 1, \"num_starts must be > 1 during training\"\n           ^^^^^^^^^^^\nAssertionError: num_starts must be > 1 during training\n",
+    "duration_s": 0.34
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.76
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 6.93
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.16
+  },
+  {
+    "problem": "mtsp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.4
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.02
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 11.37
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.23
+  },
+  {
+    "problem": "mtsp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.34
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.23
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 6.17
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.07
+  },
+  {
+    "problem": "op",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.73
+  },
+  {
+    "problem": "op",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.15
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.41
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 7.16
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.27
+  },
+  {
+    "problem": "pctsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 5.42
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.22
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 6.94
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.09
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.3
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 12.91
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.19
+  },
+  {
+    "problem": "pdp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.24
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.85
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 10.38
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.87
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.76
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.41
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 7.45
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.27
+  },
+  {
+    "problem": "spctsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 5.22
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.13
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 6.13
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.06
+  },
+  {
+    "problem": "tsp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.28
+  },
+  {
+    "problem": "tsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.31
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.93
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 10.47
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.93
+  },
+  {
+    "problem": "tsp",
+    "policy": "ptrnet",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.92
+  },
+  {
+    "problem": "tsp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.14
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.09
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 11.62
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.65
+  },
+  {
+    "problem": "vrptw",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "ValueError: Unknown environment name 'cvrptw'. Available init embeddings: dict_keys(['tsp', 'atsp', 'cvrp', 'cvrpmvc', 'sdvrp', 'pctsp', 'spctsp', 'op', 'dpp', 'mdpp', 'pdp', 'mtsp', 'smtwtp', 'shpp'])\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 469, in run_one\n    policy_obj = make_policy(policy, env, config)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 300, in make_policy\n    return wrapper.create_policy(env)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\modules\\policies\\deepaco_policy.py\", line 68, in create_policy\n    policy = DeepACOPolicy(\n             ^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\deepaco\\policy.py\", line 55, in __init__\n    encoder = NARGNNEncoder(env_name=env_name, **encoder_kwargs)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\nargnn\\encoder.py\", line 152, in __init__\n    env_edge_embedding(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\nn\\env_embeddings\\edge.py\", line 46, in env_edge_embedding\n    raise ValueError(\nValueError: Unknown environment name 'cvrptw'. Available init embeddings: dict_keys(['tsp', 'atsp', 'cvrp', 'cvrpmvc', 'sdvrp', 'pctsp', 'spctsp', 'op', 'dpp', 'mdpp', 'pdp', 'mtsp', 'smtwtp', 'shpp'])\n",
+    "duration_s": 0.02
+  },
+  {
+    "problem": "vrptw",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 9.48
+  }
+]

@@ -1,0 +1,66 @@
+problem,policy,algorithm,status,duration_s,error
+atsp,matnet,a2c,FAIL,1.71,"TypeError: linear(): argument 'input' (position 1) must be Tensor, not tuple"
+atsp,matnet,ppo,FAIL,0.32,"TypeError: linear(): argument 'input' (position 1) must be Tensor, not tuple"
+atsp,matnet,reinforce,PASS,1.94,
+cvrp,attention,a2c,PASS,1.65,
+cvrp,attention,ppo,PASS,8.65,
+cvrp,attention,reinforce,PASS,1.72,
+cvrp,deepaco,reinforce,PASS,4.33,
+cvrp,mdam,reinforce,PASS,7.58,
+cvrp,pomo,a2c,PASS,2.84,
+cvrp,pomo,ppo,PASS,16.32,
+cvrp,pomo,reinforce,PASS,2.5,
+cvrp,ptrnet,reinforce,FAIL,0.01,AssertionError: Only the Euclidean TSP env is implemented
+cvrp,symnco,reinforce,PASS,2.5,
+ffsp,matnet,a2c,FAIL,0.01,TypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'
+ffsp,matnet,ppo,FAIL,0.01,TypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'
+ffsp,matnet,reinforce,FAIL,0.01,TypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'
+mtsp,attention,a2c,PASS,1.58,
+mtsp,attention,ppo,PASS,7.98,
+mtsp,attention,reinforce,PASS,1.92,
+mtsp,deepaco,reinforce,PASS,3.12,
+mtsp,mdam,reinforce,FAIL,0.33,"KeyError: 'key ""reward"" not found in TensorDict with keys [\'action_mask\', \'agent_idx\', \'current_length\', \'current_node\', \'done\', \'first_node\', \'i\', \'locs\', \'max_subtour_length\', \'nu"
+mtsp,pomo,a2c,PASS,2.84,
+mtsp,pomo,ppo,PASS,12.31,
+mtsp,pomo,reinforce,PASS,1.88,
+mtsp,symnco,reinforce,PASS,1.53,
+op,attention,a2c,PASS,1.84,
+op,attention,ppo,PASS,6.07,
+op,attention,reinforce,PASS,1.68,
+op,deepaco,reinforce,PASS,3.6,
+op,mdam,reinforce,PASS,4.27,
+pctsp,attention,a2c,PASS,1.5,
+pctsp,attention,ppo,PASS,8.18,
+pctsp,attention,reinforce,PASS,1.34,
+pctsp,mdam,reinforce,PASS,5.69,
+pdp,attention,a2c,PASS,1.36,
+pdp,attention,ppo,PASS,6.87,
+pdp,attention,reinforce,PASS,1.14,
+pdp,ham,a2c,PASS,3.18,
+pdp,ham,ppo,PASS,14.34,
+pdp,ham,reinforce,PASS,1.87,
+pdp,mdam,reinforce,PASS,4.75,
+sdvrp,attention,a2c,PASS,2.62,
+sdvrp,attention,ppo,PASS,5.43,
+sdvrp,attention,reinforce,PASS,1.12,
+sdvrp,deepaco,reinforce,PASS,1.54,
+sdvrp,mdam,reinforce,FAIL,0.48,RuntimeError: The size of tensor a (16) must match the size of tensor b (64) at non-singleton dimension 4
+spctsp,attention,a2c,PASS,0.62,
+spctsp,attention,ppo,PASS,3.3,
+spctsp,attention,reinforce,PASS,0.61,
+spctsp,mdam,reinforce,PASS,2.9,
+tsp,attention,a2c,PASS,1.01,
+tsp,attention,ppo,PASS,2.57,
+tsp,attention,reinforce,PASS,0.47,
+tsp,deepaco,reinforce,PASS,1.31,
+tsp,mdam,reinforce,PASS,1.63,
+tsp,pomo,a2c,PASS,1.15,
+tsp,pomo,ppo,PASS,6.5,
+tsp,pomo,reinforce,PASS,1.36,
+tsp,ptrnet,reinforce,PASS,1.77,
+tsp,symnco,reinforce,PASS,1.31,
+vrptw,attention,a2c,FAIL,0.01,TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'
+vrptw,attention,ppo,FAIL,0.0,TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'
+vrptw,attention,reinforce,FAIL,0.0,TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'
+vrptw,deepaco,reinforce,FAIL,0.0,TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'
+vrptw,mdam,reinforce,FAIL,0.0,TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'

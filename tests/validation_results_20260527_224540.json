@@ -1,0 +1,522 @@
+[
+  {
+    "problem": "atsp",
+    "policy": "matnet",
+    "algorithm": "a2c",
+    "status": "FAIL",
+    "error": "TypeError: linear(): argument 'input' (position 1) must be Tensor, not tuple\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 452, in run_one\n    trainer.fit(model)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\utils\\trainer.py\", line 146, in fit\n    super().fit(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 584, in fit\n    call._call_and_handle_interrupt(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 49, in _call_and_handle_interrupt\n    return trainer_fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 630, in _fit_impl\n    self._run(model, ckpt_path=ckpt_path, weights_only=weights_only)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1079, in _run\n    results = self._run_stage()\n              ^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1123, in _run_stage\n    self.fit_loop.run()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\fit_loop.py\", line 217, in run\n    self.advance()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\fit_loop.py\", line 465, in advance\n    self.epoch_loop.run(self._data_fetcher)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\training_epoch_loop.py\", line 153, in run\n    self.advance(data_fetcher)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\training_epoch_loop.py\", line 352, in advance\n    batch_output = self.automatic_optimization.run(trainer.optimizers[0], batch_idx, kwargs)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 192, in run\n    self._optimizer_step(batch_idx, closure)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 270, in _optimizer_step\n    call._call_lightning_module_hook(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 177, in _call_lightning_module_hook\n    output = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\core\\module.py\", line 1368, in optimizer_step\n    optimizer.step(closure=optimizer_closure)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\core\\optimizer.py\", line 154, in step\n    step_output = self._strategy.optimizer_step(self._optimizer, closure, **kwargs)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\strategies\\strategy.py\", line 239, in optimizer_step\n    return self.precision_plugin.optimizer_step(optimizer, model=model, closure=closure, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\plugins\\precision\\amp.py\", line 76, in optimizer_step\n    return super().optimizer_step(optimizer, model=model, closure=closure, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\plugins\\precision\\precision.py\", line 123, in optimizer_step\n    return optimizer.step(closure=closure, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\optim\\optimizer.py\", line 533, in wrapper\n    out = func(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\optim\\optimizer.py\", line 81, in _use_grad\n    ret = func(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\optim\\adam.py\", line 227, in step\n    loss = closure()\n           ^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\plugins\\precision\\precision.py\", line 109, in _wrap_closure\n    closure_result = closure()\n                     ^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 146, in __call__\n    self._result = self.closure(*args, **kwargs)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\utils\\_contextlib.py\", line 124, in decorate_context\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 131, in closure\n    step_output = self._step_fn()\n                  ^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\automatic.py\", line 319, in _training_step\n    training_step_output = call._call_strategy_hook(trainer, \"training_step\", *kwargs.values())\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 329, in _call_strategy_hook\n    output = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\strategies\\strategy.py\", line 391, in training_step\n    return self.lightning_module.training_step(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\common\\base.py\", line 258, in training_step\n    return self.shared_step(batch, batch_idx, phase=\"train\")\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\reinforce.py\", line 68, in shared_step\n    out = self.calculate_loss(td, batch, out)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\reinforce.py\", line 99, in calculate_loss\n    self.baseline.eval(td, reward, self.env) if extra is None else (extra, 0)\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\baselines.py\", line 157, in eval\n    v = self.critic(x).squeeze(-1)\n        ^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\common\\critic.py\", line 59, in forward\n    return self.value_head(h).mean(1)  # [batch_size, N] -> [batch_size]\n           ^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\container.py\", line 253, in forward\n    input = module(input)\n            ^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: linear(): argument 'input' (position 1) must be Tensor, not tuple\n",
+    "duration_s": 1.71
+  },
+  {
+    "problem": "atsp",
+    "policy": "matnet",
+    "algorithm": "ppo",
+    "status": "FAIL",
+    "error": "TypeError: linear(): argument 'input' (position 1) must be Tensor, not tuple\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 452, in run_one\n    trainer.fit(model)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\utils\\trainer.py\", line 146, in fit\n    super().fit(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 584, in fit\n    call._call_and_handle_interrupt(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 49, in _call_and_handle_interrupt\n    return trainer_fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 630, in _fit_impl\n    self._run(model, ckpt_path=ckpt_path, weights_only=weights_only)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1079, in _run\n    results = self._run_stage()\n              ^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1123, in _run_stage\n    self.fit_loop.run()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\fit_loop.py\", line 217, in run\n    self.advance()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\fit_loop.py\", line 465, in advance\n    self.epoch_loop.run(self._data_fetcher)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\training_epoch_loop.py\", line 153, in run\n    self.advance(data_fetcher)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\training_epoch_loop.py\", line 354, in advance\n    batch_output = self.manual_optimization.run(kwargs)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\manual.py\", line 95, in run\n    self.advance(kwargs)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\loops\\optimization\\manual.py\", line 115, in advance\n    training_step_output = call._call_strategy_hook(trainer, \"training_step\", *kwargs.values())\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 329, in _call_strategy_hook\n    output = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\strategies\\strategy.py\", line 391, in training_step\n    return self.lightning_module.training_step(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\common\\base.py\", line 258, in training_step\n    return self.shared_step(batch, batch_idx, phase=\"train\")\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\ppo\\ppo.py\", line 183, in shared_step\n    value_pred = self.critic(sub_td)  # [batch, 1]\n                 ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\common\\critic.py\", line 59, in forward\n    return self.value_head(h).mean(1)  # [batch_size, N] -> [batch_size]\n           ^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\container.py\", line 253, in forward\n    input = module(input)\n            ^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: linear(): argument 'input' (position 1) must be Tensor, not tuple\n",
+    "duration_s": 0.32
+  },
+  {
+    "problem": "atsp",
+    "policy": "matnet",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.94
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.65
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 8.65
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.72
+  },
+  {
+    "problem": "cvrp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.33
+  },
+  {
+    "problem": "cvrp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 7.58
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.84
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 16.32
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.5
+  },
+  {
+    "problem": "cvrp",
+    "policy": "ptrnet",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "AssertionError: Only the Euclidean TSP env is implemented\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 433, in run_one\n    policy_obj = make_policy(policy, env, config)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 277, in make_policy\n    return wrapper.create_policy(env)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\modules\\policies\\ptrnet_policy.py\", line 64, in create_policy\n    policy = PointerNetworkPolicy(\n             ^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\ptrnet\\policy.py\", line 27, in __init__\n    assert env_name == \"tsp\", \"Only the Euclidean TSP env is implemented\"\n           ^^^^^^^^^^^^^^^^^\nAssertionError: Only the Euclidean TSP env is implemented\n",
+    "duration_s": 0.01
+  },
+  {
+    "problem": "cvrp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.5
+  },
+  {
+    "problem": "ffsp",
+    "policy": "matnet",
+    "algorithm": "a2c",
+    "status": "FAIL",
+    "error": "TypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 433, in run_one\n    policy_obj = make_policy(policy, env, config)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 277, in make_policy\n    return wrapper.create_policy(env)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\modules\\policies\\matnet_policy.py\", line 73, in create_policy\n    policy = MatNetPolicy(\n             ^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\matnet\\policy.py\", line 56, in __init__\n    decoder = MatNetFFSPDecoder(\n              ^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\matnet\\decoder.py\", line 64, in __init__\n    super().__init__(\nTypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'\n",
+    "duration_s": 0.01
+  },
+  {
+    "problem": "ffsp",
+    "policy": "matnet",
+    "algorithm": "ppo",
+    "status": "FAIL",
+    "error": "TypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 433, in run_one\n    policy_obj = make_policy(policy, env, config)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 277, in make_policy\n    return wrapper.create_policy(env)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\modules\\policies\\matnet_policy.py\", line 73, in create_policy\n    policy = MatNetPolicy(\n             ^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\matnet\\policy.py\", line 56, in __init__\n    decoder = MatNetFFSPDecoder(\n              ^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\matnet\\decoder.py\", line 64, in __init__\n    super().__init__(\nTypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'\n",
+    "duration_s": 0.01
+  },
+  {
+    "problem": "ffsp",
+    "policy": "matnet",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "TypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 433, in run_one\n    policy_obj = make_policy(policy, env, config)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 277, in make_policy\n    return wrapper.create_policy(env)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\modules\\policies\\matnet_policy.py\", line 73, in create_policy\n    policy = MatNetPolicy(\n             ^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\matnet\\policy.py\", line 56, in __init__\n    decoder = MatNetFFSPDecoder(\n              ^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\matnet\\decoder.py\", line 64, in __init__\n    super().__init__(\nTypeError: AttentionModelDecoder.__init__() got an unexpected keyword argument 'out_bias'\n",
+    "duration_s": 0.01
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.58
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 7.98
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.92
+  },
+  {
+    "problem": "mtsp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.12
+  },
+  {
+    "problem": "mtsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "KeyError: 'key \"reward\" not found in TensorDict with keys [\\'action_mask\\', \\'agent_idx\\', \\'current_length\\', \\'current_node\\', \\'done\\', \\'first_node\\', \\'i\\', \\'locs\\', \\'max_subtour_length\\', \\'num_agents\\', \\'terminated\\']'\nTraceback (most recent call last):\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\tensordict\\_td.py\", line 2773, in _get_str\n    return self._tensordict[key]\n           ~~~~~~~~~~~~~~~~^^^^^\nKeyError: 'reward'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 452, in run_one\n    trainer.fit(model)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\utils\\trainer.py\", line 146, in fit\n    super().fit(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 584, in fit\n    call._call_and_handle_interrupt(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 49, in _call_and_handle_interrupt\n    return trainer_fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 630, in _fit_impl\n    self._run(model, ckpt_path=ckpt_path, weights_only=weights_only)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1039, in _run\n    call._call_setup_hook(self)  # allow user to set up LightningModule in accelerator environment\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 110, in _call_setup_hook\n    _call_lightning_module_hook(trainer, \"setup\", stage=fn)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 177, in _call_lightning_module_hook\n    output = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\common\\base.py\", line 155, in setup\n    self.post_setup_hook()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\reinforce.py\", line 119, in post_setup_hook\n    self.baseline.setup(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\baselines.py\", line 117, in setup\n    self.baseline.setup(*args, **kw)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\baselines.py\", line 174, in setup\n    self._update_policy(*args, **kw)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\baselines.py\", line 187, in _update_policy\n    self.rollout(self.policy, env, batch_size, device, self.dataset).cpu().numpy()\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\model.py\", line 35, in rollout\n    rewards = torch.cat([eval_model(batch) for batch in dl], 0)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\model.py\", line 35, in <listcomp>\n    rewards = torch.cat([eval_model(batch) for batch in dl], 0)\n                         ^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\model.py\", line 31, in eval_model\n    return model(batch, env, decode_type=\"greedy\")[\"reward\"].max(1).values\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\policy.py\", line 79, in forward\n    reward, log_likelihood, kl_divergence, actions = self.decoder(\n                                                     ^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\decoder.py\", line 203, in forward\n    reward = env.get_reward(td, actions)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\envs\\common\\base.py\", line 192, in get_reward\n    return self._get_reward(td, actions)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\envs\\routing\\mtsp\\env.py\", line 223, in _get_reward\n    return td[\"reward\"].squeeze(-1)\n           ~~^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\tensordict\\base.py\", line 615, in __getitem__\n    return self._get_tuple_maybe_non_tensor(idx_unravel, NO_DEFAULT)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\tensordict\\base.py\", line 7804, in _get_tuple_maybe_non_tensor\n    result = self._get_tuple(key, default, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\tensordict\\_td.py\", line 2778, in _get_tuple\n    first = self._get_str(key[0], default, **kwargs)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\tensordict\\_td.py\", line 2775, in _get_str\n    return self._default_get(key, default)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\tensordict\\base.py\", line 7741, in _default_get\n    raise KeyError(\nKeyError: 'key \"reward\" not found in TensorDict with keys [\\'action_mask\\', \\'agent_idx\\', \\'current_length\\', \\'current_node\\', \\'done\\', \\'first_node\\', \\'i\\', \\'locs\\', \\'max_subtour_length\\', \\'num_agents\\', \\'terminated\\']'\n",
+    "duration_s": 0.33
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.84
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 12.31
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.88
+  },
+  {
+    "problem": "mtsp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.53
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.84
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 6.07
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.68
+  },
+  {
+    "problem": "op",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.6
+  },
+  {
+    "problem": "op",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.27
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.5
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 8.18
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.34
+  },
+  {
+    "problem": "pctsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 5.69
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.36
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 6.87
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.14
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.18
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 14.34
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.87
+  },
+  {
+    "problem": "pdp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.75
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.62
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 5.43
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.12
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.54
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "RuntimeError: The size of tensor a (16) must match the size of tensor b (64) at non-singleton dimension 4\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 452, in run_one\n    trainer.fit(model)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\utils\\trainer.py\", line 146, in fit\n    super().fit(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 584, in fit\n    call._call_and_handle_interrupt(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 49, in _call_and_handle_interrupt\n    return trainer_fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 630, in _fit_impl\n    self._run(model, ckpt_path=ckpt_path, weights_only=weights_only)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\trainer.py\", line 1039, in _run\n    call._call_setup_hook(self)  # allow user to set up LightningModule in accelerator environment\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 110, in _call_setup_hook\n    _call_lightning_module_hook(trainer, \"setup\", stage=fn)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\lightning\\pytorch\\trainer\\call.py\", line 177, in _call_lightning_module_hook\n    output = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\common\\base.py\", line 155, in setup\n    self.post_setup_hook()\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\reinforce.py\", line 119, in post_setup_hook\n    self.baseline.setup(\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\baselines.py\", line 117, in setup\n    self.baseline.setup(*args, **kw)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\baselines.py\", line 174, in setup\n    self._update_policy(*args, **kw)\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\rl\\reinforce\\baselines.py\", line 187, in _update_policy\n    self.rollout(self.policy, env, batch_size, device, self.dataset).cpu().numpy()\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\model.py\", line 35, in rollout\n    rewards = torch.cat([eval_model(batch) for batch in dl], 0)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\model.py\", line 35, in <listcomp>\n    rewards = torch.cat([eval_model(batch) for batch in dl], 0)\n                         ^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\model.py\", line 31, in eval_model\n    return model(batch, env, decode_type=\"greedy\")[\"reward\"].max(1).values\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\policy.py\", line 79, in forward\n    reward, log_likelihood, kl_divergence, actions = self.decoder(\n                                                     ^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torch\\nn\\modules\\module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\decoder.py\", line 124, in forward\n    logprobs, _ = self._get_logprobs(fixed, td_list[i], i)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\models\\zoo\\mdam\\decoder.py\", line 271, in _get_logprobs\n    glimpse_k = fixed.glimpse_key + glimpse_key_dynamic\n                ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~\nRuntimeError: The size of tensor a (16) must match the size of tensor b (64) at non-singleton dimension 4\n",
+    "duration_s": 0.48
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.62
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.3
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.61
+  },
+  {
+    "problem": "spctsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.9
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.01
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.57
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.47
+  },
+  {
+    "problem": "tsp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.31
+  },
+  {
+    "problem": "tsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.63
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.15
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 6.5
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.36
+  },
+  {
+    "problem": "tsp",
+    "policy": "ptrnet",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.77
+  },
+  {
+    "problem": "tsp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.31
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "FAIL",
+    "error": "TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 227, in create_env\n    from rl4co.envs import VRPTWEnv\nImportError: cannot import name 'VRPTWEnv' from 'rl4co.envs' (D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\envs\\__init__.py)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 430, in run_one\n    env = create_env(problem)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 232, in create_env\n    return CVRPEnvWithTimeWindows(\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torchrl\\envs\\common.py\", line 263, in __call__\n    instance: EnvBase = super().__call__(*args, **kwargs)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\n",
+    "duration_s": 0.01
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "FAIL",
+    "error": "TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 227, in create_env\n    from rl4co.envs import VRPTWEnv\nImportError: cannot import name 'VRPTWEnv' from 'rl4co.envs' (D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\envs\\__init__.py)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 430, in run_one\n    env = create_env(problem)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 232, in create_env\n    return CVRPEnvWithTimeWindows(\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torchrl\\envs\\common.py\", line 263, in __call__\n    instance: EnvBase = super().__call__(*args, **kwargs)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\n",
+    "duration_s": 0.0
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 227, in create_env\n    from rl4co.envs import VRPTWEnv\nImportError: cannot import name 'VRPTWEnv' from 'rl4co.envs' (D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\envs\\__init__.py)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 430, in run_one\n    env = create_env(problem)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 232, in create_env\n    return CVRPEnvWithTimeWindows(\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torchrl\\envs\\common.py\", line 263, in __call__\n    instance: EnvBase = super().__call__(*args, **kwargs)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\n",
+    "duration_s": 0.0
+  },
+  {
+    "problem": "vrptw",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 227, in create_env\n    from rl4co.envs import VRPTWEnv\nImportError: cannot import name 'VRPTWEnv' from 'rl4co.envs' (D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\envs\\__init__.py)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 430, in run_one\n    env = create_env(problem)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 232, in create_env\n    return CVRPEnvWithTimeWindows(\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torchrl\\envs\\common.py\", line 263, in __call__\n    instance: EnvBase = super().__call__(*args, **kwargs)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\n",
+    "duration_s": 0.0
+  },
+  {
+    "problem": "vrptw",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "FAIL",
+    "error": "TypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 227, in create_env\n    from rl4co.envs import VRPTWEnv\nImportError: cannot import name 'VRPTWEnv' from 'rl4co.envs' (D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\rl4co\\envs\\__init__.py)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 430, in run_one\n    env = create_env(problem)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Users\\Administrator\\Documents\\GitHub\\rl4co-display\\validate_combinations.py\", line 232, in create_env\n    return CVRPEnvWithTimeWindows(\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\DevTools\\Miniconda\\envs\\rl4co-display\\Lib\\site-packages\\torchrl\\envs\\common.py\", line 263, in __call__\n    instance: EnvBase = super().__call__(*args, **kwargs)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: CVRPEnvWithTimeWindows.__init__() missing 1 required positional argument: 'time_window_params'\n",
+    "duration_s": 0.0
+  }
+]

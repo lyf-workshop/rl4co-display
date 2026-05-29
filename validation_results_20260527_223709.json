@@ -1,0 +1,26 @@
+[
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.87
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.57
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.73
+  }
+]

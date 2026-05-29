@@ -1,0 +1,458 @@
+[
+  {
+    "problem": "atsp",
+    "policy": "matnet",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.32
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.85
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.25
+  },
+  {
+    "problem": "cvrp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.88
+  },
+  {
+    "problem": "cvrp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.46
+  },
+  {
+    "problem": "cvrp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.66
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.2
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.72
+  },
+  {
+    "problem": "cvrp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.02
+  },
+  {
+    "problem": "cvrp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.69
+  },
+  {
+    "problem": "ffsp",
+    "policy": "matnet",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.49
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.74
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.58
+  },
+  {
+    "problem": "mtsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.48
+  },
+  {
+    "problem": "mtsp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.23
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.04
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.15
+  },
+  {
+    "problem": "mtsp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.68
+  },
+  {
+    "problem": "mtsp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.77
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.47
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.32
+  },
+  {
+    "problem": "op",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.41
+  },
+  {
+    "problem": "op",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.41
+  },
+  {
+    "problem": "op",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.52
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.58
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.69
+  },
+  {
+    "problem": "pctsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.77
+  },
+  {
+    "problem": "pctsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.78
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.47
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.62
+  },
+  {
+    "problem": "pdp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.42
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.88
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.84
+  },
+  {
+    "problem": "pdp",
+    "policy": "ham",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.91
+  },
+  {
+    "problem": "pdp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.52
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.74
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.79
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.73
+  },
+  {
+    "problem": "sdvrp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.69
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.55
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.96
+  },
+  {
+    "problem": "spctsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.55
+  },
+  {
+    "problem": "spctsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.23
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.43
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 2.22
+  },
+  {
+    "problem": "tsp",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.38
+  },
+  {
+    "problem": "tsp",
+    "policy": "deepaco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.16
+  },
+  {
+    "problem": "tsp",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 1.78
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.75
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.81
+  },
+  {
+    "problem": "tsp",
+    "policy": "pomo",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.6
+  },
+  {
+    "problem": "tsp",
+    "policy": "ptrnet",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.64
+  },
+  {
+    "problem": "tsp",
+    "policy": "symnco",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.7
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "a2c",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.82
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "ppo",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 4.25
+  },
+  {
+    "problem": "vrptw",
+    "policy": "attention",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 0.87
+  },
+  {
+    "problem": "vrptw",
+    "policy": "mdam",
+    "algorithm": "reinforce",
+    "status": "PASS",
+    "error": "",
+    "duration_s": 3.97
+  }
+]
