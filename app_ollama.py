@@ -15,13 +15,15 @@ import urllib.request
 import urllib.error
 
 from flask import Blueprint, Response, request, jsonify, stream_with_context
+from auth_module import login_required
 
 ollama_bp = Blueprint('ollama', __name__)
 logger = logging.getLogger('rl4co_display')
 
-OLLAMA_BASE    = 'http://127.0.0.1:11434/api'
-CONNECT_TIMEOUT = 3    # 连接超时（秒）：本地服务，3 秒足够
-READ_TIMEOUT    = 120  # 读取超时（秒）：流式生成可能较慢
+OLLAMA_BASE      = 'http://127.0.0.1:11434/api'
+CONNECT_TIMEOUT  = 3        # 连接超时（秒）：本地服务，3 秒足够
+READ_TIMEOUT     = 120      # 读取超时（秒）：流式生成可能较慢
+MAX_REQUEST_SIZE = 512_000  # 请求体上限 512 KB，防止超大 context 滥用
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -29,6 +31,7 @@ READ_TIMEOUT    = 120  # 读取超时（秒）：流式生成可能较慢
 # ──────────────────────────────────────────────────────────────────────────────
 
 @ollama_bp.route('/api/ollama/tags')
+@login_required
 def ollama_tags():
     """
     前端用于检查 Ollama 是否在线，并获取已安装模型列表。
@@ -58,11 +61,14 @@ def ollama_tags():
 # ──────────────────────────────────────────────────────────────────────────────
 
 @ollama_bp.route('/api/ollama/chat', methods=['POST'])
+@login_required
 def ollama_chat():
     """
     代理对话请求，支持 stream: true（流式，前端实时显示）和 stream: false（一次性返回）。
     """
     raw_body = request.get_data()
+    if len(raw_body) > MAX_REQUEST_SIZE:
+        return jsonify({'error': '请求体过大（超过 512 KB）'}), 413
 
     try:
         payload = json.loads(raw_body)

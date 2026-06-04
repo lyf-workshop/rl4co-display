@@ -675,7 +675,7 @@ class OllamaChatEmbedded {
             setSelect('problem-select', config.problem);
         }
 
-        // 延迟设置其他参数，等问题类型变更引发的异步操作完成
+        // CompatibilityManager 是同步的；setTimeout(0) 仅确保当前调用栈清空后再设置
         setTimeout(() => {
             if (config.model) setSelect('model-select', config.model);
             if (config.algorithm) setSelect('algorithm-select', config.algorithm);
@@ -736,7 +736,7 @@ class OllamaChatEmbedded {
             }
 
             this.showNotification('✅ AI 推荐配置已应用到表单！', 'success');
-        }, 500);
+        }, 0);
     }
 
     /**
@@ -803,34 +803,44 @@ class OllamaChatEmbedded {
      * 格式化消息内容
      */
     formatMessage(content) {
-        // 剥离 <think>...</think> 推理块（deepseek-r1 等推理模型的内部思考过程，不展示给用户）
+        // 1. 剥离 <think> 推理块
         let processed = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-        // 移除包含训练配置的代码块（配置会通过专用按钮呈现），支持 2~3 个反引号
-        let cleaned = processed.replace(/`{2,3}(\w*)\s*\n([\s\S]*?)`{2,3}/g, (match, lang, code) => {
+        // 2. 提取所有代码块到占位符，避免其内容被后续 HTML 转义污染
+        const codeBlocks = [];
+        let withPlaceholders = processed.replace(/`{2,3}(\w*)\s*\n([\s\S]*?)`{2,3}/g, (match, lang, code) => {
             const parsed = this._parseJsonLoose(code.trim());
             if (parsed && parsed.problem && (parsed.model || parsed.algorithm)) {
-                return '';
+                return '';  // 配置块通过"应用按钮"呈现，此处隐藏
             }
-            return match;
-        }).trim();
+            const idx = codeBlocks.length;
+            codeBlocks.push({ lang: lang || 'plaintext', code: code.trim() });
+            return `\x00CODE${idx}\x00`;
+        });
 
-        let formatted = cleaned
+        // 3. HTML 转义非代码内容
+        let escaped = withPlaceholders
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
 
-        formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-            const language = lang || 'plaintext';
-            return `<pre><code class="language-${language}">${code.trim()}</code></pre>`;
+        // 4. 渲染 markdown
+        escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+        escaped = escaped.replace(/\n/g, '<br>');
+        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        escaped = escaped.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        // 5. 还原代码块（内容单独 HTML 转义，保证 < > & 在 pre/code 里正确显示）
+        escaped = escaped.replace(/\x00CODE(\d+)\x00/g, (_, idx) => {
+            const { lang, code } = codeBlocks[parseInt(idx)];
+            const escapedCode = code
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            return `<pre><code class="language-${lang}">${escapedCode}</code></pre>`;
         });
 
-        formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
-        formatted = formatted.replace(/\n/g, '<br>');
-        formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-        return formatted;
+        return escaped;
     }
 
     /**
@@ -885,25 +895,27 @@ class OllamaChatEmbedded {
      * 重新生成回复
      */
     async regenerateResponse() {
-        if (this.state.messages.length > 0 && 
+        // Remove last assistant message from state and DOM
+        if (this.state.messages.length > 0 &&
             this.state.messages[this.state.messages.length - 1].role === 'assistant') {
             this.state.messages.pop();
-            
-            const messages = this.elements.messages.querySelectorAll('.ai-message.assistant');
-            if (messages.length > 0) {
-                messages[messages.length - 1].remove();
+            const assistantNodes = this.elements.messages.querySelectorAll('.ai-message.assistant');
+            if (assistantNodes.length > 0) {
+                assistantNodes[assistantNodes.length - 1].remove();
             }
         }
 
-        if (this.state.messages.length > 0) {
-            const lastUserMessage = [...this.state.messages]
-                .reverse()
-                .find(msg => msg.role === 'user');
-            
-            if (lastUserMessage) {
-                this.elements.input.value = lastUserMessage.content;
-                await this.sendMessage();
+        // Also remove the preceding user message from state and DOM before re-sending.
+        // sendMessage() re-adds it, so skipping this step would cause a duplicate.
+        if (this.state.messages.length > 0 &&
+            this.state.messages[this.state.messages.length - 1].role === 'user') {
+            const userMsg = this.state.messages.pop();
+            const userNodes = this.elements.messages.querySelectorAll('.ai-message.user');
+            if (userNodes.length > 0) {
+                userNodes[userNodes.length - 1].remove();
             }
+            this.elements.input.value = userMsg.content;
+            await this.sendMessage();
         }
     }
 
@@ -911,22 +923,37 @@ class OllamaChatEmbedded {
      * 清空对话历史
      */
     clearHistory() {
-        if (!confirm('确定要清空所有对话记录吗？')) {
-            return;
+        const btn = this.elements.clearBtn;
+
+        if (btn.dataset.confirming) {
+            // Second click: confirmed — do the actual clear
+            clearTimeout(this._clearConfirmTimeout);
+            delete btn.dataset.confirming;
+            btn.textContent = '🗑️';
+            btn.classList.remove('confirming');
+
+            this.state.messages = [];
+            this.saveHistory();
+            this.elements.messages.innerHTML = `
+                <div class="ai-chat-empty">
+                    <div class="ai-chat-empty-icon">💬</div>
+                    <div class="ai-chat-empty-text">有什么可以帮助您的？</div>
+                    <div class="ai-chat-empty-hint">试试问我关于RL4CO的问题</div>
+                </div>
+            `;
+            this.showNotification('对话记录已清空', 'success');
+        } else {
+            // First click: ask for confirmation; auto-reverts after 3 s
+            btn.dataset.confirming = '1';
+            btn.textContent = '确认?';
+            btn.classList.add('confirming');
+
+            this._clearConfirmTimeout = setTimeout(() => {
+                delete btn.dataset.confirming;
+                btn.textContent = '🗑️';
+                btn.classList.remove('confirming');
+            }, 3000);
         }
-
-        this.state.messages = [];
-        this.saveHistory();
-
-        this.elements.messages.innerHTML = `
-            <div class="ai-chat-empty">
-                <div class="ai-chat-empty-icon">💬</div>
-                <div class="ai-chat-empty-text">有什么可以帮助您的？</div>
-                <div class="ai-chat-empty-hint">试试问我关于RL4CO的问题</div>
-            </div>
-        `;
-
-        this.showNotification('对话记录已清空', 'success');
     }
 
     /**
@@ -992,26 +1019,17 @@ class OllamaChatEmbedded {
      * 显示通知
      */
     showNotification(message, type = 'info') {
+        const typeClass = type === 'error' ? 'ai-notification-error'
+            : type === 'warning' ? 'ai-notification-warning'
+            : 'ai-notification-success';
         const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 100px;
-            right: 2rem;
-            padding: 1rem 1.5rem;
-            background: ${type === 'error' ? '#f8d7da' : type === 'warning' ? '#fff3cd' : '#d4edda'};
-            color: ${type === 'error' ? '#721c24' : type === 'warning' ? '#856404' : '#155724'};
-            border: 1px solid ${type === 'error' ? '#f5c6cb' : type === 'warning' ? '#ffeaa7' : '#c3e6cb'};
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            z-index: 10000;
-            animation: slideInRight 0.3s ease;
-        `;
+        notification.className = `ai-notification ${typeClass}`;
         notification.textContent = message;
 
         document.body.appendChild(notification);
 
         setTimeout(() => {
-            notification.style.animation = 'slideOutRight 0.3s ease';
+            notification.classList.add('fading-out');
             setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
@@ -1022,17 +1040,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.ollamaChatEmbedded = new OllamaChatEmbedded();
 });
 
-// 添加动画CSS
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from { opacity: 0; transform: translateX(100px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes slideOutRight {
-        from { opacity: 1; transform: translateX(0); }
-        to { opacity: 0; transform: translateX(100px); }
-    }
-`;
-document.head.appendChild(style);
 
