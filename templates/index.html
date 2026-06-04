@@ -821,7 +821,13 @@
             </div>
 
             <div class="ai-model-selector">
-                <label for="ai-model-select">选择模型</label>
+                <div class="ai-source-row">
+                    <label for="ai-source-select">来源</label>
+                    <select id="ai-source-select">
+                        <option value="ollama">🏠 本地 Ollama</option>
+                    </select>
+                </div>
+                <label for="ai-model-select">模型</label>
                 <select id="ai-model-select">
                     <option value="">加载中...</option>
                 </select>

@@ -18,7 +18,9 @@ class OllamaChatEmbedded {
             currentModel: this.config.defaultModel,
             isTyping: false,
             messages: [],
-            availableModels: []
+            availableModels: [],
+            source: 'ollama',        // 'ollama' 或云端 provider id
+            cloudProviders: [],      // 从 /api/llm/providers 加载
         };
 
         this.elements = {};
@@ -138,6 +140,7 @@ class OllamaChatEmbedded {
         this.cacheElements();
         this.bindEvents();
         this.loadHistory();
+        await this.loadProviders();   // 先加载云端服务商，填充来源下拉框
         await this.checkConnection();
         await this.loadModels();
     }
@@ -153,6 +156,7 @@ class OllamaChatEmbedded {
         this.elements.modelStatus = document.getElementById('ai-model-status');
         this.elements.clearBtn = document.getElementById('ai-clear-btn');
         this.elements.minimizeBtn = document.getElementById('ai-minimize-btn');
+        this.elements.sourceSelect = document.getElementById('ai-source-select');
     }
 
     /**
@@ -191,6 +195,13 @@ class OllamaChatEmbedded {
             this.state.currentModel = e.target.value;
             this.showNotification(`已切换到模型: ${e.target.value}`, 'success');
         });
+
+        // 来源选择
+        if (this.elements.sourceSelect) {
+            this.elements.sourceSelect.addEventListener('change', (e) => {
+                this.handleSourceChange(e.target.value);
+            });
+        }
     }
 
     /**
@@ -199,6 +210,59 @@ class OllamaChatEmbedded {
     toggleMinimize() {
         const panel = document.querySelector('.ai-chat-panel-embedded');
         panel.classList.toggle('minimized');
+    }
+
+    /**
+     * 加载云端服务商列表，填充来源下拉框
+     */
+    async loadProviders() {
+        try {
+            const resp = await fetch('/api/llm/providers');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            this.state.cloudProviders = data.providers || [];
+            this._populateSourceSelect();
+        } catch (_) {
+            // 服务端无配置时静默忽略
+        }
+    }
+
+    _populateSourceSelect() {
+        const sel = this.elements.sourceSelect;
+        if (!sel || this.state.cloudProviders.length === 0) return;
+        // 保留 Ollama 选项，追加云端服务商
+        this.state.cloudProviders.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `🌐 ${p.name}`;
+            sel.appendChild(opt);
+        });
+    }
+
+    /**
+     * 切换来源：Ollama ↔ 云端服务商
+     */
+    async handleSourceChange(sourceId) {
+        this.state.source = sourceId;
+
+        if (sourceId === 'ollama') {
+            await this.checkConnection();
+            await this.loadModels();
+        } else {
+            const provider = this.state.cloudProviders.find(p => p.id === sourceId);
+            if (!provider) return;
+
+            // 更新模型列表
+            this.elements.modelSelect.innerHTML = provider.models
+                .map(m => `<option value="${m}">${m}</option>`).join('');
+            this.state.currentModel = provider.default_model || provider.models[0] || '';
+            this.elements.modelSelect.value = this.state.currentModel;
+
+            // 更新状态指示
+            this.elements.modelStatus.classList.add('connected');
+            const statusText = this.elements.modelStatus.querySelector('.status-text');
+            if (statusText) statusText.textContent = `已配置: ${provider.name}`;
+        }
     }
 
     /**
@@ -320,16 +384,16 @@ class OllamaChatEmbedded {
                 chatMessages.push({ role: msg.role, content: msg.content });
             });
 
-            const response = await fetch(`${this.config.apiUrl}/chat`, {
+            const isCloud = this.state.source !== 'ollama';
+            const chatUrl  = isCloud ? '/api/llm/chat' : `${this.config.apiUrl}/chat`;
+            const chatBody = isCloud
+                ? { provider_id: this.state.source, model: this.state.currentModel, messages: chatMessages, stream: true }
+                : { model: this.state.currentModel, messages: chatMessages, stream: true };
+
+            const response = await fetch(chatUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: this.state.currentModel,
-                    messages: chatMessages,
-                    stream: true
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(chatBody),
             });
 
             if (!response.ok) {

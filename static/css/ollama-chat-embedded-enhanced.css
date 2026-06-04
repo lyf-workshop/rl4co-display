@@ -253,6 +253,41 @@
     }
 }
 
+/* 来源选择行 */
+.ai-source-row {
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ai-source-row label {
+    display: block;
+    color: #495057;
+    font-size: 0.875rem;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.ai-source-row select {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.ai-source-row select:hover  { border-color: rgba(102, 126, 234, 0.4); }
+.ai-source-row select:focus  {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 /* ============================================
    5. 消息区域 - 现代化滚动
    ============================================ */
