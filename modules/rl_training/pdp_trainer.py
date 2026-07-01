@@ -255,6 +255,11 @@ class PDPTrainer(BaseTrainer):
             
             self.send_message('info', f'🎉 PDP可视化完成: {len(animation_paths)}个动画, {len(plot_paths)}个对比图')
 
+            # 保存 checkpoint 到磁盘
+            if checkpoint_path:
+                trainer.save_checkpoint(checkpoint_path)
+                self.send_message('info', f'  ✓ checkpoint 已保存: {checkpoint_path}')
+
             # 保存 checkpoint 记录到数据库
             if self.bg_file_manager and checkpoint_path:
                 try:

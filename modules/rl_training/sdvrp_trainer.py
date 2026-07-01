@@ -88,6 +88,13 @@ class SDVRPTrainer(BaseTrainer):
     
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成SDVRP可视化（包含分割配送分析）"""
+        # 在可视化之前先保存 checkpoint，确保任何可视化失败都不影响模型文件
+        if checkpoint_path:
+            trainer.save_checkpoint(checkpoint_path)
+            checkpoint_filename = os.path.basename(checkpoint_path)
+            self._save_file_record(checkpoint_filename, 'checkpoint', checkpoint_path)
+            self.send_message('info', f'检查点已保存: {checkpoint_path}')
+
         try:
             policy = model.policy.to(self.device)
 
@@ -204,13 +211,21 @@ class SDVRPTrainer(BaseTrainer):
                 'plot_paths': plot_paths,
                 'animation_paths': animation_paths,
                 'analysis_paths': analysis_paths,
+                'training_curve': self.training_status[self.session_id].get('plot_url', ''),
+                'checkpoint_path': checkpoint_path,
             }
-            
+
         except Exception as e:
             self.send_message('warning', f'生成可视化失败: {str(e)}')
             import traceback
             traceback.print_exc()
-            return {}
+            return {
+                'plot_paths': [],
+                'animation_paths': [],
+                'analysis_paths': [],
+                'training_curve': self.training_status[self.session_id].get('plot_url', ''),
+                'checkpoint_path': checkpoint_path,
+            }
 
 
 def train_sdvrp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):

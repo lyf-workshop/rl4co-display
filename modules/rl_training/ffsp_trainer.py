@@ -356,6 +356,13 @@ class FFSPTrainer(BaseTrainer):
     
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成FFSP可视化结果"""
+        # 在所有可视化之前先保存 checkpoint，确保早返回路径也能保存模型文件
+        if checkpoint_path:
+            trainer.save_checkpoint(checkpoint_path)
+            checkpoint_filename = os.path.basename(checkpoint_path)
+            self._save_file_record(checkpoint_filename, 'checkpoint', checkpoint_path)
+            self.send_message('info', f'检查点已保存: {checkpoint_path}')
+
         # 训练后测试并生成可视化
         policy = model.policy.to(self.device)
         
@@ -551,24 +558,6 @@ class FFSPTrainer(BaseTrainer):
                 import traceback
                 self.send_message('info', f'详细错误: {traceback.format_exc()}')
 
-        # 保存检查点
-        trainer.save_checkpoint(checkpoint_path)
-        
-        # 保存checkpoint文件记录到数据库
-        if self.bg_file_manager:
-            try:
-                checkpoint_filename = os.path.basename(checkpoint_path)
-                self.bg_file_manager.save_file_record(
-                    user_id=self.user_id,
-                    session_id=self.session_id,
-                    filename=checkpoint_filename,
-                    file_type='checkpoint',
-                    file_path=checkpoint_path
-                )
-            except Exception as e:
-                logger.warning(f"保存checkpoint记录失败: {str(e)}")
-        
-        self.send_message('info', f'检查点已保存: {checkpoint_path}')
         
         # 计算改进
         avg_makespan_before = makespan_untrained.mean()

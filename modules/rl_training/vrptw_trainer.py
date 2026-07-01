@@ -104,8 +104,16 @@ class VRPTWTrainer(BaseTrainer):
     
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成VRPTW可视化"""
-        results = {}
-        
+        plot_paths = []
+        animation_paths = []
+
+        # 在可视化之前先保存 checkpoint
+        if checkpoint_path:
+            trainer.save_checkpoint(checkpoint_path)
+            checkpoint_filename = os.path.basename(checkpoint_path)
+            self._save_file_record(checkpoint_filename, 'checkpoint', checkpoint_path)
+            self.send_message('info', f'检查点已保存: {checkpoint_path}')
+
         try:
             self.send_message('info', '开始生成VRPTW可视化...')
 
@@ -126,7 +134,7 @@ class VRPTWTrainer(BaseTrainer):
                 reward_before = -out_before['reward'][0].item()
             except Exception as _e:
                 logger.warning(f"VRPTW 未训练基线推断失败，回退到估算: {_e}")
-                reward_before = None  # 在最终对比图前再处理
+                reward_before = None
 
             # ── 训练后模型推断 ────────────────────────────────────────────────
             with torch.no_grad():
@@ -142,16 +150,16 @@ class VRPTWTrainer(BaseTrainer):
             # 未训练基线推断失败时，退而用 1.5× 粗估（保证对比图可生成）
             if reward_before is None:
                 reward_before = reward_after * 1.5
-            
+
             # 保存路径
             animation_filename = f'vrptw_animation_{self.session_id}.gif'
             comparison_filename = f'vrptw_comparison_{self.session_id}.png'
             schedule_filename = f'vrptw_schedule_{self.session_id}.png'
-            
+
             animation_path = os.path.join(self.user_plots_dir, animation_filename)
             comparison_path = os.path.join(self.user_plots_dir, comparison_filename)
             schedule_path = os.path.join(self.user_plots_dir, schedule_filename)
-            
+
             # 生成动画
             self.send_message('info', '生成路线动画（带时间轴）...')
             create_vrptw_route_animation(
@@ -161,9 +169,7 @@ class VRPTWTrainer(BaseTrainer):
                 title=f'VRPTW路线生成（{self.num_loc}个客户，带时间窗）',
                 fps=2
             )
-            results['animation_url'] = f'/static/model_plots/user_{self.user_id}/{animation_filename}'
-            
-            # 保存动画文件记录
+            animation_paths.append(f'/static/model_plots/user_{self.user_id}/{animation_filename}')
             if self.bg_file_manager:
                 self.bg_file_manager.save_file_record(
                     user_id=self.user_id,
@@ -172,7 +178,7 @@ class VRPTWTrainer(BaseTrainer):
                     file_type='animation',
                     file_path=animation_path
                 )
-            
+
             # 生成对比图
             self.send_message('info', '生成训练对比图...')
             create_vrptw_comparison_plot(
@@ -181,9 +187,7 @@ class VRPTWTrainer(BaseTrainer):
                 comparison_path,
                 title='VRPTW训练效果对比'
             )
-            results['comparison_url'] = f'/static/model_plots/user_{self.user_id}/{comparison_filename}'
-            
-            # 保存对比图文件记录
+            plot_paths.append(f'/static/model_plots/user_{self.user_id}/{comparison_filename}')
             if self.bg_file_manager:
                 self.bg_file_manager.save_file_record(
                     user_id=self.user_id,
@@ -192,7 +196,7 @@ class VRPTWTrainer(BaseTrainer):
                     file_type='comparison',
                     file_path=comparison_path
                 )
-            
+
             # 生成时间调度详情图
             self.send_message('info', '生成时间调度详情图...')
             create_vrptw_time_schedule(
@@ -201,9 +205,7 @@ class VRPTWTrainer(BaseTrainer):
                 schedule_path,
                 title='VRPTW时间调度详情'
             )
-            results['schedule_url'] = f'/static/model_plots/user_{self.user_id}/{schedule_filename}'
-            
-            # 保存时间调度图文件记录
+            plot_paths.append(f'/static/model_plots/user_{self.user_id}/{schedule_filename}')
             if self.bg_file_manager:
                 self.bg_file_manager.save_file_record(
                     user_id=self.user_id,
@@ -212,20 +214,21 @@ class VRPTWTrainer(BaseTrainer):
                     file_type='schedule',
                     file_path=schedule_path
                 )
-            
+
             self.send_message('info', '✅ 所有VRPTW可视化生成完成！')
-            
-            results['reward_before'] = reward_before
-            results['reward_after'] = reward_after
-            results['improvement'] = ((reward_before - reward_after) / reward_before) * 100
-            
+
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
             self.send_message('warning', f'生成VRPTW可视化时出错: {str(e)}')
             logger.error(f"VRPTW可视化错误详情:\n{error_traceback}")
-        
-        return results
+
+        return {
+            'plot_paths': plot_paths,
+            'animation_paths': animation_paths,
+            'training_curve': self.training_status[self.session_id].get('plot_url', ''),
+            'checkpoint_path': checkpoint_path,
+        }
     
     def get_visualization_info(self):
         """获取VRPTW可视化信息"""
