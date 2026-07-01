@@ -388,11 +388,38 @@
             margin-bottom: 0.5rem;
         }
 
+        .metric-tooltip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #c8cfe8;
+            color: #667eea;
+            font-size: 0.65rem;
+            font-weight: bold;
+            cursor: help;
+            vertical-align: middle;
+            margin-left: 3px;
+            line-height: 1;
+        }
+
         .metric-value {
             color: #667eea;
             font-size: 1.5rem;
             font-weight: bold;
         }
+
+        .trend-indicator {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .trend-good    { color: #28a745; }
+        .trend-bad     { color: #dc3545; }
+        .trend-neutral { color: #aaa; }
 
         .training-log {
             max-height: 200px;

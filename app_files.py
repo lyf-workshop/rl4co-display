@@ -6,6 +6,9 @@ from flask import Blueprint, request, jsonify, send_file
 import os
 import json
 import uuid
+import time
+import collections
+import threading
 import numpy as np
 from datetime import datetime
 import logging
@@ -21,6 +24,25 @@ from auth_module import (
 
 files_bp = Blueprint('files', __name__)
 logger = logging.getLogger('rl4co_display')
+
+MAX_UPLOAD_SIZE        = 5 * 1024 * 1024  # 单文件 5 MB
+MAX_DATASETS_PER_USER  = 20               # 每用户最多保存 20 个数据集
+MAX_UPLOADS_PER_MINUTE = 5                # 每 60 秒最多上传 5 次（滑动窗口）
+
+_upload_timestamps: dict = collections.defaultdict(list)
+_rate_lock = threading.Lock()
+
+
+def _check_rate_limit(user_id) -> bool:
+    """滑动窗口限速：返回 True 表示允许，False 表示超限。"""
+    now = time.time()
+    with _rate_lock:
+        ts = _upload_timestamps[user_id]
+        _upload_timestamps[user_id] = [t for t in ts if now - t < 60]
+        if len(_upload_timestamps[user_id]) >= MAX_UPLOADS_PER_MINUTE:
+            return False
+        _upload_timestamps[user_id].append(now)
+        return True
 
 
 def parse_dataset(content, file_ext, problem_type='tsp'):
@@ -159,8 +181,35 @@ def upload_dataset():
                 'message': f'不支持的文件格式: {file_ext}，仅支持 .txt, .json, .tsp'
             }), 400
 
+        # 上传频率限制（在读文件之前，防止频繁解析）
+        if not _check_rate_limit(user_id):
+            return jsonify({
+                'success': False,
+                'message': f'上传过于频繁，请稍后再试（每分钟最多 {MAX_UPLOADS_PER_MINUTE} 次）'
+            }), 429
+
+        # 文件大小检查（Content-Length 快速预检 + 读后精确校验）
+        if request.content_length and request.content_length > MAX_UPLOAD_SIZE:
+            return jsonify({
+                'success': False,
+                'message': f'文件过大，最大允许 {MAX_UPLOAD_SIZE // (1024 * 1024)} MB'
+            }), 413
+
         # 读取并解析文件
-        file_content = file.read().decode('utf-8')
+        raw_bytes = file.read()
+        if len(raw_bytes) > MAX_UPLOAD_SIZE:
+            return jsonify({
+                'success': False,
+                'message': f'文件过大，最大允许 {MAX_UPLOAD_SIZE // (1024 * 1024)} MB'
+            }), 413
+
+        try:
+            file_content = raw_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            return jsonify({
+                'success': False,
+                'message': '文件编码不是 UTF-8，请转换后重新上传'
+            }), 400
         parsed = parse_dataset(file_content, file_ext, problem_type)
 
         if parsed is None or not parsed.get('coordinates'):
@@ -175,6 +224,14 @@ def upload_dataset():
         dataset_id = str(uuid.uuid4())
         user_dataset_dir = os.path.join('datasets', f'user_{user_id}')
         os.makedirs(user_dataset_dir, exist_ok=True)
+
+        # 每用户数据集数量上限
+        existing_count = sum(1 for f in os.listdir(user_dataset_dir) if f.endswith('.json'))
+        if existing_count >= MAX_DATASETS_PER_USER:
+            return jsonify({
+                'success': False,
+                'message': f'数据集数量已达上限（最多 {MAX_DATASETS_PER_USER} 个），请先删除不需要的数据集'
+            }), 400
 
         dataset_record = {
             'dataset_id': dataset_id,
@@ -282,16 +339,26 @@ def delete_dataset():
         
         data = request.json
         dataset_id = data.get('dataset_id')
-        
+
         if not dataset_id:
             return jsonify({
                 'success': False,
                 'message': '缺少数据集ID'
             }), 400
-        
-        # 构建数据集文件路径
-        dataset_path = os.path.join('datasets', f'user_{user_id}', f'{dataset_id}.json')
-        
+
+        # 安全检查：防止路径遍历攻击（dataset_id 来自客户端，不可信）
+        user_dataset_dir = os.path.join('datasets', f'user_{user_id}')
+        safe_filename = os.path.basename(f'{dataset_id}.json')
+        dataset_path = os.path.join(user_dataset_dir, safe_filename)
+
+        abs_dataset_path = os.path.abspath(dataset_path)
+        abs_user_dir = os.path.abspath(user_dataset_dir)
+        if not abs_dataset_path.startswith(abs_user_dir):
+            return jsonify({
+                'success': False,
+                'message': '无效的数据集ID'
+            }), 403
+
         if not os.path.exists(dataset_path):
             return jsonify({
                 'success': False,
@@ -343,12 +410,13 @@ def list_training_files():
                     # 获取该会话的所有文件
                     cursor = file_manager.db.cursor(dictionary=True)
                     cursor.execute("""
-                        SELECT * FROM training_files 
+                        SELECT * FROM training_files
                         WHERE session_id = %s AND user_id = %s
                         ORDER BY create_time DESC
                     """, (session_id, user_id))
                     session_files = cursor.fetchall()
-                    
+                    cursor.close()
+
                     # 分类文件
                     files_by_type = {
                         'comparison': None,
@@ -589,11 +657,12 @@ def delete_session():
             # 获取该会话的所有文件
             cursor = file_manager.db.cursor(dictionary=True)
             cursor.execute("""
-                SELECT * FROM training_files 
+                SELECT * FROM training_files
                 WHERE session_id = %s AND user_id = %s
             """, (session_id, user_id))
             session_files = cursor.fetchall()
-            
+            cursor.close()
+
             # 删除文件记录和实际文件
             deleted_count = 0
             for file_record in session_files:
@@ -725,6 +794,7 @@ def clear_all_files():
                     cursor.execute("DELETE FROM training_files WHERE user_id = %s", (user_id,))
                     # 注意：使用 get_db() 返回的连接已经设置了 autocommit=True，所以不需要手动 commit
                     deleted_db_count = cursor.rowcount
+                    cursor.close()
                     logger.info(f"已清空用户 {user_id} 的数据库记录，共删除 {deleted_db_count} 条")
             except Exception as e:
                 logger.error(f"清空数据库记录失败: {str(e)}", exc_info=True)

@@ -65,7 +65,8 @@ def get_user_stats():
                     WHERE user_id = %s
                 """, (user_id,))
                 session_stats = cursor.fetchone()
-                
+                cursor.close()
+
                 if session_stats:
                     stats['total_sessions'] = int(session_stats['total'] or 0)
                     stats['completed_sessions'] = int(session_stats['completed'] or 0)
@@ -128,7 +129,8 @@ def get_user_activity():
                 """, (user_id,))
                 
                 sessions = cursor.fetchall()
-                
+                cursor.close()
+
                 for session in sessions:
                     time_str = session['start_time'].strftime('%Y-%m-%d %H:%M')
                     

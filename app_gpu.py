@@ -9,6 +9,7 @@ GPU 资源管理模块
 from flask import Blueprint, jsonify, request
 from datetime import datetime
 import logging
+import mysql.connector
 
 from auth_module import login_required, get_current_user_id
 
@@ -276,10 +277,16 @@ def gpu_allocate():
             return jsonify({'success': True, 'message': '数据库连接失败，跳过占用记录'})
 
         cursor = db.cursor()
-        cursor.execute("""
-            INSERT INTO gpu_allocations (gpu_id, session_id, user_id, status)
-            VALUES (%s, %s, %s, 'allocated')
-        """, (gpu_id, session_id, user_id))
+        try:
+            cursor.execute("""
+                INSERT INTO gpu_allocations (gpu_id, session_id, user_id, status)
+                VALUES (%s, %s, %s, 'allocated')
+            """, (gpu_id, session_id, user_id))
+        except mysql.connector.errors.IntegrityError:
+            # 触发 uniq_active_gpu 唯一约束：该 GPU 已被另一会话占用（DB 层并发互斥）
+            cursor.close()
+            logger.warning(f"GPU {gpu_id} 占用冲突：已被其他会话占用 (尝试用户: {user_id})")
+            return jsonify({'success': False, 'message': f'GPU {gpu_id} 已被占用，请选择其他 GPU'}), 409
         cursor.close()
 
         logger.info(f"GPU {gpu_id} 已被用户 {user_id} (session: {session_id}) 占用")
@@ -298,6 +305,7 @@ def gpu_release():
     请求体：{"session_id": "xxx"}
     """
     try:
+        user_id = get_current_user_id()
         data = request.json or {}
         session_id = data.get('session_id')
 
@@ -311,12 +319,13 @@ def gpu_release():
         if db is None:
             return jsonify({'success': True, 'message': '数据库连接失败，跳过释放'})
 
+        # 只能释放属于自己的 GPU 占用记录，防止恶意释放他人会话的 GPU
         cursor = db.cursor()
         cursor.execute("""
             UPDATE gpu_allocations
             SET status = 'released', released_at = %s
-            WHERE session_id = %s AND status = 'allocated'
-        """, (datetime.now(), session_id))
+            WHERE session_id = %s AND user_id = %s AND status = 'allocated'
+        """, (datetime.now(), session_id, user_id))
         affected = cursor.rowcount
         cursor.close()
 

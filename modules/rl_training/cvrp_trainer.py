@@ -104,17 +104,7 @@ class CVRPTrainer(BaseTrainer):
             )
             
             # 保存文件记录到数据库
-            if self.bg_file_manager:
-                try:
-                    self.bg_file_manager.save_file_record(
-                        user_id=self.user_id,
-                        session_id=self.session_id,
-                        filename=plot_filename,
-                        file_type='plot',
-                        file_path=plot_path
-                    )
-                except Exception as e:
-                    logger.warning(f"保存文件记录失败: {str(e)}")
+            self._save_file_record(plot_filename, 'plot', plot_path)
             
             plot_paths.append(f"/static/model_plots/user_{self.user_id}/{plot_filename}")
             
@@ -132,17 +122,7 @@ class CVRPTrainer(BaseTrainer):
             )
             
             # 保存文件记录到数据库
-            if self.bg_file_manager:
-                try:
-                    self.bg_file_manager.save_file_record(
-                        user_id=self.user_id,
-                        session_id=self.session_id,
-                        filename=animation_filename,
-                        file_type='animation',
-                        file_path=animation_path
-                    )
-                except Exception as e:
-                    logger.warning(f"保存文件记录失败: {str(e)}")
+            self._save_file_record(animation_filename, 'animation', animation_path)
             
             animation_paths.append(f"/static/model_plots/user_{self.user_id}/{animation_filename}")
         
@@ -150,18 +130,8 @@ class CVRPTrainer(BaseTrainer):
         trainer.save_checkpoint(checkpoint_path)
         
         # 保存checkpoint文件记录到数据库
-        if self.bg_file_manager:
-            try:
-                checkpoint_filename = os.path.basename(checkpoint_path)
-                self.bg_file_manager.save_file_record(
-                    user_id=self.user_id,
-                    session_id=self.session_id,
-                    filename=checkpoint_filename,
-                    file_type='checkpoint',
-                    file_path=checkpoint_path
-                )
-            except Exception as e:
-                logger.warning(f"保存checkpoint记录失败: {str(e)}")
+        checkpoint_filename = os.path.basename(checkpoint_path)
+        self._save_file_record(checkpoint_filename, 'checkpoint', checkpoint_path)
         
         self.send_message('info', f'检查点已保存: {checkpoint_path}')
         

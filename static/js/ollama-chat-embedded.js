@@ -279,6 +279,10 @@ class OllamaChatEmbedded {
                 this.state.isConnected = true;
                 this.updateConnectionStatus(true);
                 return true;
+            } else {
+                this.state.isConnected = false;
+                this.updateConnectionStatus(false);
+                return false;
             }
         } catch (error) {
             console.error('Ollama连接失败:', error);

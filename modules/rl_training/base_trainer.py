@@ -481,7 +481,22 @@ class BaseTrainer:
             **kwargs
         }
         self.queue.put(json.dumps(msg))
-    
+
+    def _save_file_record(self, filename, file_type, file_path):
+        """保存文件记录到数据库（容错：失败仅记录警告，不中断训练流程）"""
+        if not self.bg_file_manager:
+            return
+        try:
+            self.bg_file_manager.save_file_record(
+                user_id=self.user_id,
+                session_id=self.session_id,
+                filename=filename,
+                file_type=file_type,
+                file_path=file_path,
+            )
+        except Exception as e:
+            logger.warning(f"保存文件记录失败: {e}")
+
     def load_custom_dataset(self):
         """加载用户上传的自定义数据集（各 trainer 在 __init__ 末尾调用）。"""
         dataset_mode = self.config.get('dataset_mode', 'random')

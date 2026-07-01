@@ -5,6 +5,9 @@ let eventSource = null;
 let currentSessionId = null;
 let heartbeatTimer = null;
 
+let _prevLoss   = null;
+let _prevReward = null;
+
 // 训练会话持久化工具（localStorage + TTL，2小时过期）
 const SESSION_STORAGE_KEY = 'rl4co_training_session';
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2小时
@@ -62,15 +65,10 @@ function stopHeartbeat() {
 // ============================================================
 function requestNotificationPermission() {
     if (!('Notification' in window)) {
-        console.log('当前浏览器不支持桌面通知');
         return;
     }
     if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                console.log('✓ 已获得通知权限');
-            }
-        });
+        Notification.requestPermission();
     }
 }
 
@@ -79,10 +77,8 @@ function sendNotification(title, body, icon = '🎉') {
     showInPageBanner(title, body);
 
     if (!('Notification' in window)) {
-        console.log('[通知] 浏览器不支持 Notification API');
         return;
     }
-    console.log('[通知] 当前权限:', Notification.permission, '| 标题:', title);
     if (Notification.permission !== 'granted') {
         // 尝试再次请求权限（用户可能之前未处理弹窗）
         Notification.requestPermission().then(p => {
@@ -517,6 +513,10 @@ function listenToTrainingProgress(sessionId) {
     // 启动心跳定时器（每30秒向服务器报告客户端在线）
     startHeartbeat(sessionId);
 
+    // 重置趋势追踪
+    _prevLoss   = null;
+    _prevReward = null;
+
     // 清空日志
     const trainingLog = document.getElementById('training-log');
     trainingLog.innerHTML = '';
@@ -567,19 +567,39 @@ function listenToTrainingProgress(sessionId) {
 
 // 更新进度显示
 function updateProgress(data) {
-    const progressBar = document.getElementById('progress-bar');
-    const metricEpoch = document.getElementById('metric-epoch');
-    const metricLoss = document.getElementById('metric-loss');
+    const progressBar  = document.getElementById('progress-bar');
+    const metricEpoch  = document.getElementById('metric-epoch');
+    const metricLoss   = document.getElementById('metric-loss');
     const metricReward = document.getElementById('metric-reward');
+    const lossTrend    = document.getElementById('metric-loss-trend');
+    const rewardTrend  = document.getElementById('metric-reward-trend');
 
     // 更新进度条
     progressBar.style.width = data.progress + '%';
     progressBar.textContent = Math.round(data.progress) + '%';
 
-    // 更新指标
-    metricEpoch.textContent = `${data.epoch}/${data.total_epochs}`;
-    metricLoss.textContent = data.loss.toFixed(4);
+    // 更新指标数值
+    metricEpoch.textContent  = `${data.epoch}/${data.total_epochs}`;
+    metricLoss.textContent   = data.loss.toFixed(4);
     metricReward.textContent = data.reward.toFixed(4);
+
+    // 趋势箭头（loss 越小越好，reward 越大越好）
+    const THRESHOLD = 0.0005;
+    if (lossTrend && _prevLoss !== null) {
+        const d = data.loss - _prevLoss;
+        if (d < -THRESHOLD)      { lossTrend.textContent = ' ↓'; lossTrend.className = 'trend-indicator trend-good'; }
+        else if (d > THRESHOLD)  { lossTrend.textContent = ' ↑'; lossTrend.className = 'trend-indicator trend-bad'; }
+        else                     { lossTrend.textContent = ' →'; lossTrend.className = 'trend-indicator trend-neutral'; }
+    }
+    if (rewardTrend && _prevReward !== null) {
+        const d = data.reward - _prevReward;
+        if (d > THRESHOLD)       { rewardTrend.textContent = ' ↑'; rewardTrend.className = 'trend-indicator trend-good'; }
+        else if (d < -THRESHOLD) { rewardTrend.textContent = ' ↓'; rewardTrend.className = 'trend-indicator trend-bad'; }
+        else                     { rewardTrend.textContent = ' →'; rewardTrend.className = 'trend-indicator trend-neutral'; }
+    }
+
+    _prevLoss   = data.loss;
+    _prevReward = data.reward;
 }
 
 // 更新训练曲线图
@@ -765,24 +785,6 @@ function addLogEntry(message) {
 
 // 处理训练完成
 function handleTrainingComplete(data) {
-    // ========== 调试信息 ==========
-    console.log('='.repeat(80));
-    console.log('训练完成！接收到 complete 消息');
-    console.log('='.repeat(80));
-    console.log('完整 data 对象:', JSON.stringify(data, null, 2));
-    console.log('data.results 存在?', 'results' in data);
-    if (data.results) {
-        console.log('results 对象:', JSON.stringify(data.results, null, 2));
-        console.log('plot_paths 存在?', 'plot_paths' in data.results);
-        console.log('animation_paths 存在?', 'animation_paths' in data.results);
-        console.log('plot_paths 长度:', data.results.plot_paths ? data.results.plot_paths.length : 0);
-        console.log('animation_paths 长度:', data.results.animation_paths ? data.results.animation_paths.length : 0);
-    } else {
-        console.error('❌ data.results 不存在！');
-    }
-    console.log('='.repeat(80));
-    // ========== 调试信息结束 ==========
-
     const statusMsg = document.getElementById('status-message');
     const startButton = document.getElementById('start-button');
     const resultsPanel = document.getElementById('results-panel');
@@ -861,17 +863,11 @@ function handleTrainingComplete(data) {
     }
 
     // 如果有可视化图片，添加图片展示
-    console.log('检查可视化图片...');
-    console.log('plot_paths:', results.plot_paths);
-    console.log('animation_paths:', results.animation_paths);
-
     if (results.plot_paths && results.plot_paths.length > 0) {
-        console.log('✅ 将显示', results.plot_paths.length, '个可视化图片');
         resultsHTML += '<div style="grid-column: 1 / -1; margin-top: 1rem;">';
         resultsHTML += '<div class="result-label" style="margin-bottom: 1rem;">📊 路径可视化对比</div>';
         resultsHTML += '<div style="display: grid; gap: 1.5rem;">';
         results.plot_paths.forEach((path, index) => {
-            console.log(`添加图片 ${index + 1}:`, path);
             resultsHTML += `
                 <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 12px;">
                     <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">问题 ${index + 1} - 静态对比图</h4>
@@ -890,11 +886,6 @@ function handleTrainingComplete(data) {
             `;
         });
         resultsHTML += '</div></div>';
-    } else {
-        console.log('❌ 没有可视化图片可显示');
-        console.log('  - plot_paths 是否存在:', 'plot_paths' in results);
-        console.log('  - plot_paths 值:', results.plot_paths);
-        console.log('  - plot_paths 长度:', results.plot_paths ? results.plot_paths.length : 'N/A');
     }
 
     // 如果有 checkpoint 路径，显示

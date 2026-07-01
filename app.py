@@ -40,7 +40,7 @@ _secret_key = os.environ.get('SECRET_KEY')
 if not _secret_key:
     import warnings
     _secret_key = 'rl4co-display-secret-key-dev-only-change-in-production'
-warnings.warn(
+    warnings.warn(
         "SECRET_KEY 未通过环境变量设置，正在使用默认开发密钥。"
         "生产环境必须设置 SECRET_KEY 环境变量，否则 session 可被伪造！",
         stacklevel=1
@@ -271,15 +271,45 @@ def add_security_headers(response):
     return response
 
 
-def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_seconds=1800, heartbeat_timeout=7200):
+def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_seconds=1800,
+                           heartbeat_timeout=7200, max_duration_seconds=21600):
     """
-    启动后台守护线程，定期清理过期的训练状态和队列，并终止无人监管的训练。
+    启动后台守护线程，定期清理过期的训练状态，并强制回收失控会话占用的资源。
 
     每 10 分钟扫描一次 status_dict：
-    1. 清理已完成/出错/中止且完成时间超过 ttl_seconds（默认30分钟）的会话
-    2. 终止超过 heartbeat_timeout（默认2小时）无心跳的运行中会话（防止资源占用）
+    1. 清理已结束（completed/error/stopped）且完成时间超过 ttl_seconds（默认30分钟）的会话
+    2. 强制回收满足以下任一条件的运行中会话：
+       - 超过 heartbeat_timeout（默认2小时）无客户端心跳（用户已关闭页面）
+       - 超过 max_duration_seconds（默认6小时）仍未结束（即使客户端仍在监控）
+    Python 线程无法被强制 kill：若训练线程本身卡死（例如卡在某次 GPU 计算中），
+    它只能继续在后台空跑直到进程重启，stop_requested 标志也可能永远不会被检查到。
+    因此这里采取"自愈式资源回收"：不等待线程响应，直接释放其占用的 GPU 记录、
+    标记会话为结束状态，避免卡死的会话永久占着 GPU 或让前端页面无限等待。
     队列通常已由 SSE 生成器的 finally 块提前清理，此处为兜底。
     """
+    def _force_reclaim(sid, info, reason):
+        """强制回收一个失控会话：释放 GPU 占用记录 + 标记结束 + 通知前端，不依赖训练线程自行响应"""
+        info['stop_requested'] = True
+        info['status'] = 'error'
+        info['_completed_at'] = time.time()
+
+        try:
+            from app_training import _release_gpu  # 延迟导入，避免与 app_training 的循环导入
+            _release_gpu(sid)
+        except Exception as e:
+            logger.error(f"[Reaper] 强制释放 GPU 失败 (session={sid}): {e}")
+
+        q = queues_dict.get(sid)
+        if q is not None:
+            q.put(json.dumps({
+                'type': 'error',
+                'message': f'训练已被系统自动终止：{reason}'
+            }))
+
+        evt = events_dict.get(sid)
+        if evt is not None and not evt.is_set():
+            evt.set()  # 解除可能存在的暂停阻塞
+
     def _reaper():
         while True:
             time.sleep(600)  # 每 10 分钟检查一次
@@ -298,26 +328,25 @@ def _start_cleanup_reaper(status_dict, queues_dict, events_dict, lock, ttl_secon
                     if evt is not None:
                         evt.set()
 
-                # ─── 终止超时无心跳的运行中会话 ──────────────────────────
-                timeout_sessions = []
+                # ─── 强制回收失控会话（无心跳 或 超过最大训练时长） ──────────
+                reclaimed = []
                 for sid, info in list(status_dict.items()):
                     st = info.get('status', '')
-                    if st not in ('running', 'pausing', 'paused'):
+                    if st not in ('running', 'pausing', 'paused', 'stopping'):
                         continue
-                    last_hb = info.get('_last_heartbeat', info.get('_started_at', now))
+                    started_at = info.get('_started_at', now)
+                    last_hb = info.get('_last_heartbeat', started_at)
                     if (now - last_hb) > heartbeat_timeout:
-                        timeout_sessions.append(sid)
-                        info['stop_requested'] = True
-                        info['status'] = 'stopping'
-                        # 若当前暂停阻塞，解除阻塞让其检查 stop_requested
-                        evt = events_dict.get(sid)
-                        if evt is not None and not evt.is_set():
-                            evt.set()
+                        _force_reclaim(sid, info, '长时间无客户端心跳')
+                        reclaimed.append(sid)
+                    elif (now - started_at) > max_duration_seconds:
+                        _force_reclaim(sid, info, f'训练时长超过 {max_duration_seconds // 3600} 小时上限')
+                        reclaimed.append(sid)
 
             if expired:
                 logger.info(f"[Reaper] 已清理 {len(expired)} 个过期会话: {expired}")
-            if timeout_sessions:
-                logger.warning(f"[Reaper] 已中止 {len(timeout_sessions)} 个超时无心跳会话: {timeout_sessions}")
+            if reclaimed:
+                logger.warning(f"[Reaper] 已强制回收 {len(reclaimed)} 个失控会话: {reclaimed}")
 
     t = threading.Thread(target=_reaper, daemon=True, name='session-reaper')
     t.start()

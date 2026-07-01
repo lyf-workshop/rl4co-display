@@ -41,17 +41,7 @@ class ATSPTrainer(BaseTrainer):
         """生成 ATSP 可视化结果（费用矩阵对比图 + 路径构建动态GIF）"""
         # ── 保存检查点 ──────────────────────────────────────────────────
         trainer.save_checkpoint(checkpoint_path)
-        if self.bg_file_manager:
-            try:
-                self.bg_file_manager.save_file_record(
-                    user_id=self.user_id,
-                    session_id=self.session_id,
-                    filename=os.path.basename(checkpoint_path),
-                    file_type='checkpoint',
-                    file_path=checkpoint_path,
-                )
-            except Exception as e:
-                logger.warning(f"保存 checkpoint 记录失败: {e}")
+        self._save_file_record(os.path.basename(checkpoint_path), 'checkpoint', checkpoint_path)
         self.send_message('info', f'检查点已保存: {checkpoint_path}')
 
         plot_paths = []
@@ -100,17 +90,7 @@ class ATSPTrainer(BaseTrainer):
                 title=f"ATSP训练前后对比（{self.num_loc}节点）"
             )
 
-            if self.bg_file_manager:
-                try:
-                    self.bg_file_manager.save_file_record(
-                        user_id=self.user_id,
-                        session_id=self.session_id,
-                        filename=plot_filename,
-                        file_type='plot',
-                        file_path=plot_path,
-                    )
-                except Exception as e:
-                    logger.warning(f"保存对比图记录失败: {e}")
+            self._save_file_record(plot_filename, 'plot', plot_path)
 
             plot_paths.append(f"/static/model_plots/user_{self.user_id}/{plot_filename}")
             self.send_message(
@@ -134,17 +114,7 @@ class ATSPTrainer(BaseTrainer):
                 fps=2
             )
 
-            if self.bg_file_manager:
-                try:
-                    self.bg_file_manager.save_file_record(
-                        user_id=self.user_id,
-                        session_id=self.session_id,
-                        filename=anim_filename,
-                        file_type='animation',
-                        file_path=anim_path,
-                    )
-                except Exception as e:
-                    logger.warning(f"保存动画记录失败: {e}")
+            self._save_file_record(anim_filename, 'animation', anim_path)
 
             animation_paths.append(f"/static/model_plots/user_{self.user_id}/{anim_filename}")
             self.send_message('info', '✅ ATSP动态GIF生成完成')

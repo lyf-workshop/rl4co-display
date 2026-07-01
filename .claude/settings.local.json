@@ -88,7 +88,10 @@
       "Bash(git -C \"D:\\\\Users\\\\Administrator\\\\Documents\\\\GitHub\\\\rl4co-display\" add static/js/ollama-chat-embedded.js)",
       "Bash(git -C \"D:\\\\Users\\\\Administrator\\\\Documents\\\\GitHub\\\\rl4co-display\" commit -m \"fix: strip <think> reasoning blocks from deepseek-r1 responses before rendering\")",
       "PowerShell(git -C \"D:\\\\Users\\\\Administrator\\\\Documents\\\\GitHub\\\\rl4co-display\" add static/js/ollama-chat-embedded.js)",
-      "PowerShell(git -C \"D:\\\\Users\\\\Administrator\\\\Documents\\\\GitHub\\\\rl4co-display\" commit -m \"fix: robust AI config extraction for malformed LLM JSON output\")"
+      "PowerShell(git -C \"D:\\\\Users\\\\Administrator\\\\Documents\\\\GitHub\\\\rl4co-display\" commit -m \"fix: robust AI config extraction for malformed LLM JSON output\")",
+      "Bash(findstr /n \"history\" app_pages.py app_auth.py)",
+      "Bash(dir *.py /b)",
+      "Bash(git checkout *)"
     ]
   }
 }

@@ -80,7 +80,10 @@ CREATE TABLE IF NOT EXISTS gpu_allocations (
     allocated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '分配时间',
     released_at TIMESTAMP NULL COMMENT '释放时间',
     status ENUM('allocated', 'released') DEFAULT 'allocated' COMMENT '占用状态',
+    active_gpu_id INT GENERATED ALWAYS AS (CASE WHEN status = 'allocated' THEN gpu_id ELSE NULL END) STORED
+        COMMENT '仅 allocated 状态时等于 gpu_id，否则为 NULL；配合唯一索引在 DB 层防止同一 GPU 被并发重复占用',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_active_gpu (active_gpu_id),
     INDEX idx_gpu_id (gpu_id),
     INDEX idx_session_id (session_id),
     INDEX idx_status (status),
