@@ -14,14 +14,17 @@ from .base_algorithm import BaseAlgorithm
 from .reinforce_algo import REINFORCEAlgorithm
 from .ppo_algo import PPOAlgorithm
 from .a2c_algo import A2CAlgorithm
+from .dqn_algo import DQNAlgorithm
+from .qlearning_algo import QLearningAlgorithm
 
 # 算法注册表
 ALGORITHM_REGISTRY = {
     'reinforce': REINFORCEAlgorithm,
     'ppo': PPOAlgorithm,
     'a2c': A2CAlgorithm,
+    'dqn': DQNAlgorithm,
+    'qlearning': QLearningAlgorithm,
     # 未来扩展：
-    # 'dqn': DQNAlgorithm,
     # 'sac': SACAlgorithm,
 }
 
@@ -76,6 +79,32 @@ ALGORITHM_INFO = {
             'value_loss_coef': {'default': 0.5, 'range': [0.1, 1.0]},
             'entropy_coef': {'default': 0.01, 'range': [0.0, 0.1]},
         }
+    },
+    'dqn': {
+        'name': 'DQN',
+        'full_name': 'Deep Q-Network',
+        'cn_name': '深度Q网络',
+        'type': 'value_based',
+        'difficulty': 'medium',
+        'status': 'active',
+        'description': '基于深度神经网络的价值学习算法',
+        'advantages': ['价值函数学习', '支持离散动作空间'],
+        'disadvantages': ['完整价值学习训练逻辑尚待扩展'],
+        'suitable_for': ['TSP教学演示', '算法流程展示'],
+        'params': {},
+    },
+    'qlearning': {
+        'name': 'Q-Learning',
+        'full_name': 'Q-Learning',
+        'cn_name': 'Q学习',
+        'type': 'value_based',
+        'difficulty': 'easy',
+        'status': 'active',
+        'description': '经典的无模型价值学习算法',
+        'advantages': ['概念直观', '适合教学展示'],
+        'disadvantages': ['大状态空间需要函数近似'],
+        'suitable_for': ['TSP教学演示', '算法流程展示'],
+        'params': {},
     },
 }
 
@@ -141,13 +170,14 @@ __all__ = [
     'REINFORCEAlgorithm',
     'PPOAlgorithm',
     'A2CAlgorithm',
+    'DQNAlgorithm',
+    'QLearningAlgorithm',
     'ALGORITHM_REGISTRY',
     'ALGORITHM_INFO',
     'get_algorithm_class',
     'get_algorithm_info',
     'list_available_algorithms',
 ]
-
 
 
 

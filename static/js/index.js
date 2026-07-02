@@ -617,7 +617,9 @@ class CompatibilityManager {
         const descriptions = {
             'reinforce': '最基础的策略梯度算法，简单易懂，适合学习',
             'ppo': '工业界首选算法，训练稳定，超参数不敏感，推荐用于生产',
-            'a2c': 'Actor-Critic方法，方差小，收敛快，性能介于REINFORCE和PPO之间'
+            'a2c': 'Actor-Critic方法，方差小，收敛快，性能介于REINFORCE和PPO之间',
+            'dqn': '使用深度神经网络学习动作价值函数，适用于离散动作空间',
+            'qlearning': '经典的无模型价值学习方法，通过动作价值更新学习策略'
         };
         const desc = document.getElementById('algorithm-description');
         if (desc) desc.textContent = descriptions[this.currentAlgorithm] || '';
@@ -763,7 +765,7 @@ class CompatibilityManager {
 
     updateAlgorithmConstraints() {
         const POLICY_ALGO_COMPAT = {
-            'attention': ['reinforce', 'ppo', 'a2c'],
+            'attention': ['reinforce', 'ppo', 'a2c', 'dqn', 'qlearning'],
             'pomo':      ['reinforce', 'ppo', 'a2c'],
             'symnco':    ['reinforce'],
             'ham':       ['reinforce', 'ppo', 'a2c'],
@@ -771,6 +773,10 @@ class CompatibilityManager {
             'ptrnet':    ['reinforce'],
             'mdam':      ['reinforce'],
             'deepaco':   ['reinforce'],
+        };
+        const ALGO_PROBLEM_COMPAT = {
+            'dqn': ['tsp'],
+            'qlearning': ['tsp'],
         };
 
         const POLICY_NAMES = {
@@ -789,10 +795,15 @@ class CompatibilityManager {
         let firstValidValue = null;
 
         Array.from(algoSelect.options).forEach(opt => {
-            const isCompat = compatAlgos.includes(opt.value);
+            const compatibleProblems = ALGO_PROBLEM_COMPAT[opt.value];
+            const supportsProblem = !compatibleProblems
+                || compatibleProblems.includes(this.currentProblem);
+            const isCompat = compatAlgos.includes(opt.value) && supportsProblem;
 
             opt.disabled = !isCompat;
-            opt.title = isCompat ? '' : `${POLICY_NAMES[policy] || policy} 不支持此算法`;
+            opt.title = isCompat
+                ? ''
+                : `${POLICY_NAMES[policy] || policy} 或当前问题不支持此算法`;
 
             if (isCompat && !firstValidValue) {
                 firstValidValue = opt.value;
@@ -826,7 +837,9 @@ class CompatibilityManager {
         const names = {
             'reinforce': 'REINFORCE (入门)',
             'ppo': 'PPO (生产推荐)',
-            'a2c': 'A2C (平衡)'
+            'a2c': 'A2C (平衡)',
+            'dqn': 'DQN',
+            'qlearning': 'Q-Learning'
         };
         return names[algorithm] || algorithm.toUpperCase();
     }

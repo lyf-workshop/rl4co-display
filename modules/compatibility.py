@@ -108,12 +108,14 @@ ALGORITHM_PROBLEM_COMPATIBILITY = {
     'reinforce': ALL_INTEGRATED_PROBLEMS,  # REINFORCE 通用
     'ppo': ALL_INTEGRATED_PROBLEMS,        # PPO 通用，复杂问题推荐
     'a2c': ALL_INTEGRATED_PROBLEMS,        # A2C 通用，快速收敛
+    'dqn': ['tsp'],                         # 当前接入 TSP 训练链路
+    'qlearning': ['tsp'],                   # 当前接入 TSP 训练链路
 }
 
 # 策略 → 算法兼容性
 POLICY_ALGORITHM_COMPATIBILITY = {
-    'attention': ['reinforce', 'ppo', 'a2c'],
-    'am': ['reinforce', 'ppo', 'a2c'],
+    'attention': ['reinforce', 'ppo', 'a2c', 'dqn', 'qlearning'],
+    'am': ['reinforce', 'ppo', 'a2c', 'dqn', 'qlearning'],
     'pomo': ['reinforce', 'ppo', 'a2c'],
     'ptrnet': ['reinforce'],  # PtrNet 通常只使用 REINFORCE（经典组合）
     'ptr': ['reinforce'],
@@ -898,6 +900,5 @@ if __name__ == '__main__':
     print(f"简单: {get_recommended_combination('cvrp', 'simple')}")
     
     print("\n" + "=" * 80)
-
 
 
