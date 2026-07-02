@@ -1,0 +1,371 @@
+/* 智能控制竞赛统一主题 */
+:root {
+    --color-primary: #2f7d5f;
+    --color-secondary: #d49a31;
+    --gradient-bg: linear-gradient(135deg, #eef6e8 0%, #f9f2d8 46%, #f8fbf5 100%);
+    --ic-primary: #2f7d5f;
+    --ic-primary-dark: #1f5f47;
+    --ic-primary-soft: #e7f3ec;
+    --ic-accent: #d49a31;
+    --ic-accent-dark: #a76f18;
+    --ic-accent-soft: #f7e4b7;
+    --ic-ink: #1f2f2a;
+    --ic-muted: #66766f;
+    --ic-surface: #ffffff;
+    --ic-surface-soft: #f5f8f2;
+    --ic-border: rgba(47, 125, 95, 0.16);
+    --ic-shadow: 0 14px 36px rgba(31, 95, 71, 0.12);
+    --ic-radius: 8px;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background:
+        radial-gradient(circle at 12% 6%, rgba(119, 170, 116, 0.24), transparent 32%),
+        radial-gradient(circle at 88% 0%, rgba(212, 154, 49, 0.24), transparent 34%),
+        var(--gradient-bg) !important;
+    color: var(--ic-ink);
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(47, 125, 95, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(47, 125, 95, 0.045) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.62), transparent 72%);
+    z-index: -1;
+}
+
+::selection {
+    background: rgba(212, 154, 49, 0.32);
+}
+
+a {
+    color: var(--ic-primary-dark);
+}
+
+.header {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border-bottom: 1px solid rgba(47, 125, 95, 0.12);
+    box-shadow: 0 10px 28px rgba(31, 95, 71, 0.09) !important;
+}
+
+.header.scrolled {
+    box-shadow: 0 12px 32px rgba(31, 95, 71, 0.14) !important;
+}
+
+.university-badge {
+    color: var(--ic-primary-dark) !important;
+    border-left-color: var(--ic-accent) !important;
+}
+
+.nav-links a {
+    color: var(--ic-ink) !important;
+    border-radius: var(--ic-radius) !important;
+}
+
+.nav-links a::before {
+    background: linear-gradient(135deg, var(--ic-primary) 0%, var(--ic-accent) 100%) !important;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    color: var(--ic-primary-dark) !important;
+    background: rgba(47, 125, 95, 0.09) !important;
+}
+
+.mobile-menu-btn,
+.mobile-menu-btn.active,
+.mobile-menu-btn:hover,
+.page-loading p {
+    color: var(--ic-primary-dark) !important;
+}
+
+.loading-spinner {
+    border-top-color: var(--ic-primary) !important;
+}
+
+.back-to-top,
+.reference-badge,
+.category-count,
+.category-badge,
+.view-btn.active,
+.year-badge,
+.btn-primary,
+.submit-button,
+.register-container .btn,
+.paper-link:hover,
+.back-button:hover,
+.ai-chat-header {
+    background: linear-gradient(135deg, var(--ic-primary) 0%, var(--ic-accent) 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 24px rgba(47, 125, 95, 0.18) !important;
+}
+
+.main-container,
+.container {
+    position: relative;
+}
+
+.hero-section,
+.page-header,
+.profile-container,
+.model-header,
+.content-card,
+.control-panel,
+.chart-container,
+.info-card,
+.category-section,
+.table-section,
+.content-section,
+.session-card,
+.file-card,
+.modal-content,
+.login-container,
+.register-container,
+.right-panel {
+    border-radius: var(--ic-radius) !important;
+    border: 1px solid var(--ic-border) !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    box-shadow: var(--ic-shadow) !important;
+}
+
+.hero-section,
+.page-header,
+.model-header {
+    background:
+        linear-gradient(120deg, rgba(255,255,255,0.96), rgba(252, 248, 229, 0.88)),
+        linear-gradient(135deg, rgba(76, 135, 94, 0.08), rgba(212, 154, 49, 0.12)) !important;
+}
+
+.hero-section h1,
+.page-header h1,
+.profile-header h1,
+.model-title,
+h1,
+.chart-title,
+.section-title,
+.info-section h2,
+.control-panel h3,
+.info-card h4,
+.category-title h2,
+.model-name,
+.method-name-cell {
+    color: var(--ic-primary-dark) !important;
+}
+
+.hero-section h1,
+.page-header h1,
+.profile-header h1,
+.model-title,
+.logo-section h1 {
+    background: linear-gradient(135deg, var(--ic-primary-dark) 0%, var(--ic-primary) 52%, var(--ic-accent-dark) 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    letter-spacing: 0 !important;
+}
+
+.subtitle,
+.hero-section .subtitle,
+.page-header .subtitle,
+.model-subtitle,
+.form-header p,
+.form-footer,
+.login-link,
+.terms,
+.info-label,
+.metric-label,
+.session-meta,
+.model-full-name,
+.category-title p,
+.legend-item,
+.empty-state p {
+    color: var(--ic-muted) !important;
+}
+
+.control-panel h3,
+.chart-title,
+.section-title,
+.info-section h2,
+.category-header,
+.table-header,
+.section-title,
+.section .section-title {
+    border-bottom-color: var(--ic-accent) !important;
+}
+
+.stat-card {
+    border-radius: var(--ic-radius) !important;
+    border: 1px solid rgba(47, 125, 95, 0.12) !important;
+    box-shadow: 0 10px 24px rgba(31, 95, 71, 0.09) !important;
+}
+
+.content-card .stat-card,
+.file-manager .stat-card,
+.stats .stat-card {
+    background: linear-gradient(135deg, var(--ic-primary) 0%, var(--ic-accent) 100%) !important;
+    color: #fff !important;
+}
+
+.profile-container .stat-card,
+.model-card,
+.info-card,
+.file-card {
+    background: linear-gradient(135deg, #f8fbf6 0%, #ffffff 100%) !important;
+}
+
+.stat-icon,
+.stat-value,
+.metric-value,
+.info-value,
+.model-year {
+    color: var(--ic-primary-dark) !important;
+}
+
+.content-card .stat-value,
+.content-card .stat-label,
+.stats .stat-value,
+.stats .stat-label {
+    color: #fff !important;
+}
+
+.model-card::before,
+.info-card::before,
+.section-title::after,
+.paper-link::before,
+.back-button::before {
+    background: linear-gradient(90deg, var(--ic-primary) 0%, var(--ic-accent) 100%) !important;
+}
+
+.model-card:hover,
+.info-card:hover,
+.session-card:hover,
+.file-card:hover,
+.view-btn:hover,
+.paper-link,
+.back-button {
+    border-color: var(--ic-primary) !important;
+    box-shadow: 0 14px 30px rgba(47, 125, 95, 0.16) !important;
+}
+
+button,
+.btn,
+.view-btn,
+.back-button,
+.paper-link,
+.submit-button {
+    border-radius: var(--ic-radius) !important;
+}
+
+.btn-secondary,
+.btn-back {
+    background: var(--ic-primary-soft) !important;
+    color: var(--ic-primary-dark) !important;
+}
+
+.btn-danger,
+.btn-delete {
+    background: linear-gradient(135deg, #b85f4f 0%, #d49a31 100%) !important;
+    color: #fff !important;
+}
+
+input,
+select,
+textarea {
+    border-color: rgba(47, 125, 95, 0.18) !important;
+    border-radius: var(--ic-radius) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--ic-primary) !important;
+    box-shadow: 0 0 0 3px rgba(47, 125, 95, 0.12) !important;
+}
+
+.left-panel {
+    border-radius: var(--ic-radius) 0 0 var(--ic-radius) !important;
+    background:
+        linear-gradient(135deg, rgba(31, 95, 71, 0.94), rgba(212, 154, 49, 0.86)),
+        linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px) !important;
+    background-size: auto, 36px 36px, 36px 36px !important;
+}
+
+.login-container .university-badge,
+.register-container .university-badge {
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #fff !important;
+    border-left: none !important;
+}
+
+.register-container .university-badge {
+    background: linear-gradient(135deg, var(--ic-primary) 0%, var(--ic-accent) 100%) !important;
+}
+
+
+.left-panel .logo-section h1 {
+    color: #fff !important;
+    background: none !important;
+    -webkit-text-fill-color: #fff !important;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;
+}
+
+.left-panel .subtitle,
+.left-panel .feature-item {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.feature-item::before {
+    background: rgba(255, 255, 255, 0.26) !important;
+}
+
+.form-header h2,
+.login-link a,
+.form-footer a,
+.terms a {
+    color: var(--ic-primary-dark) !important;
+}
+
+.strength-strong { background: var(--ic-primary) !important; }
+.strength-medium { background: var(--ic-accent) !important; }
+
+.pros {
+    border-color: rgba(47, 125, 95, 0.28) !important;
+    background: linear-gradient(135deg, rgba(47, 125, 95, 0.07), rgba(47, 125, 95, 0.11)) !important;
+}
+
+.pros::before {
+    background: linear-gradient(90deg, var(--ic-primary) 0%, #79b089 100%) !important;
+}
+
+.cons {
+    border-color: rgba(212, 154, 49, 0.32) !important;
+    background: linear-gradient(135deg, rgba(212, 154, 49, 0.08), rgba(212, 154, 49, 0.13)) !important;
+}
+
+.cons::before {
+    background: linear-gradient(90deg, var(--ic-accent) 0%, #e7bd64 100%) !important;
+}
+
+footer {
+    color: var(--ic-muted) !important;
+}
+
+@media (max-width: 768px) {
+    .left-panel {
+        border-radius: var(--ic-radius) var(--ic-radius) 0 0 !important;
+    }
+
+    .nav-links {
+        background: rgba(255, 255, 255, 0.96) !important;
+        border: 1px solid var(--ic-border) !important;
+        border-radius: var(--ic-radius) !important;
+        box-shadow: var(--ic-shadow) !important;
+    }
+}
