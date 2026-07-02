@@ -30,6 +30,31 @@ real_rl4co_training = None
 simulate_training = None
 get_background_db = None
 
+TSP_MIN_NUM_LOC = 5
+TSP_MAX_NUM_LOC = 1000
+
+
+def _normalize_tsp_num_loc(config):
+    """读取并校验 TSP 节点数量，返回规范化后的整数。"""
+    raw_num_loc = config.get('num_loc', 50)
+    if isinstance(raw_num_loc, bool):
+        raise ValueError('TSP节点数量必须是整数')
+
+    try:
+        num_loc = int(raw_num_loc)
+    except (TypeError, ValueError):
+        raise ValueError('TSP节点数量必须是整数')
+
+    if isinstance(raw_num_loc, float) and not raw_num_loc.is_integer():
+        raise ValueError('TSP节点数量必须是整数')
+
+    if not TSP_MIN_NUM_LOC <= num_loc <= TSP_MAX_NUM_LOC:
+        raise ValueError(
+            f'TSP节点数量必须在{TSP_MIN_NUM_LOC}到{TSP_MAX_NUM_LOC}之间'
+        )
+
+    return num_loc
+
 
 def init_training_globals(status_dict, queues_dict, rl4co_available, real_training_func, simulate_training_func, bg_db_func, lock=None, events_dict=None):
     """从app.py注入全局变量和函数"""
@@ -101,7 +126,23 @@ def start_training():
                 'message': '请先登录'
             }), 401
         
-        config = request.json
+        config = request.get_json(silent=True)
+        if not isinstance(config, dict):
+            return jsonify({
+                'success': False,
+                'message': '训练配置必须是JSON对象'
+            }), 400
+
+        problem = str(config.get('problem') or 'tsp').lower()
+        config['problem'] = problem
+        if problem == 'tsp':
+            try:
+                config['num_loc'] = _normalize_tsp_num_loc(config)
+            except ValueError as e:
+                return jsonify({
+                    'success': False,
+                    'message': str(e)
+                }), 400
 
         # ========== 解析并写入 gpu_id ==========
         gpu_id = config.get('gpu_id')
@@ -114,7 +155,6 @@ def start_training():
                 config.pop('gpu_id', None)
 
         # ========== 验证配置组合 ==========
-        problem = config.get('problem', 'tsp')
         policy = config.get('model', 'attention')
         algorithm = config.get('algorithm', 'reinforce')
         
@@ -347,4 +387,3 @@ def stop_training(session_id):
 
     logger.info(f"训练中止请求已发送 (session={session_id})")
     return jsonify({'success': True, 'message': '中止请求已发送，将在当前 Epoch 结束后停止'})
-

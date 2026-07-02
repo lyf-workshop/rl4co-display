@@ -421,7 +421,7 @@ class BaseTrainer:
         self.problem_type = config.get('problem', 'tsp')
         self.batch_size = int(config.get('batch_size', 512))
         self.learning_rate = float(config.get('learning_rate', 1e-4))
-        self.num_loc = 50  # 默认问题规模
+        self.num_loc = int(config.get('num_loc', 50))
         # 训练/验证集大小（各内置模型可使用，不再硬编码 10_000）
         self.train_data_size = int(config.get('train_data_size', 10_000))
         self.val_data_size   = int(config.get('val_data_size', 1_000))
@@ -988,6 +988,5 @@ class BaseTrainer:
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成可视化结果（子类实现）"""
         raise NotImplementedError("子类必须实现 generate_visualizations 方法")
-
 
 

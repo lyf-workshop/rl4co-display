@@ -273,7 +273,7 @@ async function startTraining() {
     const problem = document.getElementById('problem-select').value;
     const model = document.getElementById('model-select').value;
     const algorithm = document.getElementById('algorithm-select').value;
-    const numLoc = document.getElementById('num-loc').value;
+    const numLoc = Number(document.getElementById('num-loc').value);
     const epochs = document.getElementById('epochs').value;
     const batchSize = document.getElementById('batch-size').value;
     const learningRate = document.getElementById('learning-rate').value;
@@ -282,6 +282,15 @@ async function startTraining() {
     const startButton = document.getElementById('start-button');
     const progressContainer = document.getElementById('progress-container');
     const resultsPanel = document.getElementById('results-panel');
+
+    if (
+        problem === 'tsp'
+        && (!Number.isInteger(numLoc) || numLoc < 5 || numLoc > 1000)
+    ) {
+        statusMsg.className = 'status-message show error';
+        statusMsg.textContent = '❌ TSP节点数量必须是5到1000之间的整数';
+        return;
+    }
 
     // 禁用开始按钮
     startButton.disabled = true;
@@ -296,7 +305,7 @@ async function startTraining() {
         problem: problem,
         model: model,
         algorithm: algorithm,
-        num_loc: parseInt(numLoc),
+        num_loc: numLoc,
         epochs: parseInt(epochs),
         batch_size: parseInt(batchSize),
         learning_rate: parseFloat(learningRate),
