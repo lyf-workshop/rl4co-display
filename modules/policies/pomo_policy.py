@@ -30,43 +30,40 @@ class POMOPolicyWrapper(BasePolicy):
     
     def create_policy(self, env):
         """
-        创建POMO策略
-        
+        创建POMO策略网络
+
+        说明：
+            rl4co 0.6.0 中 **不存在** 独立的 POMOPolicy 类。POMO 是一个训练*模型*
+            （见 rl4co.models.zoo.pomo.POMO，继承自 REINFORCE），其能力来自
+            “共享基线 + 多起点解码 + 数据增强”，而 policy 本身就是 AttentionModelPolicy。
+            因此这里按 POMO 论文/官方默认构建 AM 策略，真正的 POMO 训练逻辑由
+            base_trainer._create_pomo_model 用 POMO 模型包裹本策略实现。
+
         参数:
             env: RL4CO环境
-        
+
         返回:
-            POMO策略实例
+            AttentionModelPolicy 实例（POMO 论文版配置）
         """
         try:
-            # 尝试导入POMO专用策略
-            try:
-                from rl4co.models import POMOPolicy
-                policy = POMOPolicy(
-                    env_name=env.name,
-                    embed_dim=self.embed_dim,
-                    num_encoder_layers=self.num_encoder_layers,
-                    num_heads=self.num_heads,
-                    num_starts=self.num_starts,
-                )
-            except (ImportError, AttributeError):
-                # 降级使用AttentionModelPolicy + POMO解码
-                from rl4co.models import AttentionModelPolicy
-                policy = AttentionModelPolicy(
-                    env_name=env.name,
-                    embed_dim=self.embed_dim,
-                    num_encoder_layers=self.num_encoder_layers,
-                    num_heads=self.num_heads,
-                )
-                # 标记为POMO模式
-                policy.use_pomo = True
-                policy.num_starts = self.num_starts
+            from rl4co.models import AttentionModelPolicy
         except ImportError:
             raise ImportError(
                 "RL4CO库未安装，无法创建POMO策略。\n"
                 "请安装: pip install rl4co"
             )
-        
+
+        # POMO 官方默认策略配置（rl4co 0.6.0 POMO.__init__）：
+        #   num_encoder_layers=6, normalization="instance", use_graph_context=False
+        # use_graph_context=False：论文不使用图上下文，避免对训练图规模过拟合。
+        policy = AttentionModelPolicy(
+            env_name=env.name,
+            embed_dim=self.embed_dim,
+            num_encoder_layers=self.num_encoder_layers,  # _init_policy_params 已确保 >= 6
+            num_heads=self.num_heads,
+            normalization="instance",
+            use_graph_context=False,
+        )
         return policy
     
     def get_policy_params(self) -> Dict[str, Any]:

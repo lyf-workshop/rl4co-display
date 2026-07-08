@@ -709,8 +709,49 @@ class BaseTrainer:
         self.send_message('info', '✅ DeepACO模型创建成功（深度蚁群优化）')
         return model
 
+    def _create_pomo_model(self, env, policy):
+        """为 POMO 策略创建专用训练模型（共享基线 + 多起点 + 数据增强）
+
+        rl4co 0.6.0 中 POMO 是继承自 REINFORCE 的训练模型，而非独立 policy。
+        POMO 仅支持 shared 基线；num_starts=None 表示自动使用环境的起点数
+        （对 TSP 即节点数），比写死一个可能超过节点数的值更安全。
+        """
+        try:
+            from rl4co.models.zoo.pomo import POMO
+        except ImportError:
+            raise ImportError(
+                "RL4CO库未安装或当前版本不包含POMO。\n"
+                "请安装最新版: pip install rl4co"
+            )
+
+        num_augment = int(self.config.get('num_augment', 8))
+        _ns = self.config.get('num_starts', None)
+        num_starts = int(_ns) if _ns not in (None, '', 0, '0') else None
+
+        model = POMO(
+            env,
+            policy,
+            baseline='shared',        # POMO 仅支持 shared 基线（其它值会 assert 失败）
+            num_augment=num_augment,
+            num_starts=num_starts,    # None=自动使用环境起点数
+            batch_size=self.batch_size,
+            train_data_size=self.train_data_size,
+            val_data_size=self.val_data_size,
+            optimizer_kwargs={'lr': self.learning_rate},
+        )
+        self.send_message(
+            'info',
+            f'✅ POMO模型创建成功 '
+            f'(num_augment={num_augment}, num_starts={num_starts if num_starts else "auto"})'
+        )
+        return model
+
     def create_model(self, env, policy):
         """创建RL模型（支持多种算法）"""
+        # POMO 使用内置的“共享基线 + 多起点”训练模型，跳过外部算法注册表
+        if self.policy_name == 'pomo':
+            return self._create_pomo_model(env, policy)
+
         # SymNCO 使用内置的自定义多损失训练算法，跳过算法注册表
         if self.policy_name == 'symnco':
             return self._create_symnco_model(env, policy)

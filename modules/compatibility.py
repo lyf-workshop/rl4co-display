@@ -70,8 +70,11 @@ POLICY_PROBLEM_COMPATIBILITY = {
     'attention': _ROUTING_WITHOUT_ATSP,
     'am': _ROUTING_WITHOUT_ATSP,  # AM 别名
 
-    # POMO：仅适用对称路由问题（利用旋转对称性），PCTSP 不适用（奖励非对称）
-    'pomo': ['tsp', 'mtsp', 'cvrp'],
+    # POMO：仅适用对称路由问题（利用旋转对称性），PCTSP 不适用（奖励非对称）。
+    # 移除 mtsp：真实 POMO（多起点解码）在 rl4co 0.6.0 的 MTSPEnv 上触发
+    # scatter/gather 索引越界——MTSPEnv 未提供 POMO multistart 所需的起点选择处理，
+    # 多智能体动作空间与按节点数展开的 num_starts 不兼容。请用 SymNCO / Attention Model。
+    'pomo': ['tsp', 'cvrp'],
     
     # Pointer Network：基础路由问题（历史方法，性能有限）
     # RL4CO 0.6.0 中 PtrNet 底层实现仅注册了 TSP 的 init_embedding，
@@ -116,7 +119,9 @@ ALGORITHM_PROBLEM_COMPATIBILITY = {
 POLICY_ALGORITHM_COMPATIBILITY = {
     'attention': ['reinforce', 'ppo', 'a2c', 'dqn', 'qlearning'],
     'am': ['reinforce', 'ppo', 'a2c', 'dqn', 'qlearning'],
-    'pomo': ['reinforce', 'ppo', 'a2c'],
+    # POMO 是自带“共享基线 + 多起点解码 + 数据增强”的训练模型（rl4co POMO 继承 REINFORCE），
+    # 由 base_trainer._create_pomo_model 直接构建；外部 PPO/A2C 不参与其训练循环，会被忽略。
+    'pomo': ['reinforce'],
     'ptrnet': ['reinforce'],  # PtrNet 通常只使用 REINFORCE（经典组合）
     'ptr': ['reinforce'],
     # MatNet（ATSP/FFSP）：内部继承 POMO，使用 REINFORCE；
@@ -437,7 +442,7 @@ WARNING_COMBINATIONS = [
     {
         'problem': 'mtsp',
         'policy': 'mdam',
-        'message': 'MDAM与MTSPEnv不兼容（reward key缺失）。请使用Attention Model或POMO',
+        'message': 'MDAM与MTSPEnv不兼容（reward key缺失）。请使用Attention Model或SymNCO',
         'severity': 'error'
     },
     {
@@ -445,6 +450,25 @@ WARNING_COMBINATIONS = [
         'policy': 'mdam',
         'message': 'MDAM与SDVRPEnv不兼容（张量尺寸不匹配）。请使用Attention Model',
         'severity': 'error'
+    },
+    # POMO 实测不兼容 / 算法被忽略
+    {
+        'problem': 'mtsp',
+        'policy': 'pomo',
+        'message': '真实POMO（多起点解码）在rl4co 0.6.0的MTSPEnv上触发索引越界（scatter/gather out of bounds）：MTSPEnv未提供POMO multistart所需的起点选择处理。请使用SymNCO或Attention Model',
+        'severity': 'error'
+    },
+    {
+        'policy': 'pomo',
+        'algorithm': 'ppo',
+        'message': 'POMO使用内置的共享基线+多起点训练逻辑，不支持外部PPO算法。算法选项将被忽略',
+        'severity': 'warning'
+    },
+    {
+        'policy': 'pomo',
+        'algorithm': 'a2c',
+        'message': 'POMO使用内置的共享基线+多起点训练逻辑，不支持外部A2C算法。算法选项将被忽略',
+        'severity': 'warning'
     },
 ]
 
@@ -463,12 +487,14 @@ RECOMMENDED_COMBINATIONS = {
     },
     'mtsp': {
         'best': {'policy': 'symnco', 'algorithm': 'reinforce'},   # SymNCO利用对称性，质量最优
-        'fast': {'policy': 'pomo', 'algorithm': 'ppo'},
+        # POMO 已从 mtsp 移除（与 MTSPEnv multistart 不兼容），fast 改用 Attention + A2C
+        'fast': {'policy': 'attention', 'algorithm': 'a2c'},
         'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
     'cvrp': {
         'best': {'policy': 'symnco', 'algorithm': 'reinforce'},   # SymNCO利用对称性，质量最优
-        'fast': {'policy': 'pomo', 'algorithm': 'ppo'},
+        # POMO 自带训练逻辑，算法固定 reinforce（外部 PPO/A2C 会被忽略）
+        'fast': {'policy': 'pomo', 'algorithm': 'reinforce'},
         'simple': {'policy': 'attention', 'algorithm': 'reinforce'},
     },
     'sdvrp': {
