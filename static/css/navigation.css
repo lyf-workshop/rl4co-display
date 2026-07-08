@@ -45,6 +45,23 @@
     flex-shrink: 0;
 }
 
+.lab-logo-link {
+    display: flex;
+    align-items: center;
+    line-height: 0;
+}
+
+.lab-logo {
+    height: 40px;
+    width: auto;
+    display: block;
+    transition: height 0.15s ease;
+}
+
+.header.scrolled .lab-logo {
+    height: 32px;
+}
+
 .university-badge {
     font-size: 1.3rem;
     font-weight: bold;
@@ -320,7 +337,11 @@
         font-size: 1.1rem;
         padding-left: 0.5rem;
     }
-    
+
+    .lab-logo {
+        height: 32px;
+    }
+
     /* 显示汉堡菜单按钮 */
     .mobile-menu-btn {
         display: block;
