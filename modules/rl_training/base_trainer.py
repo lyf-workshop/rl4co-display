@@ -537,10 +537,12 @@ class BaseTrainer:
     
     def create_policy(self, env):
         """创建策略网络（支持多种策略模型）"""
-        # DeepACO / MDAM 等专用策略依赖特定库（如 torch_geometric），
-        # 若创建失败不能降级为 AttentionModelPolicy，否则会产生策略类型不匹配，
-        # 导致训练时出现张量维度错误。
-        SPECIALIZED_POLICIES = {'deepaco', 'mdam'}
+        # 降级原则：只有 attention/am 允许在新策略模块失败时降级到传统
+        # AttentionModelPolicy 路径（二者本就是同一模型，降级安全）。
+        # 其它任何策略（pomo/ptrnet/matnet/symnco/mdam/deepaco…）构建失败一律
+        # 明确报错，绝不静默替换成 Attention Model —— 否则用户会以为在训练所选
+        # 策略、实际训练的却是 AM（POMO/MatNet 曾因此被掩盖），还可能引发策略
+        # 类型不匹配的张量维度错误。
 
         # ========== 使用新的策略注册表（如果可用） ==========
         if MODULES_AVAILABLE:
@@ -558,8 +560,8 @@ class BaseTrainer:
                 self.send_message('info', f'✅ 策略网络: {policy_wrapper.policy_name.upper()}')
                 return policy
             except Exception as e:
-                if self.policy_name in SPECIALIZED_POLICIES:
-                    # 专用策略不能降级，直接抛出带明确提示的异常
+                # 非 attention/am 策略构建失败：明确报错，不静默降级为 AM
+                if self.policy_name not in ('attention', 'am'):
                     dep_hint = (
                         "\n💡 DeepACO 需要 torch_geometric，请先安装：\n"
                         "   pip install torch_geometric\n"
@@ -567,15 +569,23 @@ class BaseTrainer:
                         if self.policy_name == 'deepaco' else ""
                     )
                     raise RuntimeError(
-                        f"{self.policy_name.upper()} 策略初始化失败，无法降级到其他模式。\n"
+                        f"{self.policy_name.upper()} 策略初始化失败，不会静默降级为 Attention Model。\n"
                         f"原因: {e}{dep_hint}"
                     ) from e
-                self.send_message('warning', f'使用新策略模块失败，降级到传统模式: {str(e)}')
-                # 降级到传统模式（仅适用于非专用策略）
+                self.send_message('warning', f'策略模块加载失败，改用传统 AttentionModelPolicy: {str(e)}')
+                # 仅 attention/am 继续走下面的传统路径
         
         # ========== 传统模式（向后兼容） ==========
+        # 若新策略模块整体不可用（MODULES_AVAILABLE=False），非 attention/am 策略
+        # 会直接落到这里 —— 同样不能用 AM 顶替，明确报错。
+        if self.policy_name not in ('attention', 'am'):
+            raise RuntimeError(
+                f"策略模块不可用，无法创建 {self.policy_name.upper()} 策略，"
+                f"且不会静默降级为 Attention Model。请检查 rl4co 及相关依赖是否正确安装。"
+            )
+
         from rl4co.models import AttentionModelPolicy
-        
+
         # ========== 关键调试信息：环境名称 ==========
         self.send_message('info', f'🔍 [DEBUG] 准备创建 AttentionModelPolicy')
         self.send_message('info', f'🔍 [DEBUG] 环境名称 (env.name): "{env.name}"')
