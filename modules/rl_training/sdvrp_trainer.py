@@ -39,22 +39,37 @@ class SDVRPTrainer(BaseTrainer):
         self.allow_split = True
         self.load_custom_dataset()
 
-    def _inject_custom_data(self, td, device):
+    def _inject_custom_data(self, td, device=None, env=None):
         data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+        target_device = td.device
+        coords = torch.as_tensor(data['coordinates'], dtype=torch.float32, device=target_device)
+        expected_customers = td['locs'].shape[-2] - 1
+        if coords.shape != (expected_customers, 2):
+            raise ValueError(
+                f'SDVRP dataset has {len(coords)} customers, but the environment expects '
+                f'{expected_customers} customers'
+            )
 
-        if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        if data.get('depot') is not None:
+            depot = torch.as_tensor(data['depot'], dtype=torch.float32, device=target_device)
         else:
-            depot = td['locs'][0, 0].cpu()
+            depot = td['locs'][0, 0]
+        td['locs'] = self._expand_custom_tensor(
+            td, torch.cat([depot.unsqueeze(0), coords], dim=0)
+        )
 
-        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
-        td['locs'] = locs.unsqueeze(0).to(device)
-
-        if data.get('demands'):
-            demand = torch.tensor(data['demands'], dtype=torch.float32)
-            td['demand'] = demand.unsqueeze(0).to(device)
-
+        if data.get('demands') is not None:
+            demand = torch.as_tensor(data['demands'], dtype=torch.float32, device=target_device)
+            if demand.numel() != expected_customers:
+                raise ValueError('SDVRP demands length must match coordinates length')
+            td['demand'] = self._expand_custom_tensor(td, demand)
+            if 'demand_with_depot' in td.keys():
+                demand_with_depot = torch.cat(
+                    [torch.zeros(1, device=target_device), demand], dim=0
+                )
+                td['demand_with_depot'] = self._expand_custom_tensor(td, demand_with_depot)
+            if env is not None:
+                td['action_mask'] = env.get_action_mask(td)
         return td
 
     def initialize_environment(self):
@@ -86,6 +101,24 @@ class SDVRPTrainer(BaseTrainer):
             self.send_message('error', f'环境初始化失败: {str(e)}')
             raise
     
+    def _run_visualization_policy(self, policy, td, env, **kwargs):
+        """Run SDVRP inference with an explicit final return to the depot."""
+        reward_td = td.clone()
+        kwargs['calc_reward'] = False
+        kwargs['return_actions'] = True
+        out = self._run_policy(policy, td, env, **kwargs)
+
+        actions = out['actions']
+        depot_return = torch.zeros(
+            (*actions.shape[:-1], 1),
+            dtype=actions.dtype,
+            device=actions.device,
+        )
+        actions = torch.cat([actions, depot_return], dim=-1)
+        out['actions'] = actions
+        out['reward'] = env.get_reward(reward_td, actions)
+        return out
+
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成SDVRP可视化（包含分割配送分析）"""
         # 在可视化之前先保存 checkpoint，确保任何可视化失败都不影响模型文件
@@ -96,25 +129,35 @@ class SDVRPTrainer(BaseTrainer):
             self.send_message('info', f'检查点已保存: {checkpoint_path}')
 
         try:
-            policy = model.policy.to(self.device)
+            device = self._get_model_device(model)
+            policy = model.policy.to(device)
+            policy.eval()
 
             # 生成测试数据
             if self.custom_dataset_data:
-                td_init = env.reset(batch_size=[1]).to(self.device)
-                td_init = self._inject_custom_data(td_init, self.device)
+                td_init = env.reset(batch_size=[1]).to(device)
+                td_init = self._inject_custom_data(td_init, env=env)
                 self.send_message('info', f'✅ 在上传的SDVRP数据集上进行测试（{self.num_loc}个客户）')
             else:
-                td_init = env.reset(batch_size=[3]).to(self.device)
+                td_init = env.reset(batch_size=[3]).to(device)
 
             # 训练前基线（未训练权重 + 贪心解码）vs 训练后模型（训练权重 + 贪心解码）
             untrained_policy = self.create_untrained_policy_copy(model)
             with torch.no_grad():
-                out_untrained = self._run_policy(untrained_policy, td_init.clone(), env,
-                                                 phase="test", decode_type="greedy",
-                                                 return_actions=True)
-                out_trained = self._run_policy(policy, td_init.clone(), env,
-                                               phase="test", decode_type="greedy",
-                                               return_actions=True)
+                out_untrained = self._run_visualization_policy(
+                    untrained_policy,
+                    td_init.clone(),
+                    env,
+                    phase="test",
+                    decode_type="greedy",
+                )
+                out_trained = self._run_visualization_policy(
+                    policy,
+                    td_init.clone(),
+                    env,
+                    phase="test",
+                    decode_type="greedy",
+                )
             actions_untrained = out_untrained['actions'].cpu().detach()
             rewards_untrained = out_untrained['reward'].cpu().detach()
             actions_trained = out_trained['actions'].cpu().detach()

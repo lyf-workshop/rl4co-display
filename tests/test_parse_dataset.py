@@ -137,3 +137,24 @@ class TestParseDatasetMultiProblem:
         result = parse_dataset(content, 'json', 'cvrp')
         assert result is not None
         assert result['depot'] == [0.5, 0.5]
+
+    @pytest.mark.parametrize(
+        ("problem_type", "field", "values"),
+        [
+            ("cvrp", "demands", [0.2]),
+            ("op", "prizes", [0.2]),
+            ("pctsp", "penalties", [0.2]),
+            ("vrptw", "time_windows", [[0.0, 1.0]]),
+            ("vrptw", "service_times", [1.0]),
+        ],
+    )
+    def test_per_node_fields_must_match_coordinate_count(self, problem_type, field, values):
+        import json
+
+        content = json.dumps(
+            {
+                "coordinates": [[0.1, 0.2], [0.3, 0.4]],
+                field: values,
+            }
+        )
+        assert parse_dataset(content, "json", problem_type) is None

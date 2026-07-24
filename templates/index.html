@@ -450,7 +450,7 @@
                         <select id="algorithm-select" name="algorithm" class="form-control">
                             <option value="reinforce" selected>REINFORCE（入门推荐）</option>
                             <option value="ppo">PPO（生产推荐）</option>
-                            <option value="a2c">A2C（平衡选择）</option>
+                            <option value="a2c">A3C（平衡选择）</option>
                             <option value="dqn">DQN（深度Q网络）</option>
                             <option value="qlearning">Q-Learning（Q学习）</option>
                         </select>
@@ -708,7 +708,7 @@
                         <div style="max-width: 800px; margin: 50px auto; background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 50px rgba(0,0,0,0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                                 <h3 style="color: #667eea; margin: 0;">📂 我的数据集</h3>
-                                <button onclick="closeDatasetManager()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✖</button>
+                                <button type="button" onclick="closeDatasetManager()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✖</button>
                             </div>
                             <div id="datasets-list" style="max-height: 400px; overflow-y: auto;">
                                 <p style="text-align: center; color: #999;">正在加载...</p>

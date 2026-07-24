@@ -47,7 +47,15 @@ from auth_module import (
 )
 
 # 配置中文字体支持
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+matplotlib.rcParams['font.sans-serif'] = [
+    'SimHei',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+    'Noto Sans CJK JP',
+    'WenQuanYi Zen Hei',
+    'Arial Unicode MS',
+    'DejaVu Sans',
+]
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
@@ -496,6 +504,25 @@ class BaseTrainer:
             )
         except Exception as e:
             logger.warning(f"保存文件记录失败: {e}")
+
+    @staticmethod
+    def _get_model_device(model):
+        """Return the device that owns the trained model parameters."""
+        try:
+            return next(model.parameters()).device
+        except StopIteration:
+            return next(model.policy.parameters()).device
+
+    @staticmethod
+    def _expand_custom_tensor(td, values, dtype=torch.float32):
+        """Create a tensor on td.device and repeat it across td's batch shape."""
+        device = td.device if td.device is not None else torch.device('cpu')
+        tensor = torch.as_tensor(values, dtype=dtype, device=device)
+        batch_shape = tuple(td.batch_size)
+        if not batch_shape:
+            return tensor.clone()
+        view_shape = (1,) * len(batch_shape) + tuple(tensor.shape)
+        return tensor.reshape(view_shape).expand(*batch_shape, *tensor.shape).clone()
 
     def load_custom_dataset(self):
         """加载用户上传的自定义数据集（各 trainer 在 __init__ 末尾调用）。"""

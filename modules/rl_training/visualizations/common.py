@@ -9,7 +9,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # 配置中文字体支持
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+matplotlib.rcParams['font.sans-serif'] = [
+    'SimHei',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+    'Noto Sans CJK JP',
+    'WenQuanYi Zen Hei',
+    'Arial Unicode MS',
+    'DejaVu Sans',
+]
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 

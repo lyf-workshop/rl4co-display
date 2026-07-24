@@ -1,3 +1,4 @@
+import json
 import queue
 from pathlib import Path
 
@@ -8,14 +9,20 @@ from PIL import Image
 
 pytest.importorskip("rl4co")
 
-from rl4co.envs import MTSPEnv
-from rl4co.envs.routing import PCTSPEnv
+from rl4co.envs import CVRPEnv, MTSPEnv, SDVRPEnv
+from rl4co.envs.routing import OPEnv, PCTSPEnv, PDPEnv
 from rl4co.models import AttentionModelPolicy
 
+from modules.envs.vrptw_env_wrapper import CVRPEnvWithTimeWindows
 from modules.rl_training.atsp_trainer import ATSPTrainer
 from modules.rl_training.base_trainer import BaseTrainer
+from modules.rl_training.cvrp_trainer import CVRPTrainer
 from modules.rl_training.mtsp_trainer import MTSPTrainer
+from modules.rl_training.op_trainer import OPTrainer
 from modules.rl_training.pctsp_trainer import PCTSPTrainer
+from modules.rl_training.pdp_trainer import PDPTrainer
+from modules.rl_training.sdvrp_trainer import SDVRPTrainer
+from modules.rl_training.vrptw_trainer import VRPTWTrainer
 from modules.rl_training.visualizations.mtsp_viz import (
     create_mtsp_comparison_plot,
     extract_agent_routes,
@@ -152,6 +159,304 @@ def test_pctsp_custom_dataset_updates_policy_and_reward_fields():
 
     assert out["actions"].shape[0] == 2
     assert torch.isfinite(out["reward"]).all()
+
+
+def test_pctsp_uploaded_dataset_overrides_form_environment_size(tmp_path, monkeypatch):
+    dataset_id = "pctsp-15"
+    coordinates = [
+        [index / 20.0, (index + 1) / 20.0]
+        for index in range(15)
+    ]
+    dataset_dir = tmp_path / "datasets" / "user_7"
+    dataset_dir.mkdir(parents=True)
+    (dataset_dir / f"{dataset_id}.json").write_text(
+        json.dumps(
+            {
+                "dataset_id": dataset_id,
+                "filename": "pctsp_15nodes.json",
+                "problem_type": "pctsp",
+                "coordinates": coordinates,
+                "depot": [0.5, 0.5],
+                "prizes": [0.2] * 15,
+                "penalties": [0.3] * 15,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    trainer = PCTSPTrainer(
+        config={
+            "problem": "pctsp",
+            "num_loc": 20,
+            "dataset_mode": "upload",
+            "dataset_id": dataset_id,
+            "gpu_id": None,
+        },
+        session_id="pctsp-upload-size",
+        user_id=7,
+        queue=queue.SimpleQueue(),
+        training_status={},
+        get_background_db_func=lambda: None,
+    )
+
+    assert trainer.num_loc == 15
+    assert trainer.pctsp_num_loc == 15
+
+    env = trainer.initialize_environment()
+    td = env.reset(batch_size=[1])
+    assert td["locs"].shape == (1, 16, 2)
+
+    injected = trainer._inject_custom_data(td)
+    assert injected["locs"].shape == (1, 16, 2)
+    assert torch.allclose(
+        injected["locs"][0, 1:],
+        torch.tensor(coordinates, dtype=torch.float32),
+    )
+
+def test_op_uploaded_dataset_overrides_form_environment_size(tmp_path, monkeypatch):
+    dataset_id = "op-15"
+    coordinates = [[index / 20.0, (index + 1) / 20.0] for index in range(15)]
+    dataset_dir = tmp_path / "datasets" / "user_7"
+    dataset_dir.mkdir(parents=True)
+    (dataset_dir / f"{dataset_id}.json").write_text(
+        json.dumps(
+            {
+                "dataset_id": dataset_id,
+                "filename": "op_15nodes.json",
+                "problem_type": "op",
+                "coordinates": coordinates,
+                "depot": [0.5, 0.5],
+                "prizes": [0.2] * 15,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    trainer = OPTrainer(
+        config={
+            "problem": "op",
+            "num_loc": 20,
+            "dataset_mode": "upload",
+            "dataset_id": dataset_id,
+            "gpu_id": None,
+        },
+        session_id="op-upload-size",
+        user_id=7,
+        queue=queue.SimpleQueue(),
+        training_status={},
+        get_background_db_func=lambda: None,
+    )
+
+    assert trainer.num_loc == 15
+    assert trainer.op_num_loc == 15
+    env = trainer.initialize_environment()
+    td = trainer._inject_custom_data(env.reset(batch_size=[1]), env=env)
+    assert td["locs"].shape == (1, 16, 2)
+    assert td["max_length"].shape == (1, 16)
+
+
+def test_vrptw_uploaded_dataset_overrides_form_environment_size(tmp_path, monkeypatch):
+    dataset_id = "vrptw-3"
+    dataset_dir = tmp_path / "datasets" / "user_7"
+    dataset_dir.mkdir(parents=True)
+    (dataset_dir / f"{dataset_id}.json").write_text(
+        json.dumps(
+            {
+                "dataset_id": dataset_id,
+                "filename": "vrptw_3nodes.json",
+                "problem_type": "vrptw",
+                "coordinates": [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+                "depot": [0.5, 0.5],
+                "demands": [0.2, 0.3, 0.4],
+                "time_windows": [[10.0, 60.0], [20.0, 80.0], [30.0, 90.0]],
+                "service_times": [5.0, 6.0, 7.0],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    trainer = VRPTWTrainer(
+        config={
+            "problem": "vrptw",
+            "num_loc": 20,
+            "dataset_mode": "upload",
+            "dataset_id": dataset_id,
+            "gpu_id": None,
+        },
+        session_id="vrptw-upload-size",
+        user_id=7,
+        queue=queue.SimpleQueue(),
+        training_status={},
+        get_background_db_func=lambda: None,
+    )
+
+    assert trainer.num_loc == 3
+    env = trainer.initialize_environment()
+    td = trainer._inject_custom_data(env.reset(batch_size=[1]), env=env)
+    assert td["locs"].shape == (1, 4, 2)
+    assert td["time_windows"].shape == (1, 4, 2)
+
+
+def _inference_device():
+    return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+def _assert_tensordict_device(td, device):
+    assert td.device == device
+    for value in td.values():
+        if isinstance(value, torch.Tensor):
+            assert value.device == device
+
+
+def _run_attention_inference(env, td, device):
+    policy = AttentionModelPolicy(
+        env_name=env.name,
+        embed_dim=32,
+        num_encoder_layers=1,
+        num_heads=4,
+    ).to(device)
+    policy.eval()
+    with torch.no_grad():
+        return policy(
+            td.clone(),
+            phase="test",
+            decode_type="greedy",
+            return_actions=True,
+        )
+
+
+def test_op_custom_dataset_inference_stays_on_model_device():
+    device = _inference_device()
+    env = OPEnv(generator_params={"num_loc": 3, "max_length": 2.0})
+    td = env.reset(batch_size=[2]).to(device)
+
+    trainer = OPTrainer.__new__(OPTrainer)
+    trainer.max_length = 2.0
+    trainer.custom_dataset_data = {
+        "coordinates": [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+        "depot": [0.9, 0.8],
+        "prizes": [0.2, 0.4, 0.6],
+    }
+    td = trainer._inject_custom_data(td, env=env)
+
+    _assert_tensordict_device(td, device)
+    assert td["locs"].shape == (2, 4, 2)
+    assert td["prize"].shape == (2, 4)
+    assert td["max_length"].shape == (2, 4)
+    out = _run_attention_inference(env, td, device)
+    assert out["actions"].device == device
+    assert torch.isfinite(out["reward"]).all()
+
+
+def test_cvrp_custom_dataset_inference_stays_on_model_device():
+    device = _inference_device()
+    env = CVRPEnv(generator_params={"num_loc": 3, "vehicle_capacity": 1.0})
+    td = env.reset(batch_size=[2]).to(device)
+
+    trainer = CVRPTrainer.__new__(CVRPTrainer)
+    trainer.custom_dataset_data = {
+        "coordinates": [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+        "depot": [0.9, 0.8],
+        "demands": [0.2, 0.3, 0.4],
+    }
+    td = trainer._inject_custom_data(td, env=env)
+
+    _assert_tensordict_device(td, device)
+    assert torch.allclose(td["demand"][0], torch.tensor([0.2, 0.3, 0.4], device=device))
+    out = _run_attention_inference(env, td, device)
+    assert out["actions"].device == device
+    assert torch.isfinite(out["reward"]).all()
+
+
+def test_sdvrp_custom_dataset_updates_demand_with_depot():
+    device = _inference_device()
+    env = SDVRPEnv(generator_params={"num_loc": 3, "vehicle_capacity": 1.0})
+    td = env.reset(batch_size=[2]).to(device)
+
+    trainer = SDVRPTrainer.__new__(SDVRPTrainer)
+    trainer.custom_dataset_data = {
+        "coordinates": [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+        "depot": [0.9, 0.8],
+        "demands": [0.2, 0.3, 0.4],
+    }
+    td = trainer._inject_custom_data(td, env=env)
+
+    _assert_tensordict_device(td, device)
+    expected = torch.tensor([0.0, 0.2, 0.3, 0.4], device=device)
+    assert torch.allclose(td["demand_with_depot"][0], expected)
+    policy = AttentionModelPolicy(
+        env_name=env.name,
+        embed_dim=32,
+        num_encoder_layers=1,
+        num_heads=4,
+    ).to(device)
+    policy.eval()
+    with torch.no_grad():
+        out = trainer._run_visualization_policy(
+            policy,
+            td.clone(),
+            env,
+            phase="test",
+            decode_type="greedy",
+        )
+    assert out["actions"].device == device
+    assert torch.equal(out["actions"][..., -1], torch.zeros(2, dtype=torch.long, device=device))
+    assert torch.isfinite(out["reward"]).all()
+
+
+def test_pdp_custom_dataset_keeps_depot_and_runs_inference():
+    device = _inference_device()
+    env = PDPEnv(generator_params={"num_loc": 4})
+    td = env.reset(batch_size=[2]).to(device)
+
+    trainer = PDPTrainer.__new__(PDPTrainer)
+    trainer.custom_dataset_data = {
+        "coordinates": [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.7, 0.8]],
+        "depot": [0.9, 0.8],
+    }
+    td = trainer._inject_custom_data(td)
+
+    _assert_tensordict_device(td, device)
+    assert td["locs"].shape == (2, 5, 2)
+    assert torch.allclose(td["locs"][:, 0], torch.tensor([[0.9, 0.8], [0.9, 0.8]], device=device))
+    out = _run_attention_inference(env, td, device)
+    assert out["actions"].device == device
+    assert torch.isfinite(out["reward"]).all()
+
+
+def test_vrptw_custom_dataset_updates_all_uploaded_fields():
+    device = _inference_device()
+    env = CVRPEnvWithTimeWindows(
+        {"num_loc": 3, "vehicle_capacity": 1.0},
+        {
+            "time_window_width": 50.0,
+            "service_time": 10.0,
+            "max_time": 480.0,
+            "hard_time_windows": True,
+        },
+    )
+    td = env.reset(batch_size=[2]).to(device)
+
+    trainer = VRPTWTrainer.__new__(VRPTWTrainer)
+    trainer.max_time = 480.0
+    trainer.custom_dataset_data = {
+        "coordinates": [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+        "depot": [0.9, 0.8],
+        "demands": [0.2, 0.3, 0.4],
+        "time_windows": [[10.0, 60.0], [20.0, 80.0], [30.0, 90.0]],
+        "service_times": [5.0, 6.0, 7.0],
+    }
+    td = trainer._inject_custom_data(td, env=env)
+
+    _assert_tensordict_device(td, device)
+    assert td["locs"].shape == (2, 4, 2)
+    assert td["demand"].shape == (2, 3)
+    assert td["time_windows"].shape == (2, 4, 2)
+    assert td["service_time"].shape == (2, 4)
+    assert torch.allclose(td["service_time"][0], torch.tensor([0.0, 5.0, 6.0, 7.0], device=device))
 
 
 def test_untrained_policy_copy_follows_current_model_device():

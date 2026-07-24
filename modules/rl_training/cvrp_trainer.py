@@ -32,23 +32,33 @@ class CVRPTrainer(BaseTrainer):
         self.num_vehicles = int(config.get('num_vehicles', 1))
         self.load_custom_dataset()
 
-    def _inject_custom_data(self, td):
-        """将自定义数据集注入 TensorDict。"""
+    def _inject_custom_data(self, td, env=None):
+        """Inject one uploaded CVRP instance across the TensorDict batch."""
         data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)  # [N, 2]
+        device = td.device
+        coords = torch.as_tensor(data['coordinates'], dtype=torch.float32, device=device)
+        expected_customers = td['locs'].shape[-2] - 1
+        if coords.shape != (expected_customers, 2):
+            raise ValueError(
+                f'CVRP dataset has {len(coords)} customers, but the environment expects '
+                f'{expected_customers} customers'
+            )
 
-        if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        if data.get('depot') is not None:
+            depot = torch.as_tensor(data['depot'], dtype=torch.float32, device=device)
         else:
-            depot = td['locs'][0, 0].cpu()
+            depot = td['locs'][0, 0]
+        td['locs'] = self._expand_custom_tensor(
+            td, torch.cat([depot.unsqueeze(0), coords], dim=0)
+        )
 
-        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)  # [N+1, 2]
-        td['locs'] = locs.unsqueeze(0).to(self.device)
-
-        if data.get('demands'):
-            demand = torch.tensor(data['demands'], dtype=torch.float32)  # [N]
-            td['demand'] = demand.unsqueeze(0).to(self.device)
-
+        if data.get('demands') is not None:
+            demand = torch.as_tensor(data['demands'], dtype=torch.float32, device=device)
+            if demand.numel() != expected_customers:
+                raise ValueError('CVRP demands length must match coordinates length')
+            td['demand'] = self._expand_custom_tensor(td, demand)
+            if env is not None:
+                td['action_mask'] = env.get_action_mask(td)
         return td
 
     def initialize_environment(self):
@@ -63,15 +73,17 @@ class CVRPTrainer(BaseTrainer):
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成CVRP可视化结果"""
         # 训练后测试并生成可视化
-        policy = model.policy.to(self.device)
+        device = self._get_model_device(model)
+        policy = model.policy.to(device)
+        policy.eval()
         
         # 生成测试数据
         if self.custom_dataset_data:
-            td_init = env.reset(batch_size=[1]).to(self.device)
-            td_init = self._inject_custom_data(td_init)
+            td_init = env.reset(batch_size=[1]).to(device)
+            td_init = self._inject_custom_data(td_init, env=env)
             self.send_message('info', f'✅ 在上传的CVRP数据集上进行测试（{self.num_loc}个客户）')
         else:
-            td_init = env.reset(batch_size=[3]).to(self.device)
+            td_init = env.reset(batch_size=[3]).to(device)
         
         # 训练前基线（未训练权重 + 贪心解码）vs 训练后模型（训练权重 + 贪心解码）
         untrained_policy = self.create_untrained_policy_copy(model)

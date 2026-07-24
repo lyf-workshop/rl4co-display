@@ -23,20 +23,22 @@ class TestGpuStatusEndpoint(unittest.TestCase):
     """测试 /api/gpu_status 接口返回格式"""
 
     def setUp(self):
-        """创建 Flask 测试客户端，强制使用 Mock 模式"""
-        # 在导入 app 之前，patch 掉 pynvml 让其不可用
-        self._patcher = patch.dict('sys.modules', {'pynvml': None})
-        self._patcher.start()
-
-        # 重新导入 app_gpu 以使 patch 生效
+        """Create a Flask test client and force mock GPU data."""
         import importlib
         import auth_module
         import app_gpu
-        # 将 login_required 替换为透传装饰器，使测试无需真实 session
-        auth_module.login_required = lambda f: f
+
+        # Avoid patching sys.modules: unloading an initialized torch extension
+        # makes a later import fail inside torch._C.
+        self._login_patcher = patch.object(
+            auth_module,
+            'login_required',
+            lambda function: function,
+        )
+        self._login_patcher.start()
         importlib.reload(app_gpu)
         app_gpu.PYNVML_AVAILABLE = False
-        app_gpu.TORCH_CUDA_AVAILABLE = False  # 同时禁用 torch.cuda 兜底，强制 Mock
+        app_gpu.TORCH_CUDA_AVAILABLE = False
 
         from flask import Flask
         self.flask_app = Flask(__name__)
@@ -45,7 +47,7 @@ class TestGpuStatusEndpoint(unittest.TestCase):
         self.client = self.flask_app.test_client()
 
     def tearDown(self):
-        self._patcher.stop()
+        self._login_patcher.stop()
 
     def test_status_returns_200(self):
         """接口正常返回 200"""
@@ -101,6 +103,60 @@ class TestGpuStatusEndpoint(unittest.TestCase):
         for gpu in data['gpus']:
             self.assertGreaterEqual(gpu['memory_pct'], 0)
             self.assertLessEqual(gpu['memory_pct'], 100)
+
+
+
+class TestNvmlVisibilityFilter(unittest.TestCase):
+    """NVML must expose the same logical devices that PyTorch can use."""
+
+    @staticmethod
+    def _fake_nvml():
+        fake = MagicMock()
+        fake.nvmlDeviceGetCount.return_value = 8
+        fake.nvmlDeviceGetHandleByIndex.side_effect = lambda index: index
+        fake.nvmlDeviceGetUUID.side_effect = lambda handle: f'GPU-test-{handle}'
+        fake.nvmlDeviceGetName.side_effect = lambda handle: f'GPU {handle}'.encode()
+        fake.nvmlDeviceGetMemoryInfo.side_effect = lambda handle: MagicMock(
+            total=81920 * 1024 * 1024,
+            used=handle * 1024 * 1024,
+        )
+        fake.nvmlDeviceGetUtilizationRates.side_effect = lambda handle: MagicMock(
+            gpu=handle * 10,
+        )
+        return fake
+
+    def _query(self, visible_devices):
+        import app_gpu
+
+        environment = {'CUDA_VISIBLE_DEVICES': visible_devices}
+        with patch.object(app_gpu, 'pynvml', self._fake_nvml(), create=True), \
+             patch.dict(os.environ, environment, clear=True):
+            return app_gpu._query_real_gpus()
+
+    def test_uuid_filter_maps_physical_gpu_to_logical_zero(self):
+        gpus = self._query('GPU-test-7')
+
+        self.assertEqual(len(gpus), 1)
+        self.assertEqual(gpus[0]['id'], 0)
+        self.assertEqual(gpus[0]['physical_id'], 7)
+        self.assertEqual(gpus[0]['name'], 'GPU 7')
+        self.assertEqual(gpus[0]['utilization_pct'], 70)
+
+    def test_numeric_filter_maps_physical_gpu_to_logical_zero(self):
+        gpus = self._query('7')
+
+        self.assertEqual([(gpu['id'], gpu['physical_id']) for gpu in gpus], [(0, 7)])
+
+    def test_visible_device_order_defines_logical_ids(self):
+        gpus = self._query('GPU-test-7,GPU-test-3')
+
+        self.assertEqual(
+            [(gpu['id'], gpu['physical_id']) for gpu in gpus],
+            [(0, 7), (1, 3)],
+        )
+
+    def test_empty_visible_devices_hides_all_nvml_gpus(self):
+        self.assertEqual(self._query(''), [])
 
 
 # ============================================================

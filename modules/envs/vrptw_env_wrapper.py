@@ -106,7 +106,8 @@ class CVRPEnvWithTimeWindows(CVRPEnv):
         penalties = torch.zeros(batch_size, device=device)
         
         # 参数
-        service_time = self.tw_params['service_time']
+        default_service_time = self.tw_params['service_time']
+        service_times = td.get('service_time', None)
         max_time = self.tw_params['max_time']
         hard_tw = self.tw_params['hard_time_windows']
         speed = 1.0  # 行驶速度
@@ -164,6 +165,11 @@ class CVRPEnvWithTimeWindows(CVRPEnv):
                         penalties[b] += late_time * 1.0
                 
                 # 执行服务
+                service_time = (
+                    service_times[b, action].item()
+                    if service_times is not None
+                    else default_service_time
+                )
                 current_time += service_time
                 current_pos = next_pos
         

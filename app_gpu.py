@@ -9,6 +9,7 @@ GPU 资源管理模块
 from flask import Blueprint, jsonify, request
 from datetime import datetime
 import logging
+import os
 import mysql.connector
 
 from auth_module import login_required, get_current_user_id
@@ -95,19 +96,81 @@ def init_gpu_globals(get_db_func):
 # 内部辅助函数
 # ============================================
 
+def _decode_nvml_value(value):
+    return value.decode('utf-8') if isinstance(value, bytes) else str(value)
+
+
+def _get_visible_nvml_devices():
+    """Return NVML devices allowed by CUDA_VISIBLE_DEVICES using logical IDs."""
+    physical_devices = []
+    for physical_id in range(pynvml.nvmlDeviceGetCount()):
+        handle = pynvml.nvmlDeviceGetHandleByIndex(physical_id)
+        uuid = _decode_nvml_value(pynvml.nvmlDeviceGetUUID(handle))
+        physical_devices.append((physical_id, handle, uuid))
+
+    visible_env = os.environ.get('CUDA_VISIBLE_DEVICES')
+    if visible_env is None:
+        return [
+            (physical_id, physical_id, handle)
+            for physical_id, handle, _ in physical_devices
+        ]
+
+    tokens = [token.strip() for token in visible_env.split(',') if token.strip()]
+    if not tokens or '-1' in tokens:
+        return []
+
+    visible_devices = []
+    selected_physical_ids = set()
+    for token in tokens:
+        match = None
+        if token.isdigit():
+            physical_id = int(token)
+            match = next(
+                (device for device in physical_devices if device[0] == physical_id),
+                None,
+            )
+        else:
+            token_lower = token.lower()
+            uuid_prefixes = {token_lower}
+            if not token_lower.startswith('gpu-'):
+                uuid_prefixes.add(f'gpu-{token_lower}')
+            match = next(
+                (
+                    device
+                    for device in physical_devices
+                    if any(device[2].lower().startswith(prefix) for prefix in uuid_prefixes)
+                ),
+                None,
+            )
+
+        if match is None:
+            logger.warning(
+                "CUDA_VISIBLE_DEVICES entry %r does not match an NVML GPU",
+                token,
+            )
+            continue
+
+        physical_id, handle, _ = match
+        if physical_id in selected_physical_ids:
+            continue
+        selected_physical_ids.add(physical_id)
+        visible_devices.append((len(visible_devices), physical_id, handle))
+
+    return visible_devices
+
+
 def _query_real_gpus():
     """通过 pynvml 查询真实 GPU 硬件信息（完整数据）"""
     gpus = []
-    count = pynvml.nvmlDeviceGetCount()
-    for i in range(count):
-        handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+    for logical_id, physical_id, handle in _get_visible_nvml_devices():
         name = pynvml.nvmlDeviceGetName(handle)
         if isinstance(name, bytes):
             name = name.decode('utf-8')
         mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
         util = pynvml.nvmlDeviceGetUtilizationRates(handle)
         gpus.append({
-            "id": i,
+            "id": logical_id,
+            "physical_id": physical_id,
             "name": name,
             "memory_total_mb": mem_info.total // (1024 * 1024),
             "memory_used_mb": mem_info.used // (1024 * 1024),

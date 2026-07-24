@@ -56,9 +56,13 @@ class PCTSPTrainer(BaseTrainer):
             self.send_message('warning', f'⚠️ prize_required={self.prize_required} 超出合理范围，使用默认值 1.0')
             self.prize_required = 1.0
 
+        self.load_custom_dataset()
+        if self.custom_dataset_data:
+            # 上传数据集的节点数决定策略输入和环境张量尺寸。
+            self.pctsp_num_loc = self.num_loc
+
         self.send_message('info', f'📋 PCTSP 配置: {self.pctsp_num_loc} 个客户节点')
         self.send_message('info', f'📋 惩罚系数: {self.penalty_factor}, 最低奖励要求: {self.prize_required}')
-        self.load_custom_dataset()
 
     def _inject_custom_data(self, td):
         data = self.custom_dataset_data

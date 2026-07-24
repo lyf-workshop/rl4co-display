@@ -91,7 +91,14 @@
       "PowerShell(git -C \"D:\\\\Users\\\\Administrator\\\\Documents\\\\GitHub\\\\rl4co-display\" commit -m \"fix: robust AI config extraction for malformed LLM JSON output\")",
       "Bash(findstr /n \"history\" app_pages.py app_auth.py)",
       "Bash(dir *.py /b)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(python -c ' *)",
+      "Bash(ls config/config.py)",
+      "Bash($PY *)",
+      "Read(//d/DevTools/Miniconda/envs/rl4co-display/Lib/site-packages/rl4co/models/zoo/pomo/**)",
+      "Bash(git -c core.pager=cat diff HEAD -- modules/policies/pomo_policy.py modules/rl_training/base_trainer.py)",
+      "Bash(git -c core.pager=cat diff HEAD -- modules/compatibility.py)",
+      "Bash(git -c core.pager=cat diff HEAD -- templates/)"
     ]
   }
 }

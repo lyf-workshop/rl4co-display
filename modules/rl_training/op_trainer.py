@@ -50,26 +50,48 @@ class OPTrainer(BaseTrainer):
             self.prize_type = 'dist'
         
         # 发送配置信息
+        self.load_custom_dataset()
+        if self.custom_dataset_data:
+            self.op_num_loc = self.num_loc
+            if 'max_length' not in config:
+                self.max_length = max_length_defaults.get(self.op_num_loc, 2.0)
+
         self.send_message('info', f'📋 OP配置: {self.op_num_loc}个地点, 最大路径长度: {self.max_length}')
         self.send_message('info', f'📋 奖励类型: {self.prize_type}')
-        self.load_custom_dataset()
 
-    def _inject_custom_data(self, td):
+    def _inject_custom_data(self, td, env=None):
         data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+        device = td.device
+        coords = torch.as_tensor(data['coordinates'], dtype=torch.float32, device=device)
+        expected_customers = td['locs'].shape[-2] - 1
+        if coords.shape != (expected_customers, 2):
+            raise ValueError(
+                f'OP dataset has {len(coords)} customers, but the environment expects '
+                f'{expected_customers} customers'
+            )
 
-        if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        if data.get('depot') is not None:
+            depot = torch.as_tensor(data['depot'], dtype=torch.float32, device=device)
         else:
-            depot = td['locs'][0, 0].cpu()
+            depot = td['locs'][0, 0]
 
         locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
-        td['locs'] = locs.unsqueeze(0).to(self.device)
+        td['locs'] = self._expand_custom_tensor(td, locs)
 
-        if data.get('prizes'):
-            prize = torch.tensor([0.0] + data['prizes'], dtype=torch.float32)
-            td['prize'] = prize.unsqueeze(0).to(self.device)
+        if data.get('prizes') is not None:
+            prizes = torch.as_tensor(data['prizes'], dtype=torch.float32, device=device)
+            if prizes.numel() != expected_customers:
+                raise ValueError('OP prizes length must match coordinates length')
+            td['prize'] = self._expand_custom_tensor(
+                td, torch.cat([torch.zeros(1, device=device), prizes])
+            )
 
+        # max_length stores the remaining budget after returning from each node.
+        route_limit = self._expand_custom_tensor(td, [self.max_length])
+        return_distance = (td['locs'] - td['locs'][..., 0:1, :]).norm(p=2, dim=-1)
+        td['max_length'] = route_limit - return_distance - 1e-6
+        if env is not None:
+            td['action_mask'] = env.get_action_mask(td)
         return td
 
     def initialize_environment(self):
@@ -88,8 +110,7 @@ class OPTrainer(BaseTrainer):
             }
             
             # 如果用户指定了 max_length，传递给环境
-            if 'max_length' in self.config:
-                generator_params['max_length'] = self.max_length
+            generator_params['max_length'] = self.max_length
             
             # 创建环境
             env = OPEnv(
@@ -132,10 +153,15 @@ class OPTrainer(BaseTrainer):
         plot_paths = []
         
         try:
+            device = self._get_model_device(model)
+            model.eval()
+            policy = model.policy.to(device)
+            policy.eval()
+
             # 定义测试实例数量和可视化数量
             if self.custom_dataset_data:
-                td = env.reset(batch_size=[1]).to(self.device)
-                td = self._inject_custom_data(td)
+                td = env.reset(batch_size=[1]).to(device)
+                td = self._inject_custom_data(td, env=env)
                 num_test_instances = 1
                 num_visualizations = 1
                 self.send_message('info', f'✅ 在上传的OP数据集上进行测试（{self.num_loc}个地点）')
@@ -143,10 +169,10 @@ class OPTrainer(BaseTrainer):
                 num_test_instances = min(3, self.batch_size)
                 num_visualizations = min(3, num_test_instances)
                 # 生成测试数据
-                td = env.reset(batch_size=[num_test_instances])
+                td = env.reset(batch_size=[num_test_instances]).to(device)
             
             # 未训练基线推断（与训练后共享同一批测试数据）
-            model.eval()
+            td = td.to(device)
             untrained_policy = self.create_untrained_policy_copy(model)
             with torch.no_grad():
                 out_baseline = self._run_policy(untrained_policy, td.clone(), env,
@@ -160,7 +186,9 @@ class OPTrainer(BaseTrainer):
 
             # 训练后模型推断
             with torch.no_grad():
-                out = model(td.clone(), phase="test", decode_type="greedy", return_actions=True)
+                out = self._run_policy(policy, td.clone(), env,
+                                       phase="test", decode_type="greedy",
+                                       return_actions=True)
 
             # 提取数据
             locs = td['locs'].cpu().numpy()  # [batch, num_loc+1, 2] (包含depot)

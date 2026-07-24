@@ -43,29 +43,8 @@ class SPCTSPTrainer(PCTSPTrainer):
         self.load_custom_dataset()
 
     def _inject_custom_data(self, td):
-        data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
-
-        if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
-        else:
-            depot = td['locs'][0, 0].cpu()
-
-        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
-        td['locs'] = locs.unsqueeze(0).to(self.device)
-
-        if data.get('prizes'):
-            prizes = data['prizes']
-            det_prize = torch.tensor(prizes, dtype=torch.float32)          # [N]
-            td['deterministic_prize'] = det_prize.unsqueeze(0).to(self.device)
-            real_prize = torch.tensor([0.0] + prizes, dtype=torch.float32) # [N+1]
-            td['real_prize'] = real_prize.unsqueeze(0).to(self.device)
-
-        if data.get('penalties'):
-            penalty = torch.tensor([0.0] + data['penalties'], dtype=torch.float32)
-            td['penalty'] = penalty.unsqueeze(0).to(self.device)
-
-        return td
+        # PCTSP already updates every prize/penalty state field on td.device.
+        return super()._inject_custom_data(td)
 
     def initialize_environment(self):
         """
@@ -119,8 +98,13 @@ class SPCTSPTrainer(PCTSPTrainer):
         plot_paths = []
 
         try:
+            device = self._get_model_device(model)
+            model.eval()
+            policy = model.policy.to(device)
+            policy.eval()
+
             if self.custom_dataset_data:
-                td = env.reset(batch_size=[1]).to(self.device)
+                td = env.reset(batch_size=[1]).to(device)
                 td = self._inject_custom_data(td)
                 num_test = 1
                 num_vis = 1
@@ -128,10 +112,10 @@ class SPCTSPTrainer(PCTSPTrainer):
             else:
                 num_test = min(3, self.batch_size)
                 num_vis = min(3, num_test)
-                td = env.reset(batch_size=[num_test])
+                td = env.reset(batch_size=[num_test]).to(device)
 
             # 未训练基线推断
-            model.eval()
+            td = td.to(device)
             untrained_policy = self.create_untrained_policy_copy(model)
             with torch.no_grad():
                 out_baseline = self._run_policy(untrained_policy, td.clone(), env,
@@ -142,7 +126,9 @@ class SPCTSPTrainer(PCTSPTrainer):
 
             # 训练后模型推断
             with torch.no_grad():
-                out = model(td.clone(), phase="test", decode_type="greedy", return_actions=True)
+                out = self._run_policy(policy, td.clone(), env,
+                                       phase="test", decode_type="greedy",
+                                       return_actions=True)
 
             # SPCTSP 特有：同时提取 deterministic_prize 和 real_prize
             locs_all = td['locs'].cpu().numpy()                        # [B, num_loc+1, 2]

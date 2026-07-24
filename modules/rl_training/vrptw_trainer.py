@@ -38,32 +38,56 @@ class VRPTWTrainer(BaseTrainer):
         self.max_time = float(config.get('max_time', 480.0))
         self.load_custom_dataset()
 
-    def _inject_custom_data(self, td):
+    def _inject_custom_data(self, td, env=None):
         data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+        device = td.device
+        coords = torch.as_tensor(data['coordinates'], dtype=torch.float32, device=device)
+        expected_customers = td['locs'].shape[-2] - 1
+        if coords.shape != (expected_customers, 2):
+            raise ValueError(
+                f'VRPTW dataset has {len(coords)} customers, but the environment expects '
+                f'{expected_customers} customers'
+            )
 
-        if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        if data.get('depot') is not None:
+            depot = torch.as_tensor(data['depot'], dtype=torch.float32, device=device)
         else:
-            depot = td['locs'][0, 0].cpu()
+            depot = td['locs'][0, 0]
+        td['locs'] = self._expand_custom_tensor(
+            td, torch.cat([depot.unsqueeze(0), coords], dim=0)
+        )
 
-        locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
-        td['locs'] = locs.unsqueeze(0).to(self.device)
+        if data.get('demands') is not None:
+            demand = torch.as_tensor(data['demands'], dtype=torch.float32, device=device)
+            if demand.numel() != expected_customers:
+                raise ValueError('VRPTW demands length must match coordinates length')
+            if td['demand'].shape[-1] == expected_customers:
+                td['demand'] = self._expand_custom_tensor(td, demand)
+            elif td['demand'].shape[-1] == expected_customers + 1:
+                td['demand'] = self._expand_custom_tensor(
+                    td, torch.cat([torch.zeros(1, device=device), demand])
+                )
+            else:
+                raise ValueError('VRPTW environment demand shape is incompatible with the dataset')
+            if env is not None:
+                td['action_mask'] = env.get_action_mask(td)
 
-        if data.get('demands'):
-            demand = torch.tensor([0.0] + data['demands'], dtype=torch.float32)
-            td['demand'] = demand.unsqueeze(0).to(self.device)
+        if data.get('time_windows') is not None:
+            customer_tw = torch.as_tensor(
+                data['time_windows'], dtype=torch.float32, device=device
+            )
+            depot_tw = torch.tensor([[0.0, self.max_time]], dtype=torch.float32, device=device)
+            td['time_windows'] = self._expand_custom_tensor(
+                td, torch.cat([depot_tw, customer_tw], dim=0)
+            )
 
-        if data.get('time_windows'):
-            depot_tw = td['time_windows'][0, 0:1].cpu()  # 保留 env 生成的 depot 时间窗
-            customer_tw = torch.tensor(data['time_windows'], dtype=torch.float32)
-            full_tw = torch.cat([depot_tw, customer_tw], dim=0)
-            td['time_windows'] = full_tw.unsqueeze(0).to(self.device)
-
-        if data.get('service_times'):
-            st = torch.tensor([0.0] + data['service_times'], dtype=torch.float32)
-            td['service_time'] = st.unsqueeze(0).to(self.device)
-
+        if data.get('service_times') is not None:
+            service_times = torch.as_tensor(
+                data['service_times'], dtype=torch.float32, device=device
+            )
+            td['service_time'] = self._expand_custom_tensor(
+                td, torch.cat([torch.zeros(1, device=device), service_times])
+            )
         return td
 
     def validate_config(self):
@@ -96,7 +120,9 @@ class VRPTWTrainer(BaseTrainer):
         """初始化VRPTW环境"""
         # 使用问题类创建环境
         ProblemClass = get_problem_class('vrptw')
-        problem = ProblemClass(self.config)
+        env_config = dict(self.config)
+        env_config['num_loc'] = self.num_loc
+        problem = ProblemClass(env_config)
         env = problem.create_environment()
         
         self.send_message('info', f'✅ VRPTW环境创建成功（{self.num_loc}个客户）')
@@ -117,17 +143,18 @@ class VRPTWTrainer(BaseTrainer):
         try:
             self.send_message('info', '开始生成VRPTW可视化...')
 
+            device = self._get_model_device(model)
             model.eval()
-            model.to(self.device)
+            model.to(device)
 
             # ── 未训练基线推断 ────────────────────────────────────────────────
             # VRPTW env 是有状态的（policy 调用后 step_cnt 等内部状态改变），
             # 需要用独立 td 推断，再 reset 一次供训练后模型使用
             untrained_policy = self.create_untrained_policy_copy(model)
             try:
-                td_before = env.reset(batch_size=[1]).to(self.device)
+                td_before = env.reset(batch_size=[1]).to(device)
                 if self.custom_dataset_data:
-                    td_before = self._inject_custom_data(td_before)
+                    td_before = self._inject_custom_data(td_before, env=env)
                 with torch.no_grad():
                     out_before = untrained_policy(td_before.clone(), env,
                                                   phase="test", decode_type="greedy")
@@ -138,9 +165,9 @@ class VRPTWTrainer(BaseTrainer):
 
             # ── 训练后模型推断 ────────────────────────────────────────────────
             with torch.no_grad():
-                td_init = env.reset(batch_size=[1]).to(self.device)
+                td_init = env.reset(batch_size=[1]).to(device)
                 if self.custom_dataset_data:
-                    td_init = self._inject_custom_data(td_init)
+                    td_init = self._inject_custom_data(td_init, env=env)
                     self.send_message('info', f'✅ 在上传的VRPTW数据集上进行测试（{self.num_loc}个客户）')
 
                 out = model.policy(td_init.clone(), env, phase="test", decode_type="greedy")

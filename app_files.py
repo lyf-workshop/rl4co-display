@@ -93,6 +93,10 @@ def parse_dataset(content, file_ext, problem_type='tsp'):
 
         if not coordinates:
             return None
+        if any(not isinstance(coord, (list, tuple)) or len(coord) != 2 for coord in coordinates):
+            return None
+        coordinates = [[float(coord[0]), float(coord[1])] for coord in coordinates]
+        num_coordinates = len(coordinates)
 
         # --- 问题类型专用校验 ---
         if problem_type == 'pdp':
@@ -103,12 +107,17 @@ def parse_dataset(content, file_ext, problem_type='tsp'):
         result = {'coordinates': coordinates}
 
         # depot（可选，所有问题通用）
-        if isinstance(data, dict) and data.get('depot'):
-            result['depot'] = data['depot']
+        if isinstance(data, dict) and data.get('depot') is not None:
+            depot = data['depot']
+            if not isinstance(depot, (list, tuple)) or len(depot) != 2:
+                return None
+            result['depot'] = [float(depot[0]), float(depot[1])]
 
         # demands（CVRP / SDVRP / VRPTW）
         if problem_type in ('cvrp', 'sdvrp', 'vrptw') and isinstance(data, dict) and data.get('demands'):
             demands = data['demands']
+            if len(demands) != num_coordinates:
+                return None
             if any(d <= 0 or d > 1 for d in demands):
                 return None  # demands 必须在 (0, 1]
             result['demands'] = demands
@@ -116,17 +125,24 @@ def parse_dataset(content, file_ext, problem_type='tsp'):
         # prizes（OP / PCTSP / SPCTSP）
         if problem_type in ('op', 'pctsp', 'spctsp') and isinstance(data, dict) and data.get('prizes'):
             prizes = data['prizes']
+            if len(prizes) != num_coordinates:
+                return None
             if any(p < 0 for p in prizes):
                 return None  # prizes 不能为负
             result['prizes'] = prizes
 
         # penalties（PCTSP / SPCTSP）
         if problem_type in ('pctsp', 'spctsp') and isinstance(data, dict) and data.get('penalties'):
-            result['penalties'] = data['penalties']
+            penalties = data['penalties']
+            if len(penalties) != num_coordinates or any(value < 0 for value in penalties):
+                return None
+            result['penalties'] = penalties
 
         # time_windows（VRPTW）
         if problem_type == 'vrptw' and isinstance(data, dict) and data.get('time_windows'):
             tws = data['time_windows']
+            if len(tws) != num_coordinates:
+                return None
             for tw in tws:
                 if len(tw) != 2 or tw[0] >= tw[1]:
                     return None
@@ -134,7 +150,10 @@ def parse_dataset(content, file_ext, problem_type='tsp'):
 
         # service_times（VRPTW）
         if problem_type == 'vrptw' and isinstance(data, dict) and data.get('service_times'):
-            result['service_times'] = data['service_times']
+            service_times = data['service_times']
+            if len(service_times) != num_coordinates or any(value < 0 for value in service_times):
+                return None
+            result['service_times'] = service_times
 
         return result
 

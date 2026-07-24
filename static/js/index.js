@@ -372,12 +372,12 @@ async function showDatasetManager() {
                                     ${!matched ? '<p style="margin: 0.2rem 0; color: #dc3545; font-size: 0.8rem;">⚠️ 与当前问题类型不匹配</p>' : ''}
                                 </div>
                                 <div>
-                                    <button onclick="selectDataset('${dataset.dataset_id}', '${dataset.filename}', ${numLoc})"
+                                    <button type="button" onclick="selectDataset('${dataset.dataset_id}', '${dataset.filename}', ${numLoc})"
                                             ${!matched ? 'disabled title="请切换到对应问题类型后再选择"' : ''}
                                             style="padding: 0.5rem 1rem; background: ${matched ? '#667eea' : '#aaa'}; color: white; border: none; border-radius: 5px; cursor: ${matched ? 'pointer' : 'not-allowed'}; margin-right: 0.5rem;">
                                         选择
                                     </button>
-                                    <button onclick="deleteDataset('${dataset.dataset_id}')"
+                                    <button type="button" onclick="deleteDataset('${dataset.dataset_id}')"
                                             style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
                                         删除
                                     </button>
@@ -892,7 +892,7 @@ class CompatibilityManager {
         const names = {
             'reinforce': 'REINFORCE (入门)',
             'ppo': 'PPO (生产推荐)',
-            'a2c': 'A2C (平衡)',
+            'a2c': 'A3C (平衡)',
             'dqn': 'DQN',
             'qlearning': 'Q-Learning'
         };

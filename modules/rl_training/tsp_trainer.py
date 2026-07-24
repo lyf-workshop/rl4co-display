@@ -56,19 +56,22 @@ class TSPTrainer(BaseTrainer):
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
         """生成TSP可视化结果"""
         # 训练后策略（已训练权重）
-        policy = model.policy.to(self.device)
+        device = self._get_model_device(model)
+        policy = model.policy.to(device)
         policy.eval()
         # 训练前策略副本（初始随机权重）
         untrained_policy = self.create_untrained_policy_copy(model)
 
         # 如果使用了自定义数据集，在该数据集上测试
         if self.custom_dataset is not None:
-            td_init = env.reset(batch_size=[1]).to(self.device)
-            coords_tensor = torch.tensor([self.custom_dataset], dtype=torch.float32).to(self.device)
+            td_init = env.reset(batch_size=[1]).to(device)
+            coords_tensor = torch.as_tensor(
+                [self.custom_dataset], dtype=torch.float32, device=device
+            )
             td_init['locs'] = coords_tensor
             self.send_message('info', f'✅ 在上传的TSP数据集上进行测试（{len(self.custom_dataset)}个城市）')
         else:
-            td_init = env.reset(batch_size=[3]).to(self.device)
+            td_init = env.reset(batch_size=[3]).to(device)
 
         # 未训练模型 vs 训练后模型（均使用贪心解码，仅权重不同）
         # 自回归策略（AM/POMO）：贪心解码

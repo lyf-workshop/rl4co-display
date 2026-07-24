@@ -10,6 +10,7 @@
 """
 import json
 import logging
+import os
 import urllib.request
 import urllib.error
 
@@ -26,14 +27,58 @@ _READ_TIMEOUT    = 120       # 秒
 # 启动时加载服务商配置（静态，不随请求变化）
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _load_providers():
+def _load_provider_source():
+    provider_file = os.environ.get('LLM_PROVIDERS_FILE', '').strip()
+    if provider_file:
+        try:
+            with open(provider_file, 'r', encoding='utf-8') as file:
+                payload = json.load(file)
+            if isinstance(payload, dict):
+                return payload.get('providers', [])
+            if isinstance(payload, list):
+                return payload
+            logger.error('[LLM proxy] Provider file must contain a list or providers object')
+            return []
+        except (OSError, ValueError) as error:
+            logger.error('[LLM proxy] Failed to load provider file %s: %s', provider_file, error)
+            return []
+
     try:
         from config.config import Config
-        raw = getattr(Config, 'LLM_PROVIDERS', [])
-        # 只保留填写了 api_key 的条目，避免用空 key 调用上游导致 401
-        return {p['id']: p for p in raw if p.get('api_key')}
+        return getattr(Config, 'LLM_PROVIDERS', [])
     except (ImportError, AttributeError):
-        return {}
+        return []
+
+
+def _load_providers():
+    providers = {}
+    for raw_provider in _load_provider_source():
+        if not isinstance(raw_provider, dict):
+            continue
+
+        provider = dict(raw_provider)
+        provider_id = str(provider.get('id') or '').strip()
+        base_url = str(provider.get('base_url') or '').strip()
+        api_key = str(provider.get('api_key') or '').strip()
+        models = [
+            str(model).strip()
+            for model in provider.get('models', [])
+            if str(model).strip()
+        ]
+        if not provider_id or not base_url or not api_key or not models:
+            continue
+
+        provider.update({
+            'id': provider_id,
+            'name': str(provider.get('name') or provider_id),
+            'base_url': base_url,
+            'api_key': api_key,
+            'models': models,
+            'default_model': provider.get('default_model') or models[0],
+        })
+        providers[provider_id] = provider
+
+    return providers
 
 _PROVIDERS = _load_providers()
 

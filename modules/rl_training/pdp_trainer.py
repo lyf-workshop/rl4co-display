@@ -41,28 +41,43 @@ class PDPTrainer(BaseTrainer):
             self.force_start_at_depot = self.force_start_at_depot.lower() == 'true'
         
         # 验证参数
-        if self.pdp_num_loc % 2 != 0:
-            raise ValueError(f"num_loc 必须是偶数（取货点和送货点成对），当前值: {self.pdp_num_loc}")
         
         self.num_pairs = self.pdp_num_loc // 2
         
-        self.send_message('info', f'📋 PDP配置: {self.pdp_num_loc}个地点 ({self.num_pairs}对取送货), 强制从depot开始: {self.force_start_at_depot}')
         self.load_custom_dataset()
         if self.custom_dataset_data:
             self.pdp_num_loc = self.num_loc
             self.num_pairs = self.pdp_num_loc // 2
 
+        if self.pdp_num_loc % 2 != 0:
+            raise ValueError(f"num_loc 必须是偶数（取货点和送货点成对），当前值: {self.pdp_num_loc}")
+        self.num_pairs = self.pdp_num_loc // 2
+        self.send_message('info', f'📋 PDP配置: {self.pdp_num_loc}个地点 ({self.num_pairs}对取送货), 强制从depot开始: {self.force_start_at_depot}')
+
     def _inject_custom_data(self, td):
         data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)  # [N, 2]
+        device = td.device
+        coords = torch.as_tensor(data['coordinates'], dtype=torch.float32, device=device)
 
-        if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
+        if data.get('depot') is not None:
+            depot = torch.as_tensor(data['depot'], dtype=torch.float32, device=device)
+        elif 'depot' in td.keys():
+            depot = td['depot'][0]
         else:
-            depot = td['depot'][0].cpu()  # PDP 有独立 depot key
+            depot = td['locs'][0, 0]
 
-        td['locs'] = coords.unsqueeze(0).to(self.device)   # [1, N, 2]
-        td['depot'] = depot.unsqueeze(0).to(self.device)   # [1, 2]
+        # Preserve the node representation produced by the installed RL4CO version.
+        if td['locs'].shape[-2] == coords.shape[0] + 1:
+            locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
+            td['locs'] = self._expand_custom_tensor(td, locs)
+        elif td['locs'].shape[-2] == coords.shape[0] and 'depot' in td.keys():
+            td['locs'] = self._expand_custom_tensor(td, coords)
+            td['depot'] = self._expand_custom_tensor(td, depot)
+        else:
+            raise ValueError(
+                f'PDP dataset has {len(coords)} locations, but the environment has '
+                f'{td["locs"].shape[-2]} location slots'
+            )
         return td
 
     def initialize_environment(self):
@@ -119,9 +134,14 @@ class PDPTrainer(BaseTrainer):
         plot_paths = []
         
         try:
+            device = self._get_model_device(model)
+            model.eval()
+            policy = model.policy.to(device)
+            policy.eval()
+
             # 定义测试实例数量和可视化数量
             if self.custom_dataset_data:
-                td = env.reset(batch_size=[1]).to(self.device)
+                td = env.reset(batch_size=[1]).to(device)
                 td = self._inject_custom_data(td)
                 num_test_instances = 1
                 num_visualizations = 1
@@ -130,10 +150,10 @@ class PDPTrainer(BaseTrainer):
                 num_test_instances = min(3, self.batch_size)  # 最多3个实例
                 num_visualizations = min(3, num_test_instances)  # 最多生成3个可视化
                 # 生成测试数据
-                td = env.reset(batch_size=[num_test_instances])
+                td = env.reset(batch_size=[num_test_instances]).to(device)
             
             # 未训练基线推断（与训练后共享同一批测试数据）
-            model.eval()
+            td = td.to(device)
             untrained_policy = self.create_untrained_policy_copy(model)
             with torch.no_grad():
                 out_baseline = self._run_policy(untrained_policy, td.clone(), env,
@@ -144,7 +164,9 @@ class PDPTrainer(BaseTrainer):
 
             # 训练后模型推断
             with torch.no_grad():
-                out = model(td.clone(), phase="test", decode_type="greedy", return_actions=True)
+                out = self._run_policy(policy, td.clone(), env,
+                                       phase="test", decode_type="greedy",
+                                       return_actions=True)
 
             # 提取数据
             locs = td['locs'].cpu().numpy()  # [batch, num_loc, 2]

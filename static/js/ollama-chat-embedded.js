@@ -251,6 +251,7 @@ class OllamaChatEmbedded {
         } else {
             const provider = this.state.cloudProviders.find(p => p.id === sourceId);
             if (!provider) return;
+            this.state.isConnected = true;
 
             // 更新模型列表
             this.elements.modelSelect.innerHTML = provider.models
@@ -358,7 +359,7 @@ class OllamaChatEmbedded {
         const text = this.elements.input.value.trim();
         
         if (!text) return;
-        if (!this.state.isConnected) {
+        if (this.state.source === 'ollama' && !this.state.isConnected) {
             this.showNotification('请先启动Ollama服务', 'error');
             return;
         }
@@ -652,7 +653,7 @@ class OllamaChatEmbedded {
         };
 
         const algoNames = {
-            reinforce: 'REINFORCE', ppo: 'PPO', a2c: 'A2C'
+            reinforce: 'REINFORCE', ppo: 'PPO', a2c: 'A3C'
         };
 
         let html = '';

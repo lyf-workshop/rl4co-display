@@ -15,7 +15,15 @@ from PIL import Image
 logger = logging.getLogger('rl4co_display')
 
 # 配置中文字体支持
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+matplotlib.rcParams['font.sans-serif'] = [
+    'SimHei',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+    'Noto Sans CJK JP',
+    'WenQuanYi Zen Hei',
+    'Arial Unicode MS',
+    'DejaVu Sans',
+]
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
@@ -44,6 +52,8 @@ def create_vrptw_route_animation(td, actions, save_path, title="VRPTW路线生�
             demands = demands.cpu().numpy()
             if demands.ndim == 2:  # 去掉batch维度
                 demands = demands[0]
+            if len(demands) == len(locs):
+                demands = demands[1:]
         
         # 尝试提取时间窗信息
         time_windows = td.get('time_windows', None)
@@ -51,6 +61,8 @@ def create_vrptw_route_animation(td, actions, save_path, title="VRPTW路线生�
             time_windows = time_windows.cpu().numpy()
             if time_windows.ndim == 3:  # 去掉batch维度
                 time_windows = time_windows[0]
+            if len(time_windows) == len(locs):
+                time_windows = time_windows[1:]
         else:
             # 如果没有时间窗信息，生成默认的
             time_windows = np.random.rand(len(customers), 2) * 100
@@ -67,12 +79,16 @@ def create_vrptw_route_animation(td, actions, save_path, title="VRPTW路线生�
             demands = demands.cpu().numpy()
             if demands.ndim == 2:
                 demands = demands[0]
+            if len(demands) == len(locs):
+                demands = demands[1:]
         
         time_windows = td.get('time_windows', None)
         if time_windows is not None:
             time_windows = time_windows.cpu().numpy()
             if time_windows.ndim == 3:
                 time_windows = time_windows[0]
+            if len(time_windows) == len(locs):
+                time_windows = time_windows[1:]
         else:
             time_windows = np.random.rand(len(customers), 2) * 100
             time_windows[:, 1] = time_windows[:, 0] + 50
@@ -110,7 +126,7 @@ def create_vrptw_route_animation(td, actions, save_path, title="VRPTW路线生�
             
             # 更新载重（如果访问客户）
             if node_a > 0 and demands is not None:  # 不是仓库
-                demand_idx = node_a if len(demands) > node_a else node_a - 1
+                demand_idx = node_a - 1
                 if demand_idx < len(demands):
                     current_load += demands[demand_idx]
                 
@@ -403,6 +419,8 @@ def create_vrptw_time_schedule(td, actions, save_path, title="VRPTW时间调度�
             time_windows = time_windows.cpu().numpy()
             if time_windows.ndim == 3:
                 time_windows = time_windows[0]
+            if len(time_windows) == len(locs):
+                time_windows = time_windows[1:]
         else:
             # 生成默认时间窗
             num_customers = len(locs) - 1
@@ -418,6 +436,8 @@ def create_vrptw_time_schedule(td, actions, save_path, title="VRPTW时间调度�
             time_windows = time_windows.cpu().numpy()
             if time_windows.ndim == 3:
                 time_windows = time_windows[0]
+            if len(time_windows) == len(locs):
+                time_windows = time_windows[1:]
         else:
             num_customers = len(locs) - 1
             time_windows = np.random.rand(num_customers, 2) * 100
