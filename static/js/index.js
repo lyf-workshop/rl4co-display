@@ -222,6 +222,16 @@ function updateDatasetSection(problemType) {
     const unsupported = ['atsp', 'ffsp'];
     const disabled = unsupported.includes(problemType);
 
+    // 切换问题类型后，之前上传的数据集属于旧问题，不再适用：清理上传状态，
+    // 避免开训时携带类型不匹配的 dataset_id（后端会静默回退到随机数据）。
+    window.uploadedDatasetId = null;
+    const datasetInfoEl = document.getElementById('dataset-info');
+    if (datasetInfoEl) datasetInfoEl.style.display = 'none';
+    const uploadStatusEl = document.getElementById('upload-status');
+    if (uploadStatusEl) uploadStatusEl.className = 'status-message';
+    const fileInputEl = document.getElementById('dataset-file');
+    if (fileInputEl) fileInputEl.value = '';
+
     const desc = DATASET_DESCRIPTIONS[problemType] || DATASET_DESCRIPTIONS['tsp'];
     const descEl = document.getElementById('dataset-description');
     if (descEl) {
@@ -290,17 +300,23 @@ async function uploadDataset() {
         const result = await response.json();
 
         if (result.success) {
+            // 先保存数据集ID（务必在任何 DOM 更新之前，避免某个展示元素缺失时
+            // 抛错导致 dataset_id 丢失、训练时回退到随机数据）
+            window.uploadedDatasetId = result.dataset_id;
+
             uploadStatus.className = 'status-message show success';
             uploadStatus.textContent = '✅ ' + result.message;
 
-            // 显示数据集信息
+            // 显示数据集信息（逐个判空，缺元素不影响上传结果）
             datasetInfo.style.display = 'block';
-            document.getElementById('dataset-filename').textContent = result.dataset_info.filename;
-            document.getElementById('dataset-size').textContent = (result.dataset_info.num_loc || result.dataset_info.num_cities) + ' 个节点';
-            document.getElementById('dataset-range').textContent = result.dataset_info.coord_range;
-
-            // 保存数据集ID到全局变量
-            window.uploadedDatasetId = result.dataset_id;
+            const info = result.dataset_info || {};
+            const setText = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            setText('dataset-filename', info.filename);
+            setText('dataset-size', (info.num_loc || info.num_cities) + ' 个节点');
+            setText('dataset-range', info.coord_range);
         } else {
             uploadStatus.className = 'status-message show error';
             uploadStatus.textContent = '❌ ' + result.message;
@@ -458,6 +474,38 @@ class CompatibilityManager {
         this.currentPolicy = 'attention';
         this.currentAlgorithm = 'reinforce';
 
+        // ── 约束表（与后端 modules/compatibility.py 保持一致，唯一前端副本）──
+        // 策略 → 支持的问题（对应 POLICY_PROBLEM_COMPATIBILITY）
+        this.POLICY_PROBLEM_COMPAT = {
+            'attention': ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
+            'pomo':      ['tsp', 'cvrp'],
+            'symnco':    ['tsp', 'mtsp', 'cvrp'],
+            'ham':       ['pdp'],
+            'matnet':    ['atsp', 'ffsp'],
+            'ptrnet':    ['tsp'],
+            'mdam':      ['tsp', 'cvrp', 'op', 'pdp', 'pctsp', 'spctsp', 'vrptw'],
+            'deepaco':   ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'op'],
+        };
+        // 策略 → 支持的算法（对应 POLICY_ALGORITHM_COMPATIBILITY）
+        // 只含单个算法的策略会被“锁定”（禁用算法下拉框）
+        this.POLICY_ALGO_COMPAT = {
+            'attention': ['reinforce', 'ppo', 'a2c', 'dqn', 'qlearning'],
+            'pomo':      ['reinforce'],
+            'symnco':    ['reinforce'],
+            'ham':       ['reinforce', 'ppo', 'a2c'],
+            'matnet':    ['reinforce'],
+            'ptrnet':    ['reinforce'],
+            'mdam':      ['reinforce'],
+            'deepaco':   ['reinforce'],
+        };
+        // 算法 → 支持的问题（对应 ALGORITHM_PROBLEM_COMPATIBILITY，仅列出受限者）
+        this.ALGO_PROBLEM_COMPAT = {
+            'dqn': ['tsp'],
+            'qlearning': ['tsp'],
+        };
+        // 自带训练逻辑的策略（用于锁定说明文案）
+        this.SELF_CONTAINED_POLICIES = ['pomo', 'symnco', 'mdam', 'deepaco', 'matnet'];
+
         this.init();
     }
 
@@ -584,6 +632,8 @@ class CompatibilityManager {
                 this.updatePolicyDescription();
                 this.updateAlgorithmDescription();
                 this.showPolicySpecificParams();
+                // 重新计算约束并应用算法锁定（推荐配置可能切到自带训练的策略）
+                this.updateAlgorithmConstraints();
                 this.validateConfiguration();
 
                 // 显示成功提示
@@ -642,16 +692,7 @@ class CompatibilityManager {
         if (deepacoParams) {
             deepacoParams.style.display = this.currentPolicy === 'deepaco' ? 'block' : 'none';
         }
-        // SymNCO/MDAM/DeepACO 使用内置训练算法，锁定算法下拉框
-        const algoSelect = document.getElementById('algorithm-select');
-        if (algoSelect) {
-            const reinforce_only = ['symnco', 'mdam', 'deepaco'];
-            algoSelect.disabled = reinforce_only.includes(this.currentPolicy);
-            if (reinforce_only.includes(this.currentPolicy)) {
-                algoSelect.value = 'reinforce';
-                this.currentAlgorithm = 'reinforce';
-            }
-        }
+        // 算法下拉框的锁定/解锁由 updateAlgorithmConstraints → applyAlgorithmLock 统一处理
     }
 
     showProblemSpecificParams() {
@@ -715,16 +756,7 @@ class CompatibilityManager {
     }
 
     updatePolicyConstraints() {
-        const POLICY_PROBLEM_COMPAT = {
-            'attention': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
-            'pomo':      ['tsp', 'mtsp', 'cvrp'],
-            'symnco':    ['tsp', 'mtsp', 'cvrp'],
-            'ham':       ['pdp'],
-            'matnet':    ['atsp', 'ffsp'],
-            'ptrnet':    ['tsp', 'cvrp'],
-            'mdam':      ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
-            'deepaco':   ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op'],
-        };
+        const POLICY_PROBLEM_COMPAT = this.POLICY_PROBLEM_COMPAT;
 
         const PROBLEM_NAMES = {
             'tsp': 'TSP', 'atsp': 'ATSP', 'mtsp': 'mTSP',
@@ -764,20 +796,8 @@ class CompatibilityManager {
     }
 
     updateAlgorithmConstraints() {
-        const POLICY_ALGO_COMPAT = {
-            'attention': ['reinforce', 'ppo', 'a2c', 'dqn', 'qlearning'],
-            'pomo':      ['reinforce', 'ppo', 'a2c'],
-            'symnco':    ['reinforce'],
-            'ham':       ['reinforce', 'ppo', 'a2c'],
-            'matnet':    ['reinforce', 'ppo', 'a2c'],
-            'ptrnet':    ['reinforce'],
-            'mdam':      ['reinforce'],
-            'deepaco':   ['reinforce'],
-        };
-        const ALGO_PROBLEM_COMPAT = {
-            'dqn': ['tsp'],
-            'qlearning': ['tsp'],
-        };
+        const POLICY_ALGO_COMPAT = this.POLICY_ALGO_COMPAT;
+        const ALGO_PROBLEM_COMPAT = this.ALGO_PROBLEM_COMPAT;
 
         const POLICY_NAMES = {
             'attention': 'Attention Model', 'pomo': 'POMO',
@@ -817,6 +837,41 @@ class CompatibilityManager {
             algoSelect.value = firstValidValue;
             this.currentAlgorithm = firstValidValue;
             this.updateAlgorithmDescription();
+        }
+
+        // ── 锁定：策略仅支持单一算法时，禁用算法下拉框并说明 ──
+        this.applyAlgorithmLock(policy, compatAlgos);
+    }
+
+    /**
+     * 当策略只支持一个算法（reinforce）时，锁定算法下拉框并显示说明；
+     * 否则解锁。用户因此无法选出后端会拒绝的冲突组合（如 POMO + PPO）。
+     */
+    applyAlgorithmLock(policy, compatAlgos) {
+        const algoSelect = document.getElementById('algorithm-select');
+        const note = document.getElementById('algorithm-lock-note');
+        const noteText = document.getElementById('algorithm-lock-text');
+        if (!algoSelect) return;
+
+        const locked = Array.isArray(compatAlgos) && compatAlgos.length === 1;
+
+        if (locked) {
+            const onlyAlgo = compatAlgos[0];
+            algoSelect.value = onlyAlgo;
+            this.currentAlgorithm = onlyAlgo;
+            algoSelect.disabled = true;
+            algoSelect.classList.add('locked');
+            if (noteText) {
+                noteText.textContent = this.SELF_CONTAINED_POLICIES.includes(policy)
+                    ? '该模型自带训练逻辑，算法已锁定为 REINFORCE'
+                    : `${this.getPolicyDisplayName(policy)} 仅支持 REINFORCE，算法已锁定`;
+            }
+            if (note) note.style.display = 'block';
+            this.updateAlgorithmDescription();
+        } else {
+            algoSelect.disabled = false;
+            algoSelect.classList.remove('locked');
+            if (note) note.style.display = 'none';
         }
     }
 

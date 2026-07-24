@@ -140,7 +140,7 @@ class TestMTSPIntegration:
         assert 'num_loc' in env_params
         assert 'min_num_agents' in env_params
         assert 'max_num_agents' in env_params
-        assert env_params['num_loc'] == 50
+        assert env_params['num_loc'] == 51  # 50 customers plus one depot
         assert env_params['min_num_agents'] == 5
         assert env_params['max_num_agents'] == 5
     

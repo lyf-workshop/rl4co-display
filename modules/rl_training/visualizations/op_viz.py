@@ -185,10 +185,10 @@ def create_op_route_animation(
             visit_rate = len(visited_indices) / num_locs * 100
             length_usage = current_length / max_length * 100 if max_length > 0 else 0
             stats_text.set_text(
-                f'📊 Statistics:\n'
-                f'  • Visited: {len(visited_indices)}/{num_locs} ({visit_rate:.1f}%)\n'
-                f'  • Length: {current_length:.3f}/{max_length:.2f} ({length_usage:.1f}%)\n'
-                f'  • Prize: {current_prize:.2f}'
+                f'Statistics:\n'
+                f'  - Visited: {len(visited_indices)}/{num_locs} ({visit_rate:.1f}%)\n'
+                f'  - Length: {current_length:.3f}/{max_length:.2f} ({length_usage:.1f}%)\n'
+                f'  - Prize: {current_prize:.2f}'
             )
             
             return route_line, current_marker, visited_scatter, title_text, stats_text

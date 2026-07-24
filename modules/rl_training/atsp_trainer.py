@@ -38,37 +38,45 @@ class ATSPTrainer(BaseTrainer):
         return env
 
     def generate_visualizations(self, env, model, trainer, checkpoint_path):
-        """生成 ATSP 可视化结果（费用矩阵对比图 + 路径构建动态GIF）"""
-        # ── 保存检查点 ──────────────────────────────────────────────────
+        """为三个随机 ATSP 实例生成费用矩阵对比图和路径动画。"""
         trainer.save_checkpoint(checkpoint_path)
         self._save_file_record(os.path.basename(checkpoint_path), 'checkpoint', checkpoint_path)
         self.send_message('info', f'检查点已保存: {checkpoint_path}')
 
         plot_paths = []
         animation_paths = []
+        num_test_instances = 3
 
-        # ── 模型推理：获取 cost_matrix、随机解、贪心解 ──────────────────
-        cost_matrix    = None
-        actions_random = None
-        actions_greedy = None
+        # 一次批量推理三个不同的随机费用矩阵，避免重复推理同一实例。
         try:
-            policy  = model.policy.to(self.device)
-            td_init = env.reset(batch_size=[1]).to(self.device)
+            device = next(model.parameters()).device
+            model.eval()
+            policy = model.policy.to(device)
+            policy.eval()
+            td_init = env.reset(batch_size=[num_test_instances]).to(device)
 
-            # 训练前基线（未训练权重）vs 训练后（训练权重），均用贪心解码
             untrained_policy = self.create_untrained_policy_copy(model)
             with torch.no_grad():
-                out_random = self._run_policy(untrained_policy, td_init.clone(), env,
-                                              phase="test", decode_type="greedy",
-                                              return_actions=True)
-                out_greedy = self._run_policy(policy, td_init.clone(), env,
-                                              phase="test", decode_type="greedy",
-                                              return_actions=True)
+                out_random = self._run_policy(
+                    untrained_policy,
+                    td_init.clone(),
+                    env,
+                    phase='test',
+                    decode_type='greedy',
+                    return_actions=True,
+                )
+                out_greedy = self._run_policy(
+                    policy,
+                    td_init.clone(),
+                    env,
+                    phase='test',
+                    decode_type='greedy',
+                    return_actions=True,
+                )
 
-            cost_matrix    = td_init['cost_matrix'][0].cpu()
-            actions_random = out_random['actions'][0].cpu()
-            actions_greedy = out_greedy['actions'][0].cpu()
-
+            cost_matrices = td_init['cost_matrix'].cpu()
+            actions_random_batch = out_random['actions'].cpu()
+            actions_greedy_batch = out_greedy['actions'].cpu()
         except Exception as e:
             logger.error(f"ATSP 模型推理失败: {e}", exc_info=True)
             self.send_message('warning', f'⚠️ 模型推理失败，跳过可视化: {str(e)}')
@@ -79,50 +87,86 @@ class ATSPTrainer(BaseTrainer):
                 'checkpoint_path': checkpoint_path,
             }
 
-        # ── 静态对比图（热力图）──────────────────────────────────────────
-        try:
-            self.send_message('info', '正在生成 ATSP 费用矩阵热力图...')
-            plot_filename = f"atsp_comparison_{self.session_id[:8]}.png"
-            plot_path = os.path.join(self.user_plots_dir, plot_filename)
+        for i in range(num_test_instances):
+            instance_id = i + 1
+            cost_matrix = cost_matrices[i]
+            actions_random = actions_random_batch[i]
+            actions_greedy = actions_greedy_batch[i]
 
-            result = create_atsp_comparison_plot(
-                cost_matrix, actions_random, actions_greedy, plot_path,
-                title=f"ATSP训练前后对比（{self.num_loc}节点）"
-            )
+            try:
+                self.send_message('info', f'正在生成 ATSP 实例 {instance_id}/3 费用矩阵热力图...')
+                plot_filename = (
+                    f"atsp_comparison_{self.session_id[:8]}_inst{instance_id}.png"
+                )
+                plot_path = os.path.join(self.user_plots_dir, plot_filename)
 
-            self._save_file_record(plot_filename, 'plot', plot_path)
+                result = create_atsp_comparison_plot(
+                    cost_matrix,
+                    actions_random,
+                    actions_greedy,
+                    plot_path,
+                    title=f"ATSP训练前后对比（实例{instance_id}，{self.num_loc}节点）",
+                )
 
-            plot_paths.append(f"/static/model_plots/user_{self.user_id}/{plot_filename}")
-            self.send_message(
-                'info',
-                f'✅ ATSP热力图生成完成: 总费用 {result["cost_random"]:.4f} → '
-                f'{result["cost_trained"]:.4f}，改进 {result["improvement"]:.2f}%'
-            )
-        except Exception as e:
-            logger.error(f"生成 ATSP 对比图失败: {e}", exc_info=True)
-            self.send_message('warning', f'⚠️ 对比图生成失败: {str(e)}')
+                self._save_file_record(plot_filename, 'plot', plot_path)
+                plot_paths.append(
+                    f"/static/model_plots/user_{self.user_id}/{plot_filename}"
+                )
+                self.send_message(
+                    'info',
+                    f'✅ ATSP实例 {instance_id} 热力图完成: '
+                    f'总费用 {result["cost_random"]:.4f} → '
+                    f'{result["cost_trained"]:.4f}，'
+                    f'改进 {result["improvement"]:.2f}%',
+                )
+            except Exception as e:
+                logger.error(
+                    f"生成 ATSP 实例 {instance_id} 对比图失败: {e}",
+                    exc_info=True,
+                )
+                self.send_message(
+                    'warning',
+                    f'⚠️ ATSP实例 {instance_id} 对比图生成失败: {str(e)}',
+                )
 
-        # ── 动态 GIF（路径构建过程）──────────────────────────────────────
-        try:
-            self.send_message('info', '正在生成 ATSP 路径构建动态图...')
-            anim_filename = f"atsp_animation_{self.session_id[:8]}.gif"
-            anim_path = os.path.join(self.user_plots_dir, anim_filename)
+            try:
+                self.send_message('info', f'正在生成 ATSP 实例 {instance_id}/3 路径动态图...')
+                anim_filename = (
+                    f"atsp_animation_{self.session_id[:8]}_inst{instance_id}.gif"
+                )
+                anim_path = os.path.join(self.user_plots_dir, anim_filename)
 
-            create_atsp_route_animation(
-                cost_matrix, actions_greedy, anim_path,
-                title=f"ATSP路径构建过程（{self.num_loc}节点，训练后贪心解）",
-                fps=2
-            )
+                create_atsp_route_animation(
+                    cost_matrix,
+                    actions_greedy,
+                    anim_path,
+                    title=(
+                        f"ATSP路径构建过程（实例{instance_id}，"
+                        f"{self.num_loc}节点，训练后贪心解）"
+                    ),
+                    fps=2,
+                )
 
-            self._save_file_record(anim_filename, 'animation', anim_path)
+                self._save_file_record(anim_filename, 'animation', anim_path)
+                animation_paths.append(
+                    f"/static/model_plots/user_{self.user_id}/{anim_filename}"
+                )
+                self.send_message('info', f'✅ ATSP实例 {instance_id} 动态GIF生成完成')
+            except Exception as e:
+                logger.error(
+                    f"生成 ATSP 实例 {instance_id} 动画失败: {e}",
+                    exc_info=True,
+                )
+                self.send_message(
+                    'warning',
+                    f'⚠️ ATSP实例 {instance_id} 动画生成失败: {str(e)}',
+                )
 
-            animation_paths.append(f"/static/model_plots/user_{self.user_id}/{anim_filename}")
-            self.send_message('info', '✅ ATSP动态GIF生成完成')
-
-        except Exception as e:
-            logger.error(f"生成 ATSP 动画失败: {e}", exc_info=True)
-            self.send_message('warning', f'⚠️ 动画生成失败: {str(e)}')
-
+        self.send_message(
+            'info',
+            f'🎉 ATSP可视化完成: {len(plot_paths)}张对比图，'
+            f'{len(animation_paths)}个动画',
+        )
         return {
             'plot_paths': plot_paths,
             'animation_paths': animation_paths,

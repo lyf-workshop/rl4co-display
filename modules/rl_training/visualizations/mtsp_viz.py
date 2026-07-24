@@ -31,7 +31,7 @@ AGENT_COLORS = [
 ]
 
 
-def extract_agent_routes(actions):
+def extract_agent_routes(actions, num_agents=None):
     """
     从动作序列中提取每个代理的路径
     
@@ -43,6 +43,8 @@ def extract_agent_routes(actions):
     """
     routes = []
     current_route = []
+
+    actions = np.asarray(actions).reshape(-1)
     
     for city in actions:
         if city == 0:  # 遇到depot
@@ -55,6 +57,14 @@ def extract_agent_routes(actions):
     # 添加最后一条路径
     if current_route:
         routes.append(current_route)
+
+    if num_agents is not None:
+        num_agents = int(num_agents)
+        if len(routes) > num_agents:
+            raise ValueError(
+                f'动作序列包含{len(routes)}条路线，超过配置的{num_agents}个代理'
+            )
+        routes.extend([[] for _ in range(num_agents - len(routes))])
     
     return routes
 
@@ -94,7 +104,8 @@ def calculate_route_distance(locs, route, include_depot=True):
     return total_dist
 
 
-def create_mtsp_route_animation(td, actions, save_path, title="mTSP路线生成过程", fps=2):
+def create_mtsp_route_animation(td, actions, save_path, title="mTSP路线生成过程",
+                                fps=2, num_agents=None):
     """
     创建mTSP路线逐步生成的动态GIF
     
@@ -120,8 +131,9 @@ def create_mtsp_route_animation(td, actions, save_path, title="mTSP路线生成�
         locs = locs[0]  # 去掉 batch 维度
     
     # 提取每个代理的路径
-    agent_routes = extract_agent_routes(actions)
-    num_agents = len(agent_routes)
+    agent_routes = extract_agent_routes(actions, num_agents=num_agents)
+    configured_agents = len(agent_routes)
+    active_agents = sum(bool(route) for route in agent_routes)
     
     frames = []
     
@@ -223,7 +235,7 @@ def create_mtsp_route_animation(td, actions, save_path, title="mTSP路线生成�
             
             # 设置标题和信息
             info_lines = []
-            info_lines.append(f"代理 {agent_idx + 1}/{num_agents}")
+            info_lines.append(f"代理 {agent_idx + 1}/{configured_agents}（已使用 {active_agents}）")
             
             if step == 0:
                 info_lines.append("准备出发...")
@@ -287,8 +299,8 @@ def create_mtsp_route_animation(td, actions, save_path, title="mTSP路线生成�
         logger.warning("mTSP动画：没有生成任何帧")
 
 
-def create_mtsp_comparison_plot(td, actions, save_path, cost=None, 
-                                 title="mTSP路线对比图"):
+def create_mtsp_comparison_plot(td, actions, save_path, cost=None,
+                                title="mTSP路线对比图", num_agents=None):
     """
     创建mTSP多代理路线对比图
     
@@ -314,8 +326,9 @@ def create_mtsp_comparison_plot(td, actions, save_path, cost=None,
         locs = locs[0]  # 去掉 batch 维度
     
     # 提取每个代理的路径
-    agent_routes = extract_agent_routes(actions)
-    num_agents = len(agent_routes)
+    agent_routes = extract_agent_routes(actions, num_agents=num_agents)
+    configured_agents = len(agent_routes)
+    active_agents = sum(bool(route) for route in agent_routes)
     
     # 创建图表
     fig, ax = plt.subplots(figsize=(12, 10))
@@ -383,8 +396,8 @@ def create_mtsp_comparison_plot(td, actions, save_path, cost=None,
         max_dist = max(distances)
         sum_dist = sum(distances)
         avg_dist = sum_dist / len(distances)
-        info_lines.append(f"代理数: {num_agents} | 最长: {max_dist:.3f} | " +
-                         f"总计: {sum_dist:.3f} | 平均: {avg_dist:.3f}")
+        info_lines.append(f"已使用代理: {active_agents}/{configured_agents} | 最长: {max_dist:.3f} | " +
+                          f"总计: {sum_dist:.3f} | 平均: {avg_dist:.3f}")
     
     if cost is not None:
         info_lines.append(f"优化成本: {cost:.4f}")
@@ -405,7 +418,7 @@ def create_mtsp_comparison_plot(td, actions, save_path, cost=None,
     
     # 添加统计信息框
     stats_text = f"城市总数: {len(customer_locs)}\n"
-    stats_text += f"代理数量: {num_agents}\n"
+    stats_text += f"代理数量: {active_agents}/{configured_agents}（使用/配置）\n"
     if distances:
         stats_text += f"负载均衡: {min(len(r) for r in agent_routes)}-{max(len(r) for r in agent_routes)} 城市/代理"
     

@@ -455,6 +455,9 @@
                             <option value="qlearning">Q-Learning（Q学习）</option>
                         </select>
                         <p class="description" id="algorithm-description">最基础的策略梯度算法，简单易懂，适合学习</p>
+                        <p class="description algorithm-lock-note" id="algorithm-lock-note" style="display: none; color: #6c757d;">
+                            🔒 <span id="algorithm-lock-text">该模型自带训练逻辑，算法已锁定为 REINFORCE</span>
+                        </p>
               </div>
 
                     <!-- 推荐配置按钮 -->
@@ -692,6 +695,7 @@
                         <h4 style="color: #667eea; margin-bottom: 0.5rem; font-size: 1rem;">✅ 数据集已上传</h4>
                         <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>文件名:</strong> <span id="dataset-filename"></span></p>
                         <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>节点数量:</strong> <span id="dataset-size"></span></p>
+                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>坐标范围:</strong> <span id="dataset-range"></span></p>
                     </div>
                     
                     <button type="button" id="dataset-manager-btn" class="start-button" onclick="showDatasetManager()" style="margin-top: 1rem; font-size: 0.9rem; padding: 0.6rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">

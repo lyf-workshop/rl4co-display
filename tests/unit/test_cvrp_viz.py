@@ -5,7 +5,7 @@ import sys
 import os
 
 # 添加项目根目录
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 print("=" * 60)
 print("测试CVRP可视化模块")
@@ -58,10 +58,12 @@ try:
         content = f.read()
     
     # 检查是否使用正确的保存方式
-    if 'self.bg_file_manager.save_file_record' in content:
-        print("[OK] 使用正确的文件保存方式: self.bg_file_manager.save_file_record")
+    if 'self._save_file_record(' in content:
+        print("[OK] 使用BaseTrainer统一的文件保存方式: self._save_file_record")
+    elif 'self.bg_file_manager.save_file_record' in content:
+        print("[OK] 使用文件管理器保存方式: self.bg_file_manager.save_file_record")
     else:
-        print("[WARN] 可能使用了错误的文件保存方式")
+        print("[WARN] 未发现文件记录保存调用")
     
     # 检查是否有错误的调用
     if 'self.save_file_record(' in content:

@@ -176,21 +176,13 @@ WARNING_COMBINATIONS = [
         'message': 'PtrNet不支持FFSP调度问题。请使用MatNet',
         'severity': 'error'
     },
-    {
-        'problem': 'ffsp',
-        'algorithm': 'reinforce',
-        'message': 'FFSP是复杂调度问题，建议使用PPO或A2C算法以获得更稳定的训练和更好的收敛性',
-        'severity': 'info'
-    },
+    # 注：ATSP / FFSP 不再给出“建议改用 PPO/A2C”的提示。
+    # 这两个问题只能用 MatNet，而 MatNet 内置 REINFORCE、与 PPO/A2C 硬不兼容
+    # （见 POLICY_ALGORITHM_COMPATIBILITY['matnet'] 及下方 matnet+ppo/a2c 的 error 规则），
+    # 该建议无法执行，会与推荐配置（matnet+reinforce）自相矛盾，故移除。
     {
         'policy': 'ptrnet',
         'message': 'PtrNet 是2015年的经典方法，性能不如现代方法（AM/POMO）。推荐用于学习和研究，实际应用建议使用 Attention Model 或 POMO',
-        'severity': 'info'
-    },
-    {
-        'problem': 'atsp',
-        'algorithm': 'reinforce',
-        'message': 'ATSP问题复杂度高，建议使用PPO或A2C算法以获得更好的收敛性',
         'severity': 'info'
     },
     {
@@ -565,10 +557,13 @@ def validate_combination(
     
     # 1. 检查策略是否支持该问题
     if not is_policy_compatible_with_problem(policy, problem):
+        recommended_policy = get_recommended_combination(problem, 'best').get(
+            'policy', 'attention'
+        )
         return (
             False,
             f'❌ {policy.upper()}策略不适用于{problem.upper()}问题。'
-            f'建议使用Attention Model。',
+            f'建议使用{recommended_policy.upper()}。',
             'error'
         )
     
@@ -637,10 +632,11 @@ def get_combination_warning(problem: str, policy: str, algorithm: str) -> str:
     algorithm = algorithm.lower()
     
     for warning in WARNING_COMBINATIONS:
-        # 检查问题是否匹配
-        if warning.get('problem') != problem:
+        # 检查问题是否匹配（仅当警告指定了 problem 时；无 problem 键的警告
+        # 是按 policy/algorithm 生效的通用警告，不应因缺 problem 键被跳过）
+        if 'problem' in warning and warning['problem'] != problem:
             continue
-        
+
         # 检查策略是否匹配（如果警告中指定了策略）
         if 'policy' in warning and warning['policy'] != policy:
             continue
@@ -802,8 +798,8 @@ def get_frontend_constraints(problem: str) -> Dict:
         'available_algorithms': get_available_algorithms(problem),
         'recommended': get_recommended_combination(problem, 'best'),
         'warnings': [
-            w for w in WARNING_COMBINATIONS 
-            if w['problem'] == problem
+            w for w in WARNING_COMBINATIONS
+            if w.get('problem') == problem
         ]
     }
 

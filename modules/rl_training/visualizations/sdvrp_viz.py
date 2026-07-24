@@ -363,11 +363,11 @@ def create_sdvrp_comparison_plot(env, td, actions_untrained, rewards_untrained,
     
     # 设置标题
     ax_untrained.set_title(
-        f"🎲 随机策略\n成本: {cost_untrained:.3f} | 返回: {returns_untrained}次\n分割: {split_untrained['total_splits']}次",
+        f"随机策略\n成本: {cost_untrained:.3f} | 返回: {returns_untrained}次\n分割: {split_untrained['total_splits']}次",
         fontsize=12, fontweight='bold', color='#e74c3c', pad=15
     )
     ax_trained.set_title(
-        f"🎯 训练后策略\n成本: {cost_trained:.3f} | 返回: {returns_trained}次\n分割: {split_trained['total_splits']}次",
+        f"训练后策略\n成本: {cost_trained:.3f} | 返回: {returns_trained}次\n分割: {split_trained['total_splits']}次",
         fontsize=12, fontweight='bold', color='#27ae60', pad=15
     )
     
@@ -383,81 +383,64 @@ def create_sdvrp_comparison_plot(env, td, actions_untrained, rewards_untrained,
     ax_stats.axis('off')
     
     stats_text = f"""
-    📊 对比统计 (SDVRP)
+    对比统计 (SDVRP)
     
     问题规模:
-    • 客户数: {num_customers}
-    • 总节点: {len(locs)}
+    - 客户数: {num_customers}
+    - 总节点: {len(locs)}
     
     成本对比:
-    • 随机: {cost_untrained:.3f}
-    • 训练: {cost_trained:.3f}
-    • 改进: {improvement:.1f}%
+    - 随机: {cost_untrained:.3f}
+    - 训练: {cost_trained:.3f}
+    - 改进: {improvement:.1f}%
     
     返回次数:
-    • 随机: {returns_untrained}次
-    • 训练: {returns_trained}次
+    - 随机: {returns_untrained}次
+    - 训练: {returns_trained}次
     
     分割配送:
-    • 随机: {split_untrained['total_splits']}次
-    • 训练: {split_trained['total_splits']}次
+    - 随机: {split_untrained['total_splits']}次
+    - 训练: {split_trained['total_splits']}次
     """
     
     # 选择改进指示颜色
     if improvement > 20:
         improvement_color = '#27ae60'
-        improvement_emoji = '🎉'
     elif improvement > 10:
         improvement_color = '#f39c12'
-        improvement_emoji = '👍'
     else:
         improvement_color = '#e74c3c'
-        improvement_emoji = '⚠️'
     
     ax_stats.text(0.05, 0.95, stats_text, 
                  transform=ax_stats.transAxes,
                  fontsize=9, 
                  verticalalignment='top',
-                 fontfamily='monospace',
+                 fontfamily='sans-serif',
                  bbox=dict(boxstyle='round,pad=0.8', 
                           facecolor='#f8f9fa', 
-                          edgecolor='#dee2e6',
-                          linewidth=2))
-    
-    # 改进指示器
-    improvement_text = f"{improvement_emoji} {improvement:.1f}%\n性能提升"
-    ax_stats.text(0.5, 0.12, improvement_text,
-                 transform=ax_stats.transAxes,
-                 fontsize=13,
-                 fontweight='bold',
-                 color=improvement_color,
-                 ha='center',
-                 va='center',
-                 bbox=dict(boxstyle='round,pad=0.6',
-                          facecolor='white',
                           edgecolor=improvement_color,
-                          linewidth=3))
+                          linewidth=2))
     
     # ========== 右侧下：分割配送分析 ==========
     ax_split.axis('off')
     
     split_text = f"""
-    🔄 分割配送分析
+    分割配送分析
     
     随机策略:
-    • 分割客户: {len(split_untrained['split_customers'])}个
-    • 分割次数: {split_untrained['total_splits']}次
-    • 分割比例: {split_untrained['split_percentage']:.1f}%
+    - 分割客户: {len(split_untrained['split_customers'])}个
+    - 分割次数: {split_untrained['total_splits']}次
+    - 分割比例: {split_untrained['split_percentage']:.1f}%
     
     训练后策略:
-    • 分割客户: {len(split_trained['split_customers'])}个
-    • 分割次数: {split_trained['total_splits']}次
-    • 分割比例: {split_trained['split_percentage']:.1f}%
-    
-    💡 SDVRP特点:
-    • 允许重复访问客户
-    • 分批配送大宗需求
-    • 减少返仓次数
+    - 分割客户: {len(split_trained['split_customers'])}个
+    - 分割次数: {split_trained['total_splits']}次
+    - 分割比例: {split_trained['split_percentage']:.1f}%
+
+    SDVRP特点:
+    - 允许重复访问客户
+    - 分批配送大宗需求
+    - 减少返仓次数
     """
     
     ax_split.text(0.05, 0.95, split_text,
@@ -470,7 +453,7 @@ def create_sdvrp_comparison_plot(env, td, actions_untrained, rewards_untrained,
                           linewidth=2))
     
     # 添加总标题
-    fig.suptitle(f'🚚 SDVRP路线对比分析 (分割配送) - 实例 #{index}',
+    fig.suptitle(f'SDVRP路线对比分析 (分割配送) - 实例 #{index}',
                 fontsize=15, fontweight='bold', y=0.98)
     
     # 保存

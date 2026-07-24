@@ -444,6 +444,18 @@ async function startTraining() {
         if (hamFF) config.feedforward_hidden = parseInt(hamFF.value);
     }
 
+    // 添加SymNCO特有参数
+    if (model === 'symnco') {
+        const numAugment = document.getElementById('num-augment');
+        const symncoNumStarts = document.getElementById('symnco-num-starts');
+        const symncoAlpha = document.getElementById('symnco-alpha');
+        const symncoBeta = document.getElementById('symnco-beta');
+        if (numAugment) config.num_augment = parseInt(numAugment.value);
+        if (symncoNumStarts) config.num_starts = parseInt(symncoNumStarts.value);
+        if (symncoAlpha) config.symnco_alpha = parseFloat(symncoAlpha.value);
+        if (symncoBeta) config.symnco_beta = parseFloat(symncoBeta.value);
+    }
+
     // 添加DeepACO特有参数
     if (model === 'deepaco') {
         const nAnts = document.getElementById('n-ants');
@@ -897,6 +909,21 @@ function handleTrainingComplete(data) {
         resultsHTML += '</div></div>';
     }
 
+    // SDVRP 会额外返回分割配送分析图，单独展示以免被静态对比图索引吞掉。
+    if (results.analysis_paths && results.analysis_paths.length > 0) {
+        resultsHTML += '<div style="grid-column: 1 / -1; margin-top: 1rem;">';
+        resultsHTML += '<div class="result-label" style="margin-bottom: 1rem;">分割配送分析</div>';
+        resultsHTML += '<div style="display: grid; gap: 1.5rem;">';
+        results.analysis_paths.forEach((path, index) => {
+            resultsHTML += `
+                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 12px;">
+                    <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">问题 ${index + 1} - 分割配送详情</h4>
+                    <img src="${path}" style="width: 100%; border-radius: 8px; background: white;" alt="分割配送分析图 ${index + 1}">
+                </div>
+            `;
+        });
+        resultsHTML += '</div></div>';
+    }
     // 如果有 checkpoint 路径，显示
     if (results.checkpoint_path) {
         resultsHTML += `

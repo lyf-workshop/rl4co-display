@@ -96,7 +96,9 @@ class MTSProblem(BaseProblem):
     def get_env_params(self) -> Dict[str, Any]:
         """mTSP环境参数"""
         return {
-            'num_loc': self.num_loc,
+            # RL4CO includes the depot in MTSPGenerator.num_loc.
+            # Project-level num_loc counts customer cities only.
+            'num_loc': self.num_loc + 1,
             'min_num_agents': self.num_agents,
             'max_num_agents': self.num_agents,  # 固定代理数量
         }

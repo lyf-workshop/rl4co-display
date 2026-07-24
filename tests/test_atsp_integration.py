@@ -60,9 +60,9 @@ class TestATSPProblem:
 class TestATSPCompatibility:
     """测试ATSP兼容性"""
     
-    def test_atsp_with_attention_ppo(self):
-        """测试ATSP + Attention Model + PPO（推荐配置）"""
-        valid, msg, level = validate_combination('atsp', 'attention', 'ppo')
+    def test_atsp_with_matnet_reinforce(self):
+        """测试ATSP + MatNet + REINFORCE（唯一支持配置）"""
+        valid, msg, level = validate_combination('atsp', 'matnet', 'reinforce')
         assert valid is True
         assert level in ['success', 'info']
     
@@ -72,30 +72,27 @@ class TestATSPCompatibility:
         assert valid is False or level == 'error'
         assert 'POMO' in msg
     
-    def test_atsp_with_reinforce_warning(self):
-        """测试ATSP + REINFORCE有警告"""
+    def test_atsp_with_attention_blocked(self):
+        """测试ATSP拒绝依赖locs的Attention Model"""
         valid, msg, level = validate_combination('atsp', 'attention', 'reinforce')
-        # 应该允许但有警告
-        assert valid is True
-        assert level in ['warning', 'info']
+        assert valid is False
+        assert level == 'error'
+        assert 'matnet' in msg.lower()
     
     def test_atsp_available_policies(self):
-        """测试ATSP可用策略"""
+        """测试ATSP仅开放能够处理cost_matrix的MatNet"""
         policies = get_available_policies('atsp')
-        assert isinstance(policies, list)
-        assert 'attention' in policies or 'am' in policies
-        # POMO不应该在列表中（因为不兼容）
-        # 注意：get_available_policies返回所有声明支持的，警告在validate时处理
+        assert policies == ['matnet']
     
     def test_atsp_recommended_config(self):
         """测试ATSP推荐配置"""
         recommended = get_recommended_combination('atsp', 'best')
-        assert recommended['policy'] == 'attention'
-        assert recommended['algorithm'] == 'ppo'
+        assert recommended['policy'] == 'matnet'
+        assert recommended['algorithm'] == 'reinforce'
         
         recommended_fast = get_recommended_combination('atsp', 'fast')
-        assert recommended_fast['policy'] == 'attention'
-        assert recommended_fast['algorithm'] == 'a2c'
+        assert recommended_fast['policy'] == 'matnet'
+        assert recommended_fast['algorithm'] == 'reinforce'
 
 
 class TestATSPFeatures:

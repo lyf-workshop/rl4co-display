@@ -38,15 +38,24 @@ class MTSPTrainer(BaseTrainer):
 
     def _inject_custom_data(self, td):
         data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+        device = td.device
+        coords = torch.tensor(data['coordinates'], dtype=torch.float32, device=device)
 
         if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
+            depot = torch.tensor(data['depot'], dtype=torch.float32, device=device)
         else:
-            depot = td['locs'][0, 0].cpu()
+            depot = td['locs'][0, 0]
 
         locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
-        td['locs'] = locs.unsqueeze(0).to(self.device)
+        expected_num_locs = td['locs'].shape[-2]
+        if locs.shape[0] != expected_num_locs:
+            raise ValueError(
+                f'mTSP dataset has {len(coords)} customers, but the environment expects '
+                f'{expected_num_locs - 1} customers'
+            )
+
+        batch_size = td.batch_size[0] if td.batch_size else 1
+        td['locs'] = locs.unsqueeze(0).expand(batch_size, -1, -1).clone()
         return td
 
     def get_problem_type(self):
@@ -59,7 +68,9 @@ class MTSPTrainer(BaseTrainer):
         
         env = MTSPEnv(
             generator_params={
-                'num_loc': self.num_loc,
+                # RL4CO MTSP num_loc includes the depot at index 0.
+                # The UI num_loc counts customers, so reserve one extra location.
+                'num_loc': self.num_loc + 1,
                 'min_num_agents': self.num_agents,
                 'max_num_agents': self.num_agents,  # 固定代理数量
             },
@@ -87,28 +98,36 @@ class MTSPTrainer(BaseTrainer):
             
             device = next(model.parameters()).device
             model.eval()
+            policy = model.policy.to(device)
+            policy.eval()
             
             # 生成测试数据
             if self.custom_dataset_data:
-                td = env.reset(batch_size=[1]).to(self.device)
+                # RL4CO 0.6.0 drops the batch dimension for MTSP batch=1.
+                # Infer two identical instances internally and display the first.
+                td = env.reset(batch_size=[2]).to(device)
                 td = self._inject_custom_data(td)
                 num_test_instances = 1
                 self.send_message('info', f'✅ 在上传的mTSP数据集上进行测试（{self.num_loc}个城市）')
             else:
                 num_test_instances = min(3, self.batch_size)  # 最多3个实例
-                td = env.reset(batch_size=[num_test_instances])
+                inference_batch_size = max(2, num_test_instances)
+                td = env.reset(batch_size=[inference_batch_size]).to(device)
             td = td.to(device)
             
             # 未训练基线推断（与训练后共享同一批测试数据）
             untrained_policy = self.create_untrained_policy_copy(model)
             with torch.no_grad():
-                out_baseline = self._run_policy(untrained_policy, td.clone(), env,
-                                                phase='test', decode_type='greedy')
+                out_baseline = self._run_policy(
+                    untrained_policy, td.clone(), env, phase='test',
+                    decode_type='greedy', return_actions=True)
             rewards_baseline = out_baseline['reward'].cpu().numpy()
 
             # 训练后模型推断
             with torch.no_grad():
-                out = model(td.clone(), phase='test', decode_type='greedy')
+                out = self._run_policy(
+                    policy, td.clone(), env, phase='test',
+                    decode_type='greedy', return_actions=True)
 
             # 提取动作和奖励
             actions = out['actions'].cpu().numpy()
@@ -129,6 +148,7 @@ class MTSPTrainer(BaseTrainer):
             animation_paths = []
             comparison_paths = []
             
+            visualization_errors = []
             for i in range(num_test_instances):
                 # 生成文件名
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -151,7 +171,8 @@ class MTSPTrainer(BaseTrainer):
                         actions=instance_actions,
                         save_path=anim_path,
                         title=f'mTSP路线生成过程 - 问题{i+1} ({self.num_agents}个代理)',
-                        fps=2
+                        fps=2,
+                        num_agents=self.num_agents,
                     )
                     animation_paths.append(f"/static/model_plots/user_{self.user_id}/{anim_filename}")
                     self.send_message('info', f'✅ 动画 {i+1} 生成成功')
@@ -160,6 +181,7 @@ class MTSPTrainer(BaseTrainer):
                     self._save_file_record(anim_filename, 'animation', anim_path)
                 except Exception as e:
                     self.send_message('info', f'⚠️ 动画 {i+1} 生成失败: {str(e)}')
+                    visualization_errors.append(f'animation {i+1}: {e}')
                 
                 # 创建对比图
                 try:
@@ -168,7 +190,8 @@ class MTSPTrainer(BaseTrainer):
                         actions=instance_actions,
                         save_path=comp_path,
                         cost=-rewards[i],  # 负奖励即为成本
-                        title=f'mTSP路线对比图 - 问题{i+1}'
+                        title=f'mTSP路线对比图 - 问题{i+1}',
+                        num_agents=self.num_agents,
                     )
                     comparison_paths.append(f"/static/model_plots/user_{self.user_id}/{comp_filename}")
                     self.send_message('info', f'✅ 对比图 {i+1} 生成成功')
@@ -177,18 +200,23 @@ class MTSPTrainer(BaseTrainer):
                     self._save_file_record(comp_filename, 'plot', comp_path)
                 except Exception as e:
                     self.send_message('info', f'⚠️ 对比图 {i+1} 生成失败: {str(e)}')
+                    visualization_errors.append(f'comparison {i+1}: {e}')
             
+            if not animation_paths and not comparison_paths:
+                details = '; '.join(visualization_errors) or 'no output files were created'
+                raise RuntimeError(f'All mTSP visualizations failed: {details}')
+
             self.send_message('info', f'🎉 mTSP可视化完成: {len(animation_paths)}个动画, {len(comparison_paths)}个对比图')
             logger.debug("mTSP可视化完成: animations=%s, comparisons=%s", animation_paths, comparison_paths)
+            if checkpoint_path:
+                # 保存检查点
+                trainer.save_checkpoint(checkpoint_path)
 
-            # 保存检查点
-            trainer.save_checkpoint(checkpoint_path)
-            
-            # 保存checkpoint文件记录到数据库
-            checkpoint_filename = os.path.basename(checkpoint_path)
-            self._save_file_record(checkpoint_filename, 'checkpoint', checkpoint_path)
-            
-            self.send_message('info', f'检查点已保存: {checkpoint_path}')
+                # 保存checkpoint文件记录到数据库
+                checkpoint_filename = os.path.basename(checkpoint_path)
+                self._save_file_record(checkpoint_filename, 'checkpoint', checkpoint_path)
+
+                self.send_message('info', f'检查点已保存: {checkpoint_path}')
             
             # 返回字典格式（注意：前端期望 plot_paths，不是 comparison_paths）
             return {
@@ -199,16 +227,9 @@ class MTSPTrainer(BaseTrainer):
             }
             
         except Exception as e:
-            self.send_message('info', f'❌ mTSP可视化失败: {str(e)}')
-            import traceback
-            traceback.print_exc()
-            # 返回空字典（注意：前端期望 plot_paths，不是 comparison_paths）
-            return {
-                'plot_paths': [],  # ✅ 前端期望的字段名
-                'animation_paths': [],
-                'training_curve': '',
-                'checkpoint_path': checkpoint_path
-            }
+            self.send_message('error', f'❌ mTSP可视化失败: {str(e)}')
+            logger.exception('mTSP visualization failed')
+            raise
     
     def get_training_summary(self):
         """获取mTSP训练总结"""

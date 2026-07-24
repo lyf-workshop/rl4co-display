@@ -1000,16 +1000,21 @@ class BaseTrainer:
             model: 已完成训练的 RL 模型（model.policy 是训练后策略）
 
         返回:
-            policy: 加载了初始权重的策略副本（eval 模式，已移至 self.device）
+            policy: 加载了初始权重的策略副本（eval 模式，与当前模型同设备）
         """
         import copy
+        try:
+            model_device = next(model.policy.parameters()).device
+        except StopIteration:
+            model_device = next(model.parameters()).device
+
         untrained_policy = copy.deepcopy(model.policy)
         if self.initial_policy_state_dict is not None:
             untrained_policy.load_state_dict(self.initial_policy_state_dict)
         else:
             logger.warning("initial_policy_state_dict 不可用，基线推断将使用当前（训练后）权重")
         untrained_policy.eval()
-        return untrained_policy.to(self.device)
+        return untrained_policy.to(model_device)
 
     def _run_policy(self, policy, td, env, **kwargs):
         """

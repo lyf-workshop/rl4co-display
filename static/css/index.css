@@ -107,6 +107,19 @@
             font-style: italic;
         }
 
+        /* 算法下拉框被锁定（策略自带训练逻辑，仅支持 REINFORCE）时的样式 */
+        .form-group select:disabled,
+        .form-group select.locked {
+            cursor: not-allowed;
+            background-color: #f1f3f5;
+            color: #6c757d;
+            opacity: 1;
+        }
+
+        .algorithm-lock-note {
+            font-style: italic;
+        }
+
         .description {
             color: #666;
             font-size: 0.85rem;

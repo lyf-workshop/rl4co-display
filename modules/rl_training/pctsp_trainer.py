@@ -9,6 +9,7 @@ PCTSP (Prize Collecting TSP) 训练器
 """
 
 import os
+import logging
 import torch
 import numpy as np
 from typing import Optional
@@ -17,6 +18,8 @@ from .visualizations.pctsp_viz import (
     create_pctsp_route_animation,
     create_pctsp_comparison_plot
 )
+
+logger = logging.getLogger('rl4co_display')
 
 
 class PCTSPTrainer(BaseTrainer):
@@ -59,23 +62,53 @@ class PCTSPTrainer(BaseTrainer):
 
     def _inject_custom_data(self, td):
         data = self.custom_dataset_data
-        coords = torch.tensor(data['coordinates'], dtype=torch.float32)
+        device = td.device
+        batch_size = td.batch_size[0] if td.batch_size else 1
+        coords = torch.as_tensor(data['coordinates'], dtype=torch.float32, device=device)
+
+        if coords.ndim != 2 or coords.shape[-1] != 2:
+            raise ValueError('PCTSP coordinates must have shape [num_customers, 2]')
 
         if data.get('depot'):
-            depot = torch.tensor(data['depot'], dtype=torch.float32)
+            depot = torch.as_tensor(data['depot'], dtype=torch.float32, device=device)
         else:
-            depot = td['locs'][0, 0].cpu()
+            depot = td['locs'][0, 0]
+
+        expected_customers = td['locs'].shape[-2] - 1
+        if coords.shape[0] != expected_customers:
+            raise ValueError(
+                f'PCTSP dataset has {len(coords)} customers, but the environment expects '
+                f'{expected_customers} customers'
+            )
 
         locs = torch.cat([depot.unsqueeze(0), coords], dim=0)
-        td['locs'] = locs.unsqueeze(0).to(self.device)
+        td['locs'] = locs.unsqueeze(0).expand(batch_size, -1, -1).clone()
+        if 'depot' in td.keys():
+            td['depot'] = depot.unsqueeze(0).expand(batch_size, -1).clone()
 
         if data.get('prizes'):
-            real_prize = torch.tensor([0.0] + data['prizes'], dtype=torch.float32)
-            td['real_prize'] = real_prize.unsqueeze(0).to(self.device)
+            customer_prize = torch.as_tensor(
+                data['prizes'], dtype=torch.float32, device=device)
+            if customer_prize.numel() != expected_customers:
+                raise ValueError('PCTSP prizes length must match coordinates length')
+            repeated_prize = customer_prize.unsqueeze(0).expand(batch_size, -1).clone()
+            td['expected_prize'] = repeated_prize
+            for key in ('deterministic_prize', 'stochastic_prize'):
+                if key in td.keys():
+                    td[key] = repeated_prize.clone()
+            real_prize = torch.cat(
+                [torch.zeros(1, device=device), customer_prize], dim=0)
+            td['real_prize'] = real_prize.unsqueeze(0).expand(batch_size, -1).clone()
 
         if data.get('penalties'):
-            penalty = torch.tensor([0.0] + data['penalties'], dtype=torch.float32)
-            td['penalty'] = penalty.unsqueeze(0).to(self.device)
+            customer_penalty = torch.as_tensor(
+                data['penalties'], dtype=torch.float32, device=device)
+            if customer_penalty.numel() != expected_customers:
+                raise ValueError('PCTSP penalties length must match coordinates length')
+            penalty = torch.cat(
+                [torch.zeros(1, device=device), customer_penalty], dim=0)
+            td['penalty'] = penalty.unsqueeze(0).expand(batch_size, -1).clone()
+            td['cur_total_penalty'] = customer_penalty.sum().expand(batch_size).clone()
 
         return td
 
@@ -127,10 +160,15 @@ class PCTSPTrainer(BaseTrainer):
 
         animation_paths = []
         plot_paths = []
+        visualization_errors = []
 
         try:
+            device = next(model.parameters()).device
+            model.eval()
+            policy = model.policy.to(device)
+            policy.eval()
             if self.custom_dataset_data:
-                td = env.reset(batch_size=[1]).to(self.device)
+                td = env.reset(batch_size=[1]).to(device)
                 td = self._inject_custom_data(td)
                 num_test = 1
                 num_vis = 1
@@ -138,10 +176,9 @@ class PCTSPTrainer(BaseTrainer):
             else:
                 num_test = min(3, self.batch_size)
                 num_vis = min(3, num_test)
-                td = env.reset(batch_size=[num_test])
+                td = env.reset(batch_size=[num_test]).to(device)
 
             # 未训练基线推断
-            model.eval()
             untrained_policy = self.create_untrained_policy_copy(model)
             with torch.no_grad():
                 out_baseline = self._run_policy(untrained_policy, td.clone(), env,
@@ -152,7 +189,9 @@ class PCTSPTrainer(BaseTrainer):
 
             # 训练后模型推断
             with torch.no_grad():
-                out = model(td.clone(), phase="test", decode_type="greedy", return_actions=True)
+                out = self._run_policy(
+                    policy, td.clone(), env, phase='test',
+                    decode_type='greedy', return_actions=True)
 
             # 提取坐标：locs [B, num_loc+1, 2]，索引 0 是 depot
             locs_all = td['locs'].cpu().numpy()        # [B, num_loc+1, 2]
@@ -221,7 +260,7 @@ class PCTSPTrainer(BaseTrainer):
                                     self.send_message('info', f'  ⚠️ 对比图数据库记录失败: {str(db_err)}')
                     except Exception as e:
                         self.send_message('info', f'  ✗ 对比图 {i+1} 失败: {str(e)}')
-
+                        visualization_errors.append(f'comparison {i+1}: {e}')
                     # 生成动画
                     try:
                         anim_path = create_pctsp_route_animation(
@@ -253,10 +292,15 @@ class PCTSPTrainer(BaseTrainer):
                                     self.send_message('info', f'  ⚠️ 动画数据库记录失败: {str(db_err)}')
                     except Exception as e:
                         self.send_message('info', f'  ✗ 动画 {i+1} 失败: {str(e)}')
-
+                        visualization_errors.append(f'animation {i+1}: {e}')
                 except Exception as e:
                     self.send_message('info', f'  ⚠️ 实例 {i+1} 处理失败: {str(e)}')
+                    visualization_errors.append(f'instance {i+1}: {e}')
                     continue
+
+            if not animation_paths and not plot_paths:
+                details = '; '.join(visualization_errors) or 'no output files were created'
+                raise RuntimeError(f'All PCTSP visualizations failed: {details}')
 
             self.send_message('info', f'🎉 PCTSP 可视化完成: {len(animation_paths)} 个动画, {len(plot_paths)} 个对比图')
 
@@ -282,8 +326,8 @@ class PCTSPTrainer(BaseTrainer):
 
         except Exception as e:
             self.send_message('error', f'❌ 可视化生成失败: {str(e)}')
-            import traceback
-            traceback.print_exc()
+            logger.exception('PCTSP visualization failed')
+            raise
 
         return {
             'animation_paths': animation_paths,
