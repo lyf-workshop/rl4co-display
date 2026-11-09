@@ -1,0 +1,27 @@
+:root {
+  --color-brand: #2563eb;
+  --color-ink: #17243b;
+  --color-muted: #617189;
+  --color-border: #dde4ed;
+  --color-success: #147d64;
+  --color-warning: #9a6700;
+  --color-danger: #b93838;
+  --color-background: #f4f7fb;
+  --color-surface: #ffffff;
+  --color-brand-tint: #edf3ff;
+  --color-success-tint: #eaf6f1;
+  --color-warning-tint: #fff7e5;
+  --color-danger-tint: #fceeee;
+  --color-navigation: #142239;
+  --color-navigation-active: #263d5e;
+  --color-navigation-text: #b9c7da;
+  --font-ui:
+    'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  --font-data: 'IBM Plex Sans', 'Noto Sans SC', system-ui, sans-serif;
+  --radius-card: 12px;
+  --radius-control: 7px;
+  --sidebar-width: 224px;
+  --space-page: 32px;
+  --space-module: 24px;
+}

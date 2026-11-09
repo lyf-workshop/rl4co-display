@@ -24,6 +24,7 @@ logger = logging.getLogger('rl4co_display')
 training_status = {}
 training_queues = {}
 training_events = {}  # session_id -> threading.Event（set=运行，clear=暂停）
+training_contexts = {}  # UI metadata; trainers may replace their own status dict.
 training_lock = threading.Lock()
 RL4CO_AVAILABLE = False
 real_rl4co_training = None
@@ -32,6 +33,11 @@ get_background_db = None
 
 TSP_MIN_NUM_LOC = 5
 TSP_MAX_NUM_LOC = 1000
+
+CHIP_GRID_MIN = 8
+CHIP_GRID_MAX = 40
+CHIP_NETS_MIN = 4
+CHIP_NETS_MAX = 40
 
 
 def _normalize_tsp_num_loc(config):
@@ -54,6 +60,44 @@ def _normalize_tsp_num_loc(config):
         )
 
     return num_loc
+
+
+def _normalize_chip_routing_config(config):
+    """Validate and normalize the bounded chip-routing prototype inputs."""
+    normalized = {}
+    integer_fields = {
+        'grid_width': (18, CHIP_GRID_MIN, CHIP_GRID_MAX, '网格宽度'),
+        'grid_height': (18, CHIP_GRID_MIN, CHIP_GRID_MAX, '网格高度'),
+        'num_nets': (12, CHIP_NETS_MIN, CHIP_NETS_MAX, '网络数量'),
+        'edge_capacity': (1, 1, 4, '边容量'),
+    }
+    for field, (default, minimum, maximum, label) in integer_fields.items():
+        raw_value = config.get(field, default)
+        if isinstance(raw_value, bool):
+            raise ValueError(f'{label}必须是整数')
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            raise ValueError(f'{label}必须是整数')
+        if isinstance(raw_value, float) and not raw_value.is_integer():
+            raise ValueError(f'{label}必须是整数')
+        if not minimum <= value <= maximum:
+            raise ValueError(f'{label}必须在{minimum}到{maximum}之间')
+        normalized[field] = value
+
+    raw_ratio = config.get('obstacle_ratio', 0.10)
+    if isinstance(raw_ratio, bool):
+        raise ValueError('障碍率必须是数字')
+    try:
+        obstacle_ratio = float(raw_ratio)
+    except (TypeError, ValueError):
+        raise ValueError('障碍率必须是数字')
+    if not 0.0 <= obstacle_ratio <= 0.30:
+        raise ValueError('障碍率必须在0到0.30之间')
+
+    normalized['obstacle_ratio'] = obstacle_ratio
+    normalized['num_loc'] = normalized['num_nets']
+    return normalized
 
 
 def init_training_globals(status_dict, queues_dict, rl4co_available, real_training_func, simulate_training_func, bg_db_func, lock=None, events_dict=None):
@@ -143,6 +187,14 @@ def start_training():
                     'success': False,
                     'message': str(e)
                 }), 400
+        elif problem == 'chip_routing':
+            try:
+                config.update(_normalize_chip_routing_config(config))
+            except ValueError as e:
+                return jsonify({
+                    'success': False,
+                    'message': str(e)
+                }), 400
 
         # ========== 解析并写入 gpu_id ==========
         gpu_id = config.get('gpu_id')
@@ -193,6 +245,11 @@ def start_training():
         with training_lock:
             training_queues[session_id] = Queue()
             training_events[session_id] = pause_event
+            training_contexts[session_id] = {
+                'user_id': user_id, 'config': dict(config),
+                'started_at': start_time,
+                'mode': 'real' if RL4CO_AVAILABLE else 'simulation',
+            }
             # 初始化心跳时间戳（训练线程会覆盖 status，但这两个时间戳会保留）
             training_status[session_id] = {
                 '_started_at': start_time,
@@ -212,6 +269,8 @@ def start_training():
                 with training_lock:
                     if session_id in training_status:
                         training_status[session_id]['_completed_at'] = time.time()
+                    if session_id in training_contexts:
+                        training_contexts[session_id]['finished_at'] = time.time()
                     # 确保暂停事件被 set，防止训练线程在异常时永久阻塞
                     evt = training_events.get(session_id)
                     if evt is not None:
@@ -251,9 +310,71 @@ def start_training():
         return jsonify({'success': False, 'message': '启动训练失败，请检查配置后重试'}), 500
 
 
+def _owns_training_session(session_id):
+    user_id = get_current_user_id()
+    context = training_contexts.get(session_id)
+    if context:
+        return context['user_id'] == user_id
+    manager = get_session_manager()
+    return bool(manager and manager.verify_session_owner(session_id, user_id))
+
+
+@training_bp.route('/api/training_sessions')
+@login_required
+def list_training_sessions():
+    """Read existing session records and this process's live sessions for the UI."""
+    user_id = get_current_user_id()
+    sessions = {}
+    manager = get_session_manager()
+    try:
+        if manager:
+            for record in manager.get_user_sessions(user_id, limit=100):
+                row = dict(record)
+                for key in ('start_time', 'end_time'):
+                    if row.get(key):
+                        row[key] = row[key].isoformat()
+                raw_config = row.get('config')
+                row['config'] = json.loads(raw_config) if isinstance(raw_config, str) else (raw_config or {})
+                row['live'] = False
+                row['mode'] = 'unknown'  # Historical schema does not record real/simulation mode.
+                for key in ('final_loss', 'final_reward', 'best_reward', 'total_size'):
+                    if row.get(key) is not None:
+                        row[key] = float(row[key])
+                sessions[row['session_id']] = row
+        with training_lock:
+            for session_id, context in list(training_contexts.items()):
+                if session_id not in training_status:
+                    training_contexts.pop(session_id, None)
+                    continue
+                if context['user_id'] != user_id:
+                    continue
+                status = training_status[session_id]
+                row = sessions.setdefault(session_id, {'session_id': session_id})
+                row.update({
+                    'config': context['config'], 'mode': context['mode'],
+                    'model_type': context['config'].get('model'),
+                    'problem_type': context['config'].get('problem'),
+                    'status': status.get('status', 'starting'),
+                    'started_at': context['started_at'],
+                    'finished_at': context.get('finished_at'),
+                    'live': True,
+                    'epoch': status.get('epoch'), 'best_reward': status.get('best_reward'),
+                })
+                if status.get('status') == 'completed':
+                    row.update(final_loss=status.get('loss'), final_reward=status.get('reward'))
+        return jsonify(success=True, sessions=list(sessions.values()),
+                       training_mode='real' if RL4CO_AVAILABLE else 'simulation')
+    except Exception:
+        logger.exception('读取训练会话失败')
+        return jsonify(success=False, message='读取训练会话失败，请重试'), 500
+
+
 @training_bp.route('/api/training_progress/<session_id>')
+@login_required
 def training_progress(session_id):
     """使用 Server-Sent Events (SSE) 推送训练进度"""
+    if not _owns_training_session(session_id):
+        return jsonify(success=False, message='无权访问此训练会话'), 403
     def generate():
         with training_lock:
             if session_id not in training_queues:
@@ -266,10 +387,14 @@ def training_progress(session_id):
                 try:
                     # 从队列中获取消息（阻塞等待）；Queue 本身线程安全，无需加锁
                     message = queue.get(timeout=1)
+                    data = json.loads(message)
+                    if data.get('type') == 'complete':
+                        with training_lock:
+                            if session_id in training_contexts:
+                                training_contexts[session_id]['results'] = data.get('results', {})
                     yield f"data: {message}\n\n"
 
                     # 如果收到完成、错误或中止消息，则结束流
-                    data = json.loads(message)
                     if data['type'] in ['complete', 'error', 'stopped']:
                         break
 
@@ -293,18 +418,39 @@ def training_progress(session_id):
                     logger.debug(f"SSE 连接关闭 (session={session_id})，训练仍在运行，保留队列供重连")
 
     return Response(generate(), mimetype='text/event-stream',
-                    headers={'X-Accel-Buffering': 'no'})
+                    headers={'X-Accel-Buffering': 'no', 'Cache-Control': 'no-cache'})
 
 
 @training_bp.route('/api/training_status/<session_id>')
+@login_required
 def get_training_status(session_id):
     """获取当前训练状态"""
+    if not _owns_training_session(session_id):
+        return jsonify(success=False, message='无权访问此训练会话'), 403
     with training_lock:
         status = training_status.get(session_id)
     if status is not None:
         # 过滤掉非 JSON 可序列化的内部字段（以 _ 开头）
         public_status = {k: v for k, v in status.items() if not k.startswith('_')}
-        return jsonify({'success': True, 'status': public_status})
+        context = training_contexts.get(session_id, {})
+        # A disconnected browser may never have consumed the terminal SSE event.
+        # Read its result metadata without draining the trainer's queue.
+        if status.get('status') == 'completed' and 'results' not in context:
+            queue = training_queues.get(session_id)
+            if queue is not None:
+                with queue.mutex:
+                    messages = list(queue.queue)
+                for message in reversed(messages):
+                    try:
+                        event = json.loads(message)
+                    except (TypeError, ValueError):
+                        continue
+                    if event.get('type') == 'complete':
+                        context['results'] = event.get('results', {})
+                        break
+        public_status['total_epochs'] = context.get('config', {}).get('epochs')
+        return jsonify({'success': True, 'status': public_status,
+                        'context': {k: v for k, v in context.items() if k != 'user_id'}})
     return jsonify({'success': False, 'message': '未找到训练会话'}), 404
 
 
@@ -312,6 +458,8 @@ def get_training_status(session_id):
 @login_required
 def pause_training(session_id):
     """暂停指定训练会话（在当前 Epoch 结束后生效）"""
+    if not _owns_training_session(session_id):
+        return jsonify(success=False, message='无权操作此训练会话'), 403
     with training_lock:
         event = training_events.get(session_id)
         status = training_status.get(session_id, {})
@@ -336,6 +484,8 @@ def pause_training(session_id):
 @login_required
 def resume_training(session_id):
     """恢复指定训练会话"""
+    if not _owns_training_session(session_id):
+        return jsonify(success=False, message='无权操作此训练会话'), 403
     with training_lock:
         event = training_events.get(session_id)
         status = training_status.get(session_id, {})
@@ -356,6 +506,8 @@ def resume_training(session_id):
 @login_required
 def training_heartbeat(session_id):
     """客户端心跳，表明用户仍在监控此训练（防止无人监管任务占用资源）"""
+    if not _owns_training_session(session_id):
+        return jsonify(success=False, message='无权操作此训练会话'), 403
     with training_lock:
         if session_id in training_status:
             training_status[session_id]['_last_heartbeat'] = time.time()
@@ -367,6 +519,8 @@ def training_heartbeat(session_id):
 @login_required
 def stop_training(session_id):
     """中止指定训练会话（在当前 Epoch 结束后生效）"""
+    if not _owns_training_session(session_id):
+        return jsonify(success=False, message='无权操作此训练会话'), 403
     with training_lock:
         status_info = training_status.get(session_id)
         event = training_events.get(session_id)

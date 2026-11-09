@@ -3,14 +3,21 @@ VRPTW问题专用可视化函数
 提供VRPTW路线动画、时间调度图等可视化
 """
 
-import os
 import logging
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-from PIL import Image
+from matplotlib.collections import LineCollection
+from matplotlib.patches import FancyArrowPatch, Rectangle
+
+from .common import (
+    DEFAULT_MAX_ANIMATION_FRAMES,
+    build_closed_depot_route,
+    figure_to_palette_image,
+    save_palette_gif,
+    select_animation_steps,
+)
 
 logger = logging.getLogger('rl4co_display')
 
@@ -27,313 +34,402 @@ matplotlib.rcParams['font.sans-serif'] = [
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
-def create_vrptw_route_animation(td, actions, save_path, title="VRPTW路线生成过程（带时间窗）", fps=2):
-    """
-    创建VRPTW路线逐步生成的动态GIF，展示时间窗约束
-    
-    参数:
-        td: TensorDict，包含客户坐标、需求、时间窗等信息
-        actions: numpy数组，访问节点的顺序
-        save_path: GIF保存路径
-        title: 图表标题
-        fps: 帧率（每秒帧数）
-    """
-    # 提取坐标信息
-    if hasattr(td, 'get'):
-        locs = td.get('locs', td['locs']).cpu().numpy()
-        # 去掉batch维度（如果有）
-        if locs.ndim == 3:  # shape: (batch, num_nodes, 2)
-            locs = locs[0]  # 取第一个batch
-        depot = locs[0]  # 仓库位置 - shape: (2,)
-        customers = locs[1:]  # 客户位置 - shape: (num_customers, 2)
-        
-        demands = td.get('demand', td.get('demands', None))
-        if demands is not None:
-            demands = demands.cpu().numpy()
-            if demands.ndim == 2:  # 去掉batch维度
-                demands = demands[0]
-            if len(demands) == len(locs):
-                demands = demands[1:]
-        
-        # 尝试提取时间窗信息
-        time_windows = td.get('time_windows', None)
-        if time_windows is not None:
-            time_windows = time_windows.cpu().numpy()
-            if time_windows.ndim == 3:  # 去掉batch维度
-                time_windows = time_windows[0]
-            if len(time_windows) == len(locs):
-                time_windows = time_windows[1:]
+def _to_numpy(value):
+    if hasattr(value, "detach"):
+        value = value.detach()
+    if hasattr(value, "cpu"):
+        value = value.cpu()
+    return np.asarray(value)
+
+
+def _remove_single_batch_dimension(value, target_dimensions):
+    values = _to_numpy(value)
+    while values.ndim > target_dimensions and values.shape[0] == 1:
+        values = values[0]
+    return values
+
+
+def _normalise_node_values(values, num_nodes, default, field_name):
+    if values is None:
+        result = np.full(num_nodes, default, dtype=float)
+        result[0] = 0.0
+        return result
+
+    array = _remove_single_batch_dimension(values, 1).reshape(-1).astype(float)
+    if array.size == 1:
+        result = np.full(num_nodes, float(array[0]), dtype=float)
+        result[0] = 0.0
+        return result
+    if array.size == num_nodes:
+        return array
+    if array.size == num_nodes - 1:
+        return np.concatenate(([0.0], array))
+    raise ValueError(
+        f"VRPTW {field_name} length {array.size} does not match "
+        f"{num_nodes - 1} customers"
+    )
+
+
+def _normalise_time_windows(values, num_nodes):
+    if values is None:
+        customer_windows = np.tile(np.array([0.0, 50.0]), (num_nodes - 1, 1))
+        return np.vstack((np.array([[0.0, 50.0]]), customer_windows))
+
+    windows = _remove_single_batch_dimension(values, 2).astype(float)
+    if windows.shape == (num_nodes - 1, 2):
+        depot_end = max(float(windows[:, 1].max()), 1.0)
+        windows = np.vstack((np.array([[0.0, depot_end]]), windows))
+    if windows.shape != (num_nodes, 2):
+        raise ValueError(
+            f"VRPTW time_windows shape {windows.shape} does not match "
+            f"{num_nodes - 1} customers"
+        )
+    if np.any(windows[:, 1] < windows[:, 0]):
+        raise ValueError("VRPTW time window end must not precede its start")
+    return windows
+
+
+def _prepare_vrptw_route(
+    locs,
+    actions,
+    demands=None,
+    time_windows=None,
+    service_times=None,
+    speed=1.0,
+):
+    """Build a closed route and precompute distance, load, time and visits."""
+    locs = _remove_single_batch_dimension(locs, 2).astype(float)
+    if locs.ndim != 2 or locs.shape[1] != 2 or len(locs) < 2:
+        raise ValueError("VRPTW locations must have shape [num_nodes, 2]")
+    if speed <= 0:
+        raise ValueError("VRPTW speed must be greater than zero")
+
+    route = build_closed_depot_route(
+        _to_numpy(actions),
+        num_nodes=len(locs),
+        depot_index=0,
+    )
+    if len(route) < 2:
+        raise ValueError("VRPTW route must visit at least one customer")
+
+    node_demands = _normalise_node_values(
+        demands,
+        len(locs),
+        default=0.0,
+        field_name="demand",
+    )
+    node_service_times = _normalise_node_values(
+        service_times,
+        len(locs),
+        default=10.0,
+        field_name="service_time",
+    )
+    node_time_windows = _normalise_time_windows(time_windows, len(locs))
+
+    segments = np.stack((locs[route[:-1]], locs[route[1:]]), axis=1)
+    segment_distances = np.linalg.norm(segments[:, 1] - segments[:, 0], axis=1)
+    cumulative_distances = np.concatenate(([0.0], np.cumsum(segment_distances)))
+    loads = np.zeros(len(route), dtype=float)
+    elapsed_times = np.zeros(len(route), dtype=float)
+    visits = []
+
+    current_load = 0.0
+    current_time = 0.0
+    for step, destination in enumerate(route[1:], start=1):
+        current_time += segment_distances[step - 1] / speed
+        if destination == 0:
+            current_load = 0.0
         else:
-            # 如果没有时间窗信息，生成默认的
-            time_windows = np.random.rand(len(customers), 2) * 100
-            time_windows[:, 1] = time_windows[:, 0] + 50  # end = start + 50
+            current_load += node_demands[destination]
+            arrival_time = current_time
+            earliest, latest = node_time_windows[destination]
+            service_start = max(arrival_time, earliest)
+            current_time = service_start + node_service_times[destination]
+            visits.append(
+                (step, destination - 1, arrival_time, service_start, latest)
+            )
+        loads[step] = current_load
+        elapsed_times[step] = current_time
+
+    return (
+        locs,
+        route,
+        node_demands,
+        node_time_windows,
+        segments,
+        cumulative_distances,
+        loads,
+        elapsed_times,
+        visits,
+    )
+
+
+def create_vrptw_route_animation(
+    td,
+    actions,
+    save_path,
+    title="VRPTW路线生成过程（带时间窗）",
+    fps=2,
+    max_frames=DEFAULT_MAX_ANIMATION_FRAMES,
+    progress_callback=None,
+):
+    """Create a bounded-memory VRPTW route and schedule animation."""
+    locs_value = td.get("locs") if hasattr(td, "get") else td["locs"]
+    demands = None
+    time_windows = None
+    service_times = None
+    if hasattr(td, "get"):
+        demands = td.get("demand", td.get("demands", None))
+        time_windows = td.get("time_windows", None)
+        service_times = td.get("service_time", None)
     else:
-        locs = td['locs'].cpu().numpy()
-        if locs.ndim == 3:
-            locs = locs[0]
-        depot = locs[0]
-        customers = locs[1:]
-        
-        demands = td.get('demand', td.get('demands', None))
-        if demands is not None:
-            demands = demands.cpu().numpy()
-            if demands.ndim == 2:
-                demands = demands[0]
-            if len(demands) == len(locs):
-                demands = demands[1:]
-        
-        time_windows = td.get('time_windows', None)
-        if time_windows is not None:
-            time_windows = time_windows.cpu().numpy()
-            if time_windows.ndim == 3:
-                time_windows = time_windows[0]
-            if len(time_windows) == len(locs):
-                time_windows = time_windows[1:]
-        else:
-            time_windows = np.random.rand(len(customers), 2) * 100
-            time_windows[:, 1] = time_windows[:, 0] + 50
-    
-    num_nodes = len(locs)
+        demands = td["demand"] if "demand" in td else td.get("demands")
+        time_windows = td.get("time_windows")
+        service_times = td.get("service_time")
+
+    (
+        locs,
+        route,
+        node_demands,
+        node_time_windows,
+        segments,
+        distances,
+        loads,
+        elapsed_times,
+        visits,
+    ) = _prepare_vrptw_route(
+        locs_value,
+        actions,
+        demands=demands,
+        time_windows=time_windows,
+        service_times=service_times,
+    )
+
+    customers = locs[1:]
+    customer_windows = node_time_windows[1:]
+    route_steps = len(route) - 1
+    frame_steps = select_animation_steps(route_steps, max_frames=max_frames)
+    num_customers = len(customers)
+    marker_size = max(8, min(80, 1400 / max(num_customers, 1)))
+    line_width = max(0.7, min(2.4, 15 / np.sqrt(max(num_customers, 1))))
+
+    fig, (route_ax, schedule_ax) = plt.subplots(1, 2, figsize=(12, 6), dpi=100)
     frames = []
-    
-    # 计算每一步的累计距离、载重和时间
-    def calculate_metrics(locs, actions, step, capacity=1.0, speed=1.0, service_time=10.0):
-        """计算到第step步为止的累计距离、当前载重和当前时间"""
-        if step < 1:
-            return 0.0, 0.0, 0.0
-        
-        total_dist = 0.0
-        current_load = 0.0
-        current_time = 0.0
-        
-        for i in range(step):
-            node_a = actions[i]
-            
-            if i + 1 < len(actions):
-                node_b = actions[i + 1]
-            else:
-                node_b = 0  # 返回仓库
-            
-            # 计算距离
-            pos_a = locs[node_a]
-            pos_b = locs[node_b]
-            dist = np.sqrt(np.sum((pos_a - pos_b) ** 2))
-            total_dist += dist
-            
-            # 计算旅行时间
-            travel_time = dist / speed
-            current_time += travel_time
-            
-            # 更新载重（如果访问客户）
-            if node_a > 0 and demands is not None:  # 不是仓库
-                demand_idx = node_a - 1
-                if demand_idx < len(demands):
-                    current_load += demands[demand_idx]
-                
-                # 检查时间窗约束
-                if time_windows is not None and demand_idx < len(time_windows):
-                    earliest, latest = time_windows[demand_idx]
-                    # 如果到达太早，等待到最早开始时间
-                    if current_time < earliest:
-                        current_time = earliest
-                
-                # 添加服务时间
-                current_time += service_time
-            
-            # 如果返回仓库，重置载重
-            if node_b == 0:
-                current_load = 0.0
-        
-        return total_dist, current_load, current_time
-    
-    # 为每一步生成一帧图像（使用双子图：地图+时间轴）
-    for step in range(len(actions) + 1):
-        fig = plt.figure(figsize=(16, 8))
-        
-        # 左侧：路线地图
-        ax1 = plt.subplot(1, 2, 1)
-        
-        # 绘制仓库（特殊标记）
-        ax1.scatter(float(depot[0]), float(depot[1]), c='red', s=400, marker='s', 
-                   zorder=5, edgecolors='darkred', linewidths=3, label='仓库')
-        
-        # 绘制所有客户点，根据时间窗上色
-        if time_windows is not None:
-            # 根据时间窗早晚上色
-            tw_starts = time_windows[:, 0]
-            scatter = ax1.scatter(customers[:, 0], customers[:, 1], 
-                                 c=tw_starts, s=200, cmap='coolwarm',
-                                 zorder=3, alpha=0.7, edgecolors='black', linewidths=2)
-            cbar = plt.colorbar(scatter, ax=ax1, label='时间窗起始时间')
-        else:
-            ax1.scatter(customers[:, 0], customers[:, 1], c='lightblue', s=200, 
-                       zorder=3, alpha=0.6, edgecolors='black', linewidths=2)
-        
-        # 标注节点编号和时间窗
-        ax1.text(float(depot[0]), float(depot[1]), '0\n仓库', fontsize=10, ha='center', va='center',
-                fontweight='bold', color='white')
-        
-        for idx, (x, y) in enumerate(customers):
-            customer_id = idx + 1
-            if time_windows is not None:
-                tw_text = f'\n[{time_windows[idx][0]:.0f}-{time_windows[idx][1]:.0f}]'
-            else:
-                tw_text = ''
-            ax1.text(float(x), float(y), f'{customer_id}{tw_text}', fontsize=8, ha='center', va='center',
-                    fontweight='bold', color='darkblue')
-        
-        # 绘制已经构建的路径
-        if step > 0:
-            for i in range(step):
-                start_idx = actions[i]
-                if i + 1 < len(actions):
-                    end_idx = actions[i + 1]
-                else:
-                    end_idx = 0  # 最后返回仓库
-                
-                start_pos = locs[start_idx]
-                end_pos = locs[end_idx]
-                
-                # 如果是返回仓库，使用虚线
-                linestyle = '--' if end_idx == 0 else '-'
-                linewidth = 2 if end_idx == 0 else 3
-                
-                # 绘制路径线
-                ax1.plot([start_pos[0], end_pos[0]], [start_pos[1], end_pos[1]], 
-                        'b-' if linestyle == '-' else 'g--', 
-                        linewidth=linewidth, alpha=0.7, zorder=1)
-                
-                # 添加箭头表示方向
-                mid_x = float((start_pos[0] + end_pos[0]) / 2)
-                mid_y = float((start_pos[1] + end_pos[1]) / 2)
-                dx = float(end_pos[0] - start_pos[0])
-                dy = float(end_pos[1] - start_pos[1])
-                ax1.annotate('', xy=(mid_x + dx*0.1, mid_y + dy*0.1), 
-                           xytext=(mid_x - dx*0.1, mid_y - dy*0.1),
-                           arrowprops=dict(arrowstyle='->', 
-                                         color='blue' if linestyle == '-' else 'green', 
-                                         lw=2, alpha=0.7))
-        
-        # 高亮当前访问的节点
-        if step > 0 and step <= len(actions):
-            current_node = actions[step - 1]
-            current_pos = locs[current_node]
-            node_type = '仓库' if current_node == 0 else f'客户 {current_node}'
-            ax1.scatter(float(current_pos[0]), float(current_pos[1]), 
-                       c='orange', s=500, zorder=6, marker='*', 
-                       edgecolors='darkorange', linewidths=2,
-                       label=f'当前: {node_type}')
-        
-        # 计算当前指标
-        current_dist, current_load, current_time = calculate_metrics(locs, actions, step)
-        
-        # 标题和图例
-        ax1.set_title(f'{title}\n步骤: {step}/{len(actions)}', fontsize=14, fontweight='bold')
-        ax1.legend(loc='upper left', fontsize=10)
-        ax1.set_xlabel('X坐标', fontsize=12)
-        ax1.set_ylabel('Y坐标', fontsize=12)
-        ax1.grid(True, alpha=0.3, linestyle='--')
-        ax1.set_aspect('equal')
-        
-        # 添加统计信息
-        info_text = (
-            f'累计距离: {current_dist:.2f}\n'
-            f'当前载重: {current_load:.2f}\n'
-            f'当前时间: {current_time:.1f}'
+    try:
+        customer_scatter = route_ax.scatter(
+            customers[:, 0],
+            customers[:, 1],
+            c=customer_windows[:, 0],
+            s=marker_size,
+            cmap="coolwarm",
+            alpha=0.8,
+            edgecolors="#1f2937" if num_customers <= 100 else "none",
+            linewidths=0.5,
+            zorder=3,
         )
-        ax1.text(0.02, 0.98, info_text, transform=ax1.transAxes,
-                fontsize=11, verticalalignment='top',
-                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
-        
-        # 右侧：时间调度甘特图
-        ax2 = plt.subplot(1, 2, 2)
-        
-        if time_windows is not None and step > 0:
-            # 绘制时间窗
-            for idx in range(len(customers)):
-                earliest, latest = time_windows[idx]
-                width = latest - earliest
-                # 绘制时间窗矩形（浅色）
-                rect = Rectangle((earliest, idx), width, 0.8, 
-                               facecolor='lightgreen', edgecolor='black', 
-                               alpha=0.3, linewidth=1)
-                ax2.add_patch(rect)
-            
-            # 绘制已访问客户的实际到达时间
-            temp_time = 0.0
-            visited_customers = []
-            for i in range(step):
-                node = actions[i]
-                if node > 0:  # 客户节点
-                    customer_idx = node - 1
-                    if customer_idx < len(customers):
-                        visited_customers.append((customer_idx, temp_time))
-                
-                # 更新时间
-                if i + 1 < len(actions):
-                    next_node = actions[i + 1]
-                    pos_a = locs[node]
-                    pos_b = locs[next_node]
-                    dist = np.sqrt(np.sum((pos_a - pos_b) ** 2))
-                    temp_time += dist  # 假设速度=1
-                    
-                    if next_node > 0:  # 下一个是客户
-                        customer_idx = next_node - 1
-                        earliest = time_windows[customer_idx][0]
-                        if temp_time < earliest:
-                            temp_time = earliest  # 等待
-                        temp_time += 10  # 服务时间
-            
-            # 绘制访问标记
-            for customer_idx, arrival_time in visited_customers:
-                ax2.scatter(arrival_time, customer_idx, c='red', s=100, 
-                          zorder=5, marker='o', edgecolors='darkred', linewidths=2)
-                ax2.text(arrival_time, customer_idx + 0.3, f'{arrival_time:.1f}',
-                        fontsize=8, ha='center', color='red', fontweight='bold')
-            
-            ax2.set_xlabel('时间', fontsize=12)
-            ax2.set_ylabel('客户ID', fontsize=12)
-            ax2.set_title('时间调度图', fontsize=12, fontweight='bold')
-            ax2.set_ylim(-0.5, len(customers) - 0.5)
-            if time_windows is not None:
-                max_time = np.max(time_windows[:, 1]) * 1.2
-                ax2.set_xlim(0, max_time)
-            ax2.grid(True, alpha=0.3, axis='x')
-            ax2.set_yticks(range(len(customers)))
-            ax2.set_yticklabels([f'客户 {i+1}' for i in range(len(customers))])
-        else:
-            ax2.text(0.5, 0.5, '等待路线生成...', 
-                    transform=ax2.transAxes, ha='center', va='center',
-                    fontsize=14, color='gray')
-            ax2.axis('off')
-        
-        plt.tight_layout()
-        
-        # 保存到临时文件并读取为图像
-        temp_path = save_path.replace('.gif', f'_frame_{step}.png')
-        plt.savefig(temp_path, dpi=100, bbox_inches='tight')
-        plt.close()
-        
-        # 读取图像
-        frames.append(Image.open(temp_path))
-    
-    # 保存为GIF
-    if frames:
-        duration = int(1000 / fps)  # 每帧持续时间（毫秒）
-        frames[0].save(
-            save_path,
-            save_all=True,
-            append_images=frames[1:],
-            duration=duration,
-            loop=0
+        colorbar = fig.colorbar(customer_scatter, ax=route_ax, fraction=0.046, pad=0.04)
+        colorbar.set_label("时间窗起始时间")
+        route_ax.scatter(
+            locs[0, 0],
+            locs[0, 1],
+            c="#d32f2f",
+            s=max(90, marker_size * 2.2),
+            marker="s",
+            edgecolors="#7f1d1d",
+            linewidths=1.5,
+            zorder=5,
+            label="仓库",
         )
-    
-    # 清理临时文件
-    for step in range(len(actions) + 1):
-        temp_path = save_path.replace('.gif', f'_frame_{step}.png')
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-    
+        if num_customers <= 50:
+            route_ax.text(
+                locs[0, 0],
+                locs[0, 1],
+                "0",
+                color="white",
+                fontsize=8,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                zorder=6,
+            )
+            for node, (x_coord, y_coord) in enumerate(customers, start=1):
+                earliest, latest = node_time_windows[node]
+                route_ax.text(
+                    x_coord,
+                    y_coord,
+                    f"{node}\n[{earliest:.0f}-{latest:.0f}]",
+                    fontsize=5.5,
+                    color="#0f3b66",
+                    ha="center",
+                    va="center",
+                    zorder=4,
+                )
+
+        route_lines = LineCollection(
+            [],
+            linewidths=line_width,
+            alpha=0.8,
+            zorder=2,
+            label="配送路线",
+        )
+        route_ax.add_collection(route_lines)
+        current_marker = route_ax.scatter(
+            [locs[0, 0]],
+            [locs[0, 1]],
+            c="#ff9800",
+            s=max(110, marker_size * 2.6),
+            marker="*",
+            edgecolors="#9a4d00",
+            linewidths=1,
+            zorder=7,
+            label="当前位置",
+        )
+        direction_arrow = FancyArrowPatch(
+            locs[0],
+            locs[0],
+            arrowstyle="-|>",
+            mutation_scale=11,
+            linewidth=max(1.0, line_width),
+            color="#1565c0",
+            alpha=0.9,
+            zorder=6,
+        )
+        direction_arrow.set_visible(False)
+        route_ax.add_patch(direction_arrow)
+
+        minimum = locs.min(axis=0)
+        maximum = locs.max(axis=0)
+        span = np.maximum(maximum - minimum, 1e-3)
+        margin = np.maximum(span * 0.06, 0.02)
+        route_ax.set_xlim(minimum[0] - margin[0], maximum[0] + margin[0])
+        route_ax.set_ylim(minimum[1] - margin[1], maximum[1] + margin[1])
+        route_ax.set_aspect("equal", adjustable="box")
+        route_ax.grid(True, alpha=0.25, linestyle="--")
+        route_ax.set_xlabel("X 坐标")
+        route_ax.set_ylabel("Y 坐标")
+        route_ax.legend(loc="upper right", fontsize=8, framealpha=0.9)
+        route_title = route_ax.set_title("", fontsize=11, fontweight="bold")
+        route_info = route_ax.text(
+            0.02,
+            0.98,
+            "",
+            transform=route_ax.transAxes,
+            fontsize=8.5,
+            verticalalignment="top",
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.85),
+        )
+
+        for customer_index, (earliest, latest) in enumerate(customer_windows):
+            schedule_ax.add_patch(
+                Rectangle(
+                    (earliest, customer_index - 0.35),
+                    latest - earliest,
+                    0.7,
+                    facecolor="#a5d6a7",
+                    edgecolor="#4b5563",
+                    alpha=0.35,
+                    linewidth=0.6,
+                )
+            )
+        service_markers = schedule_ax.scatter(
+            [],
+            [],
+            c="#d32f2f",
+            s=max(12, marker_size * 0.7),
+            edgecolors="#7f1d1d",
+            linewidths=0.5,
+            zorder=5,
+            label="服务开始",
+        )
+        max_schedule_time = max(
+            float(customer_windows[:, 1].max()),
+            float(elapsed_times[-1]),
+            1.0,
+        )
+        schedule_ax.set_xlim(0, max_schedule_time * 1.08)
+        schedule_ax.set_ylim(-0.75, num_customers - 0.25)
+        tick_count = min(num_customers, 20)
+        tick_indices = np.unique(
+            np.linspace(0, num_customers - 1, tick_count).astype(int)
+        )
+        schedule_ax.set_yticks(tick_indices)
+        schedule_ax.set_yticklabels(
+            [f"客户 {index + 1}" for index in tick_indices],
+            fontsize=7,
+        )
+        schedule_ax.set_xlabel("时间")
+        schedule_ax.set_ylabel("客户")
+        schedule_ax.set_title("时间窗与服务开始时间", fontsize=11, fontweight="bold")
+        schedule_ax.grid(True, alpha=0.25, axis="x")
+        schedule_ax.legend(loc="upper right", fontsize=8)
+        progress_artist = fig.text(0.5, 0.02, "", ha="center", fontsize=9)
+        fig.suptitle(title, fontsize=13, fontweight="bold")
+        fig.tight_layout(rect=(0, 0.04, 1, 0.95))
+
+        notify_stride = max(1, len(frame_steps) // 10)
+        for frame_index, step in enumerate(frame_steps):
+            route_lines.set_segments(segments[:step])
+            destinations = route[1:step + 1]
+            route_lines.set_colors(
+                ["#2e7d32" if node == 0 else "#1565c0" for node in destinations]
+            )
+            route_lines.set_linestyles(
+                ["dashed" if node == 0 else "solid" for node in destinations]
+            )
+
+            current_position = locs[route[step]]
+            current_marker.set_offsets(current_position.reshape(1, 2))
+            if step:
+                direction_arrow.set_positions(segments[step - 1, 0], segments[step - 1, 1])
+                direction_arrow.set_color(
+                    "#2e7d32" if route[step] == 0 else "#1565c0"
+                )
+                direction_arrow.set_visible(True)
+            else:
+                direction_arrow.set_visible(False)
+
+            visible_visits = [visit for visit in visits if visit[0] <= step]
+            if visible_visits:
+                marker_offsets = np.array(
+                    [[visit[3], visit[1]] for visit in visible_visits],
+                    dtype=float,
+                )
+                service_markers.set_offsets(marker_offsets)
+                service_markers.set_color(
+                    [
+                        "#d32f2f" if visit[3] > visit[4] else "#2e7d32"
+                        for visit in visible_visits
+                    ]
+                )
+            else:
+                service_markers.set_offsets(np.empty((0, 2)))
+
+            percent = int(round(step * 100 / route_steps))
+            current_node = route[step]
+            node_label = "仓库" if current_node == 0 else f"客户 {current_node}"
+            route_title.set_text(f"步骤 {step}/{route_steps} | 当前：{node_label}")
+            route_info.set_text(
+                f"累计距离: {distances[step]:.2f}\n"
+                f"当前载重: {loads[step]:.2f}\n"
+                f"当前时间: {elapsed_times[step]:.1f}"
+            )
+            progress_artist.set_text(f"动画进度: {percent}%")
+            frames.append(figure_to_palette_image(fig))
+
+            if progress_callback and (
+                frame_index == 0
+                or frame_index == len(frame_steps) - 1
+                or frame_index % notify_stride == 0
+            ):
+                progress_callback(percent, int(step), route_steps)
+    except Exception:
+        for frame in frames:
+            frame.close()
+        raise
+    finally:
+        plt.close(fig)
+
+    save_palette_gif(frames, save_path, fps)
     logger.info(f"VRPTW动画已保存: {save_path}")
     return save_path
 

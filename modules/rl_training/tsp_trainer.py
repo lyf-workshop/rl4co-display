@@ -21,6 +21,15 @@ except ImportError:
 from .base_trainer import BaseTrainer
 from .visualizations.tsp_viz import create_tsp_route_animation, create_tsp_comparison_plot
 
+LARGE_TSP_NODE_THRESHOLD = 500
+
+
+def _get_animation_instance_limit(num_cities, num_instances):
+    """Limit large TSP animations while retaining every static plot."""
+    if num_cities >= LARGE_TSP_NODE_THRESHOLD:
+        return min(1, num_instances)
+    return num_instances
+
 
 class TSPTrainer(BaseTrainer):
     """TSP问题训练器"""
@@ -93,6 +102,19 @@ class TSPTrainer(BaseTrainer):
         plot_paths = []
         animation_paths = []
         left_label = "Untrained (Greedy)"
+        num_instances = len(td_init)
+        num_cities = int(td_init["locs"].shape[-2])
+        animation_instance_limit = _get_animation_instance_limit(
+            num_cities,
+            num_instances,
+        )
+
+        if animation_instance_limit < num_instances:
+            self.send_message(
+                'info',
+                f'TSP规模为{num_cities}个节点：保留{num_instances}张静态对比图，'
+                '动态路线图仅生成第1组以控制耗时和内存。',
+            )
 
         for i, td in enumerate(td_init):
             # 生成静态对比图
@@ -111,18 +133,33 @@ class TSPTrainer(BaseTrainer):
             self._save_file_record(plot_filename, 'plot', plot_path)
             
             plot_paths.append(f"/static/model_plots/user_{self.user_id}/{plot_filename}")
-            
+
+            if i >= animation_instance_limit:
+                continue
+
             # 生成动态路线构建过程GIF
-            self.send_message('info', f'正在生成TSP动态路线图 {i+1}/{len(td_init)}...')
+            self.send_message(
+                'info',
+                f'正在生成TSP动态路线图 {i+1}/{animation_instance_limit}...',
+            )
             
             animation_filename = f"tsp_animation_{self.session_id[:8]}_{i+1}.gif"
             animation_path = os.path.join(self.user_plots_dir, animation_filename)
-            
+
+            def report_animation_progress(percent, step, total_steps):
+                self.send_message(
+                    'info',
+                    f'TSP动态路线图 {i+1}/{animation_instance_limit}：'
+                    f'{percent}%（{step}/{total_steps}步）',
+                )
+
             create_tsp_route_animation(
                 td, 
                 actions_trained[i].cpu().numpy(), 
                 animation_path,
-                title="TSP训练后路线生成过程"
+                title="TSP训练后路线生成过程",
+                fps=4 if num_cities >= LARGE_TSP_NODE_THRESHOLD else 2,
+                progress_callback=report_animation_progress,
             )
             
             # 保存文件记录到数据库

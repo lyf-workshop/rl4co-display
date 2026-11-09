@@ -1,0 +1,119 @@
+.auth-layout {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 42% 58%;
+  padding: 0;
+}
+.auth-brand {
+  background: var(--color-navigation);
+  color: white;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+}
+.auth-brand-copy {
+  margin: auto 0;
+  padding: 70px 0;
+}
+.auth-brand-copy h2 {
+  font-size: 36px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+  margin-bottom: 24px;
+}
+.auth-brand-copy p,
+.auth-brand-footer {
+  color: var(--color-navigation-text);
+  font-size: 13px;
+}
+.auth-eyebrow {
+  font: 500 11px var(--font-data);
+  letter-spacing: 1.5px;
+  color: var(--color-muted);
+  margin-bottom: 16px;
+}
+.auth-brand .auth-eyebrow {
+  color: var(--color-navigation-text);
+}
+.auth-brand-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border: 1px solid var(--color-navigation-active);
+  border-radius: 8px;
+  margin-top: 40px;
+  max-width: 360px;
+}
+.auth-brand-grid span {
+  padding: 22px;
+  font: 12px var(--font-data);
+  letter-spacing: 1px;
+  color: var(--color-navigation-text);
+}
+.auth-brand-footer {
+  font: 11px var(--font-data);
+  margin: 0;
+}
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+.auth-card {
+  width: min(420px, 100%);
+  padding: 36px;
+}
+.auth-card h1 {
+  font-size: 24px;
+}
+.auth-card > .muted {
+  margin-bottom: 28px;
+}
+.auth-card form {
+  display: grid;
+  gap: 20px;
+}
+.auth-card .banner {
+  margin-bottom: 20px;
+}
+.auth-card .btn-primary {
+  width: 100%;
+  margin-top: 4px;
+}
+.auth-footer {
+  border-top: 1px solid var(--color-border);
+  padding-top: 24px;
+  margin: 24px 0 0;
+  font-size: 13px;
+  text-align: center;
+  color: var(--color-muted);
+}
+.auth-caption {
+  margin: 24px 0 0;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+@media (max-width: 1199px) {
+  .auth-brand {
+    padding: 32px;
+  }
+  .auth-brand-copy h2 {
+    font-size: 30px;
+  }
+}
+@media (max-width: 767px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+  .auth-brand {
+    display: none;
+  }
+  .auth-main {
+    padding: 32px 20px;
+    min-height: 100dvh;
+  }
+  .auth-card {
+    padding: 26px 22px;
+  }
+}

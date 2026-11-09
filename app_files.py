@@ -326,7 +326,8 @@ def list_datasets():
                             'filename': dataset_data.get('filename'),
                             'problem_type': dataset_data.get('problem_type', 'tsp'),
                             'num_loc': dataset_data.get('num_loc', dataset_data.get('num_cities', 0)),
-                            'upload_time': dataset_data.get('upload_time')
+                            'upload_time': dataset_data.get('upload_time'),
+                            'size': os.path.getsize(dataset_path)
                         })
                 except Exception as e:
                     logger.error(f"读取数据集失败: {filename}, {str(e)}")
@@ -397,6 +398,21 @@ def delete_dataset():
         return jsonify({'success': False, 'message': '删除数据集失败，请稍后重试'}), 500
 
 
+@files_bp.route('/api/download_dataset/<dataset_id>')
+@login_required
+def download_dataset(dataset_id):
+    """Download the normalized dataset actually used by the trainer."""
+    if any(char in dataset_id for char in '\\/:') or dataset_id in ('.', '..'):
+        return jsonify(success=False, message='无效的数据集 ID'), 400
+    directory = os.path.abspath(os.path.join('datasets', f'user_{get_current_user_id()}'))
+    path = os.path.abspath(os.path.join(directory, f'{dataset_id}.json'))
+    if os.path.commonpath([directory, path]) != directory or os.path.basename(dataset_id) != dataset_id:
+        return jsonify(success=False, message='无效的数据集 ID'), 400
+    if not os.path.isfile(path):
+        return jsonify(success=False, message='数据集不存在'), 404
+    return send_file(path, as_attachment=True, download_name=f'{dataset_id}.json', mimetype='application/json')
+
+
 @files_bp.route('/api/list_files', methods=['GET'])
 @login_required
 def list_training_files():
@@ -446,6 +462,7 @@ def list_training_files():
                     }
                     
                     total_session_size = 0
+                    all_files = []
                     
                     for file_record in session_files:
                         file_info = {
@@ -459,6 +476,7 @@ def list_training_files():
                         }
                         
                         total_session_size += file_record['file_size']
+                        all_files.append(file_info)
                         
                         # 按类型归类（每种类型只保留第一个）
                         file_type = file_record['file_type']
@@ -483,7 +501,8 @@ def list_training_files():
                             'start_time': session['start_time'].strftime('%Y-%m-%d %H:%M'),
                             'file_count': len(session_files),
                             'total_size_mb': round(total_session_size / (1024 * 1024), 2),
-                            'files': files_by_type
+                            'files': files_by_type,
+                            'all_files': all_files
                         }
                         sessions_data.append(session_data)
                 

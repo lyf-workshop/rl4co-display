@@ -1,0 +1,3394 @@
+{
+  "routes": [
+    {
+      "file": "app_auth.py",
+      "function": "login_page",
+      "route": "/login",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_auth.py",
+      "function": "register_page",
+      "route": "/register",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_auth.py",
+      "function": "res_redirect",
+      "route": "/res",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_auth.py",
+      "function": "api_register",
+      "route": "/api/register",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_auth.py",
+      "function": "api_login",
+      "route": "/api/login",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_auth.py",
+      "function": "api_logout",
+      "route": "/api/logout",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_auth.py",
+      "function": "logout_page",
+      "route": "/logout",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_auth.py",
+      "function": "api_current_user",
+      "route": "/api/current_user",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_compat.py",
+      "function": "get_compatibility_matrix",
+      "route": "/api/compatibility/info",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_compat.py",
+      "function": "validate_config_combination",
+      "route": "/api/compatibility/validate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_compat.py",
+      "function": "get_problem_constraints",
+      "route": "/api/compatibility/constraints/<problem_type>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_compat.py",
+      "function": "get_available_policies_api",
+      "route": "/api/compatibility/available_policies",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_compat.py",
+      "function": "get_available_algorithms_api",
+      "route": "/api/compatibility/available_algorithms",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_compat.py",
+      "function": "get_recommended_config",
+      "route": "/api/compatibility/recommend",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "upload_dataset",
+      "route": "/api/upload_dataset",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "list_datasets",
+      "route": "/api/list_datasets",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "delete_dataset",
+      "route": "/api/delete_dataset",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "download_dataset",
+      "route": "/api/download_dataset/<dataset_id>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "list_training_files",
+      "route": "/api/list_files",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "delete_training_file",
+      "route": "/api/delete_file",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "download_checkpoint",
+      "route": "/api/download_checkpoint/<filename>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "delete_session",
+      "route": "/api/delete_session",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "delete_by_session",
+      "route": "/api/delete_by_session",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_files.py",
+      "function": "clear_all_files",
+      "route": "/api/clear_all_files",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_gpu.py",
+      "function": "gpu_status",
+      "route": "/api/gpu_status",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_gpu.py",
+      "function": "gpu_allocate",
+      "route": "/api/gpu_allocate",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_gpu.py",
+      "function": "gpu_release",
+      "route": "/api/gpu_release",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_llm.py",
+      "function": "llm_providers",
+      "route": "/api/llm/providers",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_llm.py",
+      "function": "llm_chat",
+      "route": "/api/llm/chat",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_ollama.py",
+      "function": "ollama_tags",
+      "route": "/api/ollama/tags",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_ollama.py",
+      "function": "ollama_chat",
+      "route": "/api/ollama/chat",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_pages.py",
+      "function": "index",
+      "route": "/",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_pages.py",
+      "function": "benchmark",
+      "route": "/benchmark",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_pages.py",
+      "function": "file_manager",
+      "route": "/file_manager",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_pages.py",
+      "function": "profile",
+      "route": "/profile",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_pages.py",
+      "function": "model_info_list",
+      "route": "/model_info",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_pages.py",
+      "function": "model_info_detail",
+      "route": "/model_info/<model_id>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_stats.py",
+      "function": "get_user_stats",
+      "route": "/api/user_stats",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_stats.py",
+      "function": "get_user_activity",
+      "route": "/api/user_activity",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "start_training",
+      "route": "/api/start_training",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "list_training_sessions",
+      "route": "/api/training_sessions",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "training_progress",
+      "route": "/api/training_progress/<session_id>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "get_training_status",
+      "route": "/api/training_status/<session_id>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "pause_training",
+      "route": "/api/pause_training/<session_id>",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "resume_training",
+      "route": "/api/resume_training/<session_id>",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "training_heartbeat",
+      "route": "/api/training_heartbeat/<session_id>",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "file": "app_training.py",
+      "function": "stop_training",
+      "route": "/api/stop_training/<session_id>",
+      "methods": [
+        "POST"
+      ]
+    }
+  ],
+  "templates": {
+    "templates/base.html": [
+      {
+        "tag": "meta",
+        "name": "viewport",
+        "content": "width=device-width, initial-scale=1.0"
+      },
+      {
+        "tag": "body",
+        "data-page": "{{ active_page|default('auth') }}",
+        "data-user-id": "{{ session.get('user_id', '') }}"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "data-open-assistant": null
+      },
+      {
+        "tag": "main",
+        "id": "main-content",
+        "class": "{% block main_class %}app-content{% endblock %}"
+      },
+      {
+        "tag": "div",
+        "id": "toast-container",
+        "class": "toast-container",
+        "aria-live": "polite",
+        "aria-atomic": "false"
+      },
+      {
+        "tag": "div",
+        "id": "modal-root",
+        "class": "modal-overlay",
+        "hidden": null
+      },
+      {
+        "tag": "h2",
+        "id": "modal-title"
+      },
+      {
+        "tag": "p",
+        "id": "modal-description",
+        "class": "muted"
+      },
+      {
+        "tag": "div",
+        "id": "modal-error",
+        "class": "banner banner-error modal-error",
+        "role": "alert",
+        "hidden": null
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn",
+        "id": "modal-cancel"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-danger",
+        "id": "modal-submit"
+      }
+    ],
+    "templates/benchmark.html": [
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn",
+        "id": "benchmark-refresh"
+      },
+      {
+        "tag": "select",
+        "id": "benchmark-source"
+      },
+      {
+        "tag": "select",
+        "id": "problem-select"
+      },
+      {
+        "tag": "select",
+        "id": "node-select"
+      },
+      {
+        "tag": "select",
+        "id": "metric-select"
+      },
+      {
+        "tag": "div",
+        "class": "field",
+        "id": "benchmark-category-field",
+        "hidden": null
+      },
+      {
+        "tag": "select",
+        "id": "category-select"
+      },
+      {
+        "tag": "div",
+        "id": "experiment-picker",
+        "class": "experiment-picker"
+      },
+      {
+        "tag": "div",
+        "class": "banner",
+        "id": "benchmark-note",
+        "role": "status"
+      },
+      {
+        "tag": "div",
+        "id": "benchmark-feedback"
+      },
+      {
+        "tag": "div",
+        "class": "metric-grid",
+        "id": "benchmark-metrics"
+      },
+      {
+        "tag": "div",
+        "id": "compare-count",
+        "class": "metric-value"
+      },
+      {
+        "tag": "div",
+        "class": "metric-label",
+        "id": "best-label"
+      },
+      {
+        "tag": "div",
+        "id": "best-method",
+        "class": "metric-value"
+      },
+      {
+        "tag": "div",
+        "id": "best-value",
+        "class": "metric-value"
+      },
+      {
+        "tag": "div",
+        "id": "average-value",
+        "class": "metric-value"
+      },
+      {
+        "tag": "section",
+        "class": "card",
+        "id": "benchmark-chart-card"
+      },
+      {
+        "tag": "span",
+        "class": "badge",
+        "id": "benchmark-source-label"
+      },
+      {
+        "tag": "div",
+        "class": "chart",
+        "id": "mainChart",
+        "role": "img",
+        "aria-label": "所选实验或论文基准的性能对比"
+      },
+      {
+        "tag": "p",
+        "id": "benchmark-chart-summary",
+        "class": "chart-caption"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "benchmark-export",
+        "class": "btn btn-small"
+      },
+      {
+        "tag": "div",
+        "class": "table-scroll",
+        "id": "benchmark-table"
+      }
+    ],
+    "templates/file_manager.html": [
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "files-refresh",
+        "class": "btn"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "files-clear",
+        "class": "btn btn-danger"
+      },
+      {
+        "tag": "div",
+        "id": "dataset-count",
+        "class": "metric-value"
+      },
+      {
+        "tag": "div",
+        "id": "result-count",
+        "class": "metric-value"
+      },
+      {
+        "tag": "div",
+        "id": "checkpoint-count",
+        "class": "metric-value"
+      },
+      {
+        "tag": "div",
+        "id": "storage-count",
+        "class": "metric-value"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "role": "tab",
+        "id": "tab-datasets",
+        "aria-controls": "panel-datasets",
+        "aria-selected": "true",
+        "data-tab": "datasets"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "role": "tab",
+        "id": "tab-results",
+        "aria-controls": "panel-results",
+        "aria-selected": "false",
+        "data-tab": "results",
+        "tabindex": "-1"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "role": "tab",
+        "id": "tab-checkpoints",
+        "aria-controls": "panel-checkpoints",
+        "aria-selected": "false",
+        "data-tab": "checkpoints",
+        "tabindex": "-1"
+      },
+      {
+        "tag": "div",
+        "id": "panel-datasets",
+        "role": "tabpanel",
+        "aria-labelledby": "tab-datasets"
+      },
+      {
+        "tag": "form",
+        "id": "files-upload-form",
+        "class": "upload-fields"
+      },
+      {
+        "tag": "select",
+        "id": "upload-problem",
+        "name": "problem_type"
+      },
+      {
+        "tag": "input",
+        "type": "file",
+        "id": "upload-file",
+        "name": "dataset",
+        "accept": ".json,.txt,.tsp",
+        "required": null
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "class": "btn btn-primary",
+        "id": "files-upload"
+      },
+      {
+        "tag": "div",
+        "id": "files-upload-status",
+        "class": "banner",
+        "role": "status",
+        "hidden": null
+      },
+      {
+        "tag": "div",
+        "id": "datasets-table",
+        "class": "table-scroll"
+      },
+      {
+        "tag": "div",
+        "id": "panel-results",
+        "role": "tabpanel",
+        "aria-labelledby": "tab-results",
+        "hidden": null
+      },
+      {
+        "tag": "div",
+        "id": "results-table"
+      },
+      {
+        "tag": "div",
+        "id": "panel-checkpoints",
+        "role": "tabpanel",
+        "aria-labelledby": "tab-checkpoints",
+        "hidden": null
+      },
+      {
+        "tag": "div",
+        "id": "checkpoints-table",
+        "class": "table-scroll"
+      }
+    ],
+    "templates/includes/assistant.html": [
+      {
+        "tag": "div",
+        "id": "assistant-layer",
+        "class": "drawer-overlay",
+        "hidden": null
+      },
+      {
+        "tag": "h2",
+        "id": "assistant-title"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-icon",
+        "id": "ai-clear-btn",
+        "aria-label": "清空对话"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-icon",
+        "id": "assistant-close",
+        "aria-label": "关闭 AI 助手"
+      },
+      {
+        "tag": "select",
+        "id": "ai-source-select"
+      },
+      {
+        "tag": "select",
+        "id": "ai-model-select"
+      },
+      {
+        "tag": "div",
+        "id": "ai-model-status",
+        "class": "ai-model-status",
+        "role": "status"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "assistant-retry",
+        "class": "btn btn-small"
+      },
+      {
+        "tag": "div",
+        "id": "assistant-context",
+        "class": "data"
+      },
+      {
+        "tag": "div",
+        "class": "ai-chat-messages",
+        "id": "ai-chat-messages",
+        "role": "log",
+        "aria-live": "polite"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "data-prompt": "解释当前 Loss 的变化，并说明哪些现象值得关注。"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "data-prompt": "根据当前实验配置和训练指标，给出调参建议。"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "data-prompt": "检查当前配置和指标是否存在异常，说明判断依据。"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "id": "assistant-cancel",
+        "hidden": null
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "id": "assistant-message-retry",
+        "hidden": null
+      },
+      {
+        "tag": "textarea",
+        "id": "ai-chat-input",
+        "class": "ai-chat-input",
+        "rows": "2",
+        "placeholder": "输入问题…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-primary",
+        "id": "ai-send-btn",
+        "aria-label": "发送消息"
+      }
+    ],
+    "templates/includes/auth-brand.html": [],
+    "templates/includes/icons.html": [],
+    "templates/includes/navbar.html": [
+      {
+        "tag": "aside",
+        "class": "app-sidebar",
+        "id": "app-sidebar",
+        "aria-label": "主导航",
+        "tabindex": "-1"
+      },
+      {
+        "tag": "strong",
+        "id": "shell-gpu-name"
+      },
+      {
+        "tag": "span",
+        "id": "shell-gpu-status"
+      }
+    ],
+    "templates/index.html": [
+      {
+        "tag": "h1",
+        "id": "workspace-title"
+      },
+      {
+        "tag": "p",
+        "id": "workspace-description"
+      },
+      {
+        "tag": "span",
+        "class": "status",
+        "id": "workspace-status"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn",
+        "id": "new-experiment",
+        "hidden": null
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "view-config",
+        "aria-selected": "true"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "view-monitor",
+        "aria-selected": "false",
+        "disabled": null
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "view-results",
+        "aria-selected": "false",
+        "disabled": null
+      },
+      {
+        "tag": "div",
+        "id": "status-message",
+        "class": "status-message",
+        "role": "status"
+      },
+      {
+        "tag": "div",
+        "id": "configuration-view"
+      },
+      {
+        "tag": "form",
+        "id": "training-form",
+        "novalidate": null
+      },
+      {
+        "tag": "div",
+        "class": "page-stack",
+        "id": "config"
+      },
+      {
+        "tag": "select",
+        "id": "problem-select",
+        "name": "problem"
+      },
+      {
+        "tag": "div",
+        "class": "form-group",
+        "id": "num-loc-group"
+      },
+      {
+        "tag": "input",
+        "id": "num-loc",
+        "max": "1000",
+        "min": "5",
+        "name": "num_loc",
+        "type": "number",
+        "value": "50"
+      },
+      {
+        "tag": "select",
+        "class": "form-control",
+        "id": "model-select",
+        "name": "model"
+      },
+      {
+        "tag": "p",
+        "class": "description",
+        "id": "model-description"
+      },
+      {
+        "tag": "select",
+        "class": "form-control",
+        "id": "algorithm-select",
+        "name": "algorithm"
+      },
+      {
+        "tag": "p",
+        "class": "description",
+        "id": "algorithm-description"
+      },
+      {
+        "tag": "p",
+        "class": "description algorithm-lock-note",
+        "id": "algorithm-lock-note"
+      },
+      {
+        "tag": "span",
+        "id": "algorithm-lock-text"
+      },
+      {
+        "tag": "input",
+        "id": "epochs",
+        "max": "1000",
+        "min": "1",
+        "name": "epochs",
+        "type": "number",
+        "value": "10"
+      },
+      {
+        "tag": "input",
+        "id": "batch-size",
+        "max": "2048",
+        "min": "32",
+        "name": "batch_size",
+        "step": "32",
+        "type": "number",
+        "value": "512"
+      },
+      {
+        "tag": "input",
+        "id": "learning-rate",
+        "max": "0.01",
+        "min": "0.00001",
+        "name": "learning_rate",
+        "step": "0.00001",
+        "type": "number",
+        "value": "0.0001"
+      },
+      {
+        "tag": "input",
+        "id": "random-seed",
+        "name": "seed",
+        "type": "number",
+        "value": "1234",
+        "min": "0",
+        "max": "4294967295",
+        "disabled": null
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "id": "use-recommended-btn"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "id": "use-fast-btn"
+      },
+      {
+        "tag": "div",
+        "id": "config-validation-alert",
+        "class": "alert",
+        "role": "status"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "cvrp-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "vehicle-capacity",
+        "max": "10",
+        "min": "0.1",
+        "name": "vehicle_capacity",
+        "step": "0.1",
+        "type": "number",
+        "value": "1.0"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "vrptw-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "time-window-width",
+        "max": "500",
+        "min": "10",
+        "name": "time_window_width",
+        "step": "10",
+        "type": "number",
+        "value": "100"
+      },
+      {
+        "tag": "input",
+        "id": "service-time",
+        "max": "60",
+        "min": "0",
+        "name": "service_time",
+        "step": "1",
+        "type": "number",
+        "value": "10"
+      },
+      {
+        "tag": "input",
+        "id": "max-time",
+        "max": "1440",
+        "min": "60",
+        "name": "max_processing_time",
+        "step": "30",
+        "type": "number",
+        "value": "480"
+      },
+      {
+        "tag": "select",
+        "id": "hard-time-windows",
+        "name": "hard_time_windows"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "mtsp-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "num-agents",
+        "max": "10",
+        "min": "2",
+        "name": "num_agents",
+        "step": "1",
+        "type": "number",
+        "value": "5"
+      },
+      {
+        "tag": "select",
+        "id": "cost-type",
+        "name": "cost_type"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "pdp-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "pdp-num-loc",
+        "max": "40",
+        "min": "4",
+        "name": "pdp_num_loc",
+        "step": "2",
+        "type": "number",
+        "value": "20"
+      },
+      {
+        "tag": "select",
+        "id": "force-start-depot",
+        "name": "force_start_depot"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "op-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "op-num-loc",
+        "max": "100",
+        "min": "10",
+        "name": "op_num_loc",
+        "step": "1",
+        "type": "number",
+        "value": "20"
+      },
+      {
+        "tag": "input",
+        "id": "max-length",
+        "max": "5.0",
+        "min": "1.0",
+        "name": "max_length",
+        "step": "0.1",
+        "type": "number",
+        "value": "2.0"
+      },
+      {
+        "tag": "select",
+        "id": "prize-type",
+        "name": "prize_type"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "pctsp-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "pctsp-num-loc",
+        "max": "100",
+        "min": "10",
+        "name": "pctsp_num_loc",
+        "step": "1",
+        "type": "number",
+        "value": "20"
+      },
+      {
+        "tag": "input",
+        "id": "penalty-factor",
+        "max": "5.0",
+        "min": "1.0",
+        "name": "penalty_factor",
+        "step": "0.1",
+        "type": "number",
+        "value": "3.0"
+      },
+      {
+        "tag": "input",
+        "id": "prize-required",
+        "max": "2.0",
+        "min": "0.5",
+        "name": "prize_required",
+        "step": "0.1",
+        "type": "number",
+        "value": "1.0"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "spctsp-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "spctsp-num-loc",
+        "max": "100",
+        "min": "10",
+        "name": "spctsp_num_loc",
+        "step": "1",
+        "type": "number",
+        "value": "20"
+      },
+      {
+        "tag": "input",
+        "id": "spctsp-penalty-factor",
+        "max": "5.0",
+        "min": "1.0",
+        "name": "spctsp_penalty_factor",
+        "step": "0.1",
+        "type": "number",
+        "value": "3.0"
+      },
+      {
+        "tag": "input",
+        "id": "spctsp-prize-required",
+        "max": "2.0",
+        "min": "0.5",
+        "name": "spctsp_prize_required",
+        "step": "0.1",
+        "type": "number",
+        "value": "1.0"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "ffsp-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "num-stage",
+        "max": "10",
+        "min": "2",
+        "name": "num_stage",
+        "step": "1",
+        "type": "number",
+        "value": "3"
+      },
+      {
+        "tag": "input",
+        "id": "num-machine",
+        "max": "10",
+        "min": "1",
+        "name": "num_machine",
+        "step": "1",
+        "type": "number",
+        "value": "4"
+      },
+      {
+        "tag": "input",
+        "id": "num-job",
+        "max": "100",
+        "min": "5",
+        "name": "num_job",
+        "step": "1",
+        "type": "number",
+        "value": "20"
+      },
+      {
+        "tag": "input",
+        "id": "min-time",
+        "max": "10",
+        "min": "1",
+        "name": "min_time",
+        "step": "1",
+        "type": "number",
+        "value": "2"
+      },
+      {
+        "tag": "input",
+        "id": "max-time-ffsp",
+        "max": "50",
+        "min": "2",
+        "name": "max_time",
+        "step": "1",
+        "type": "number",
+        "value": "10"
+      },
+      {
+        "tag": "select",
+        "id": "flatten-stages",
+        "name": "flatten_stages"
+      },
+      {
+        "tag": "span",
+        "id": "ffsp-scale-info"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "chip-routing-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "id": "chip-grid-width",
+        "max": "40",
+        "min": "8",
+        "name": "grid_width",
+        "step": "1",
+        "type": "number",
+        "value": "18"
+      },
+      {
+        "tag": "input",
+        "id": "chip-grid-height",
+        "max": "40",
+        "min": "8",
+        "name": "grid_height",
+        "step": "1",
+        "type": "number",
+        "value": "18"
+      },
+      {
+        "tag": "input",
+        "id": "chip-num-nets",
+        "max": "40",
+        "min": "4",
+        "name": "num_nets",
+        "step": "1",
+        "type": "number",
+        "value": "12"
+      },
+      {
+        "tag": "input",
+        "id": "chip-obstacle-ratio",
+        "max": "0.30",
+        "min": "0",
+        "name": "obstacle_ratio",
+        "step": "0.02",
+        "type": "number",
+        "value": "0.10"
+      },
+      {
+        "tag": "input",
+        "id": "chip-edge-capacity",
+        "max": "4",
+        "min": "1",
+        "name": "edge_capacity",
+        "step": "1",
+        "type": "number",
+        "value": "1"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "pomo-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "num-starts",
+        "max": "100",
+        "min": "10",
+        "name": "num_starts",
+        "type": "number",
+        "value": "50"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "ham-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "select",
+        "class": "form-control",
+        "id": "ham-normalization",
+        "name": "normalization"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "ham-feedforward-hidden",
+        "max": "1024",
+        "min": "256",
+        "name": "feedforward_hidden",
+        "step": "128",
+        "type": "number",
+        "value": "512"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "symnco-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "num-augment",
+        "max": "8",
+        "min": "1",
+        "name": "num_augment",
+        "type": "number",
+        "value": "4"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "symnco-num-starts",
+        "max": "50",
+        "min": "0",
+        "name": "num_starts",
+        "type": "number",
+        "value": "0"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "symnco-alpha",
+        "max": "1",
+        "min": "0",
+        "name": "symnco_alpha",
+        "step": "0.05",
+        "type": "number",
+        "value": "0.2"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "symnco-beta",
+        "max": "2",
+        "min": "0",
+        "name": "symnco_beta",
+        "step": "0.1",
+        "type": "number",
+        "value": "1.0"
+      },
+      {
+        "tag": "div",
+        "class": "conditional-params full-width",
+        "id": "deepaco-params",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "n-ants",
+        "max": "200",
+        "min": "5",
+        "name": "n_ants",
+        "type": "number",
+        "value": "30"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "n-iterations-train",
+        "max": "10",
+        "min": "1",
+        "name": "n_iterations_train",
+        "type": "number",
+        "value": "1"
+      },
+      {
+        "tag": "input",
+        "class": "form-control",
+        "id": "n-iterations-test",
+        "max": "20",
+        "min": "1",
+        "name": "n_iterations_test",
+        "type": "number",
+        "value": "5"
+      },
+      {
+        "tag": "select",
+        "id": "dataset-mode",
+        "name": "dataset_mode",
+        "onchange": "toggleDatasetUpload()"
+      },
+      {
+        "tag": "p",
+        "class": "description",
+        "id": "dataset-description"
+      },
+      {
+        "tag": "div",
+        "id": "dataset-upload-section",
+        "style": "display: none;"
+      },
+      {
+        "tag": "input",
+        "type": "file",
+        "id": "dataset-file",
+        "accept": ".txt,.json,.tsp"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn",
+        "id": "dataset-upload-btn",
+        "onclick": "uploadDataset()"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn",
+        "id": "dataset-manager-btn",
+        "onclick": "showDatasetManager()"
+      },
+      {
+        "tag": "div",
+        "id": "upload-status",
+        "class": "status-message",
+        "role": "status"
+      },
+      {
+        "tag": "div",
+        "id": "dataset-info",
+        "class": "banner banner-success",
+        "style": "display: none;"
+      },
+      {
+        "tag": "strong",
+        "id": "dataset-filename"
+      },
+      {
+        "tag": "span",
+        "id": "dataset-size"
+      },
+      {
+        "tag": "span",
+        "id": "dataset-range"
+      },
+      {
+        "tag": "details",
+        "id": "advanced-parameters"
+      },
+      {
+        "tag": "input",
+        "type": "number",
+        "id": "train-data-size",
+        "name": "train_data_size",
+        "value": "10000",
+        "min": "1",
+        "max": "1000000"
+      },
+      {
+        "tag": "input",
+        "type": "number",
+        "id": "val-data-size",
+        "name": "val_data_size",
+        "value": "1000",
+        "min": "1",
+        "max": "1000000"
+      },
+      {
+        "tag": "input",
+        "type": "checkbox",
+        "id": "resume-checkbox",
+        "name": "resume_checkpoint",
+        "onchange": "updateResumeHint()"
+      },
+      {
+        "tag": "p",
+        "class": "description",
+        "id": "resume-hint"
+      },
+      {
+        "tag": "div",
+        "id": "gpu-mock-banner",
+        "class": "banner banner-warning",
+        "style": "display: none;"
+      },
+      {
+        "tag": "div",
+        "id": "gpu-torch-banner",
+        "class": "banner",
+        "style": "display: none;"
+      },
+      {
+        "tag": "div",
+        "id": "gpu-pynvml-banner",
+        "class": "banner banner-success",
+        "style": "display: none;"
+      },
+      {
+        "tag": "div",
+        "id": "gpu-cards-container"
+      },
+      {
+        "tag": "label",
+        "class": "gpu-option",
+        "id": "cpu-option-label"
+      },
+      {
+        "tag": "input",
+        "type": "radio",
+        "name": "gpu_select",
+        "value": "cpu",
+        "id": "gpu-select-cpu",
+        "checked": null,
+        "onchange": "onGpuSelect(null)"
+      },
+      {
+        "tag": "span",
+        "class": "description",
+        "id": "gpu-last-update"
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "class": "btn btn-primary start-button-large",
+        "id": "start-button",
+        "disabled": null
+      },
+      {
+        "tag": "section",
+        "id": "training-section",
+        "class": "page-stack",
+        "hidden": null
+      },
+      {
+        "tag": "div",
+        "id": "connection-banner",
+        "class": "banner",
+        "role": "status"
+      },
+      {
+        "tag": "span",
+        "id": "connection-text"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "id": "reconnect-training",
+        "hidden": null
+      },
+      {
+        "tag": "span",
+        "class": "data muted",
+        "id": "monitor-session"
+      },
+      {
+        "tag": "div",
+        "id": "training-controls",
+        "class": "actions"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "pause-btn",
+        "class": "btn",
+        "onclick": "pauseTraining()"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "resume-btn",
+        "class": "btn",
+        "onclick": "resumeTraining()",
+        "style": "display: none;"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "id": "stop-btn",
+        "class": "btn btn-danger",
+        "onclick": "stopTraining()"
+      },
+      {
+        "tag": "div",
+        "id": "progress-container",
+        "class": "progress-container"
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "metric-epoch"
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "metric-reward"
+      },
+      {
+        "tag": "span",
+        "id": "metric-current-reward"
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "metric-loss"
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "metric-elapsed"
+      },
+      {
+        "tag": "div",
+        "class": "metric-note",
+        "id": "metric-eta"
+      },
+      {
+        "tag": "div",
+        "id": "progress-bar",
+        "class": "progress-bar"
+      },
+      {
+        "tag": "div",
+        "id": "reward-chart",
+        "class": "chart",
+        "role": "img",
+        "aria-label": "Reward 随 Epoch 变化的曲线"
+      },
+      {
+        "tag": "p",
+        "id": "reward-chart-summary",
+        "class": "chart-caption"
+      },
+      {
+        "tag": "div",
+        "id": "loss-chart",
+        "class": "chart",
+        "role": "img",
+        "aria-label": "Loss 随 Epoch 变化的曲线"
+      },
+      {
+        "tag": "p",
+        "id": "loss-chart-summary",
+        "class": "chart-caption"
+      },
+      {
+        "tag": "div",
+        "class": "training-log",
+        "id": "training-log",
+        "role": "log",
+        "aria-live": "off"
+      },
+      {
+        "tag": "details",
+        "id": "training-curves-container",
+        "class": "card",
+        "style": "display: none;"
+      },
+      {
+        "tag": "img",
+        "id": "training-curve-img",
+        "alt": "后端生成的训练曲线"
+      },
+      {
+        "tag": "p",
+        "id": "curve-update-info",
+        "class": "description"
+      },
+      {
+        "tag": "section",
+        "id": "results-panel",
+        "class": "results-panel page-stack",
+        "hidden": null
+      },
+      {
+        "tag": "a",
+        "class": "btn",
+        "id": "compare-result",
+        "href": "/benchmark?source=experiments"
+      },
+      {
+        "tag": "div",
+        "id": "results-content",
+        "class": "page-stack"
+      },
+      {
+        "tag": "div",
+        "id": "dataset-manager-modal",
+        "class": "modal-overlay",
+        "hidden": null
+      },
+      {
+        "tag": "h2",
+        "id": "dataset-dialog-title"
+      },
+      {
+        "tag": "div",
+        "id": "datasets-list"
+      }
+    ],
+    "templates/login.html": [
+      {
+        "tag": "div",
+        "id": "alert",
+        "class": "banner",
+        "role": "alert",
+        "hidden": null
+      },
+      {
+        "tag": "form",
+        "id": "loginForm",
+        "data-auth": "login",
+        "novalidate": null
+      },
+      {
+        "tag": "input",
+        "type": "text",
+        "id": "username",
+        "name": "username",
+        "required": null,
+        "autocomplete": "username",
+        "placeholder": "输入用户名"
+      },
+      {
+        "tag": "p",
+        "class": "field-error",
+        "id": "username-error",
+        "hidden": null
+      },
+      {
+        "tag": "input",
+        "type": "password",
+        "id": "password",
+        "name": "password",
+        "required": null,
+        "autocomplete": "current-password",
+        "placeholder": "输入密码"
+      },
+      {
+        "tag": "p",
+        "class": "field-error",
+        "id": "password-error",
+        "hidden": null
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "class": "btn btn-primary",
+        "id": "submitBtn"
+      }
+    ],
+    "templates/model_info.html": [],
+    "templates/model_list.html": [
+      {
+        "tag": "input",
+        "id": "model-search",
+        "type": "search",
+        "placeholder": "名称、完整名称或适用问题"
+      },
+      {
+        "tag": "select",
+        "id": "model-category"
+      },
+      {
+        "tag": "select",
+        "id": "model-support"
+      },
+      {
+        "tag": "p",
+        "id": "model-filter-count",
+        "class": "description",
+        "role": "status"
+      },
+      {
+        "tag": "article",
+        "class": "model-card card",
+        "data-model-card": null,
+        "data-name": "{{ model.name }} {{ model.full_name }} {{ info.problems|join(' ') }}",
+        "data-category": "{{ model.category }}",
+        "data-integrated": "{{ 'true' if info.policy else 'false' }}"
+      },
+      {
+        "tag": "div",
+        "id": "model-empty",
+        "class": "empty-state",
+        "hidden": null
+      }
+    ],
+    "templates/profile.html": [
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn",
+        "id": "profile-logout"
+      },
+      {
+        "tag": "div",
+        "id": "profile-stats-feedback",
+        "hidden": null
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "totalSessions"
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "completedSessions"
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "runningSessions"
+      },
+      {
+        "tag": "div",
+        "class": "metric-value",
+        "id": "storageUsed"
+      },
+      {
+        "tag": "span",
+        "id": "totalFiles"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-small",
+        "id": "profile-refresh"
+      },
+      {
+        "tag": "div",
+        "id": "activityList"
+      }
+    ],
+    "templates/register.html": [
+      {
+        "tag": "div",
+        "id": "alert",
+        "class": "banner",
+        "role": "alert",
+        "hidden": null
+      },
+      {
+        "tag": "form",
+        "id": "registerForm",
+        "data-auth": "register",
+        "novalidate": null
+      },
+      {
+        "tag": "input",
+        "type": "text",
+        "id": "username",
+        "name": "username",
+        "minlength": "3",
+        "maxlength": "20",
+        "required": null,
+        "autocomplete": "username",
+        "placeholder": "3–20 个字符"
+      },
+      {
+        "tag": "p",
+        "id": "username-error",
+        "class": "field-error",
+        "hidden": null
+      },
+      {
+        "tag": "input",
+        "type": "email",
+        "id": "email",
+        "name": "email",
+        "autocomplete": "email",
+        "placeholder": "用于账户信息"
+      },
+      {
+        "tag": "p",
+        "id": "email-error",
+        "class": "field-error",
+        "hidden": null
+      },
+      {
+        "tag": "input",
+        "type": "password",
+        "id": "password",
+        "name": "password",
+        "minlength": "6",
+        "required": null,
+        "autocomplete": "new-password",
+        "placeholder": "至少 6 个字符"
+      },
+      {
+        "tag": "p",
+        "id": "password-error",
+        "class": "field-error",
+        "hidden": null
+      },
+      {
+        "tag": "p",
+        "id": "strengthText",
+        "class": "description"
+      },
+      {
+        "tag": "input",
+        "type": "password",
+        "id": "confirm_password",
+        "name": "confirm_password",
+        "required": null,
+        "autocomplete": "new-password",
+        "placeholder": "再次输入密码",
+        "aria-describedby": "confirm_password-error"
+      },
+      {
+        "tag": "p",
+        "id": "confirm_password-error",
+        "class": "field-error",
+        "hidden": null
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "class": "btn btn-primary",
+        "id": "submitBtn"
+      }
+    ]
+  },
+  "javascript": {
+    "static/js/ai-assistant.js": {
+      "ids": [
+        "ai-chat-input",
+        "algorithm-select",
+        "assistant-cancel",
+        "assistant-close",
+        "assistant-context",
+        "assistant-layer",
+        "assistant-message-retry",
+        "assistant-retry",
+        "force-start-depot",
+        "model-select",
+        "problem-select",
+        "training-form"
+      ],
+      "selectors": [
+        "[data-open-assistant]",
+        "[data-prompt]",
+        "input[name],select[name]"
+      ],
+      "requests": []
+    },
+    "static/js/app-shell.js": {
+      "ids": [
+        "app-sidebar",
+        "shell-gpu-name",
+        "shell-gpu-status"
+      ],
+      "selectors": [
+        ".menu-toggle",
+        ".sidebar-overlay"
+      ],
+      "requests": [
+        "/api/gpu_status"
+      ]
+    },
+    "static/js/auth.js": {
+      "ids": [
+        "alert",
+        "confirm_password",
+        "password",
+        "strengthText",
+        "submitBtn"
+      ],
+      "selectors": [
+        "[data-auth]",
+        "input"
+      ],
+      "requests": [
+        "/api/"
+      ]
+    },
+    "static/js/benchmark.js": {
+      "ids": [
+        "average-value",
+        "benchmark-category-field",
+        "benchmark-chart-card",
+        "benchmark-chart-summary",
+        "benchmark-export",
+        "benchmark-feedback",
+        "benchmark-note",
+        "benchmark-refresh",
+        "benchmark-source",
+        "benchmark-source-label",
+        "benchmark-table",
+        "best-label",
+        "best-method",
+        "best-value",
+        "category-select",
+        "compare-count",
+        "experiment-picker",
+        "metric-select",
+        "node-select",
+        "problem-select"
+      ],
+      "selectors": [
+        "input"
+      ],
+      "requests": [
+        "/api/training_sessions",
+        "/static/data/benchmark-reference.json"
+      ]
+    },
+    "static/js/charts.js": {
+      "ids": [],
+      "selectors": [],
+      "requests": []
+    },
+    "static/js/file-manager.js": {
+      "ids": [
+        "checkpoint-count",
+        "checkpoints-table",
+        "dataset-count",
+        "datasets-table",
+        "files-clear",
+        "files-refresh",
+        "files-upload",
+        "files-upload-form",
+        "files-upload-status",
+        "panel-",
+        "result-count",
+        "results-table",
+        "storage-count",
+        "upload-file"
+      ],
+      "selectors": [
+        "[data-delete-dataset]",
+        "[data-delete-file]",
+        "[data-delete-session]",
+        "[data-tab]"
+      ],
+      "requests": [
+        "/api/list_datasets",
+        "/api/list_files",
+        "/api/training_sessions",
+        "/api/upload_dataset"
+      ]
+    },
+    "static/js/index.js": {
+      "ids": [
+        "algorithm-description",
+        "algorithm-lock-note",
+        "algorithm-lock-text",
+        "algorithm-select",
+        "chip-routing-params",
+        "config-validation-alert",
+        "cvrp-params",
+        "dataset-description",
+        "dataset-file",
+        "dataset-filename",
+        "dataset-info",
+        "dataset-manager-modal",
+        "dataset-mode",
+        "dataset-range",
+        "dataset-size",
+        "dataset-upload-btn",
+        "dataset-upload-section",
+        "datasets-list",
+        "deepaco-params",
+        "ffsp-params",
+        "ffsp-scale-info",
+        "gpu-",
+        "gpu-cards-container",
+        "gpu-last-update",
+        "gpu-select-cpu",
+        "ham-params",
+        "model-description",
+        "model-select",
+        "mtsp-params",
+        "num-job",
+        "num-loc-group",
+        "num-machine",
+        "num-stage",
+        "op-params",
+        "pctsp-params",
+        "pdp-params",
+        "pomo-params",
+        "problem-select",
+        "random-seed",
+        "spctsp-params",
+        "start-button",
+        "symnco-params",
+        "upload-status",
+        "use-fast-btn",
+        "use-recommended-btn",
+        "vrptw-params"
+      ],
+      "selectors": [
+        "input"
+      ],
+      "requests": [
+        "/api/compatibility/info",
+        "/api/compatibility/recommend?problem=${requestedProblem}&preference=${preference}",
+        "/api/compatibility/validate",
+        "/api/delete_dataset",
+        "/api/gpu_status",
+        "/api/list_datasets",
+        "/api/logout",
+        "/api/upload_dataset"
+      ]
+    },
+    "static/js/model-library.js": {
+      "ids": [
+        "model-category",
+        "model-empty",
+        "model-filter-count",
+        "model-search",
+        "model-support"
+      ],
+      "selectors": [
+        "[data-model-card]"
+      ],
+      "requests": []
+    },
+    "static/js/ollama-chat-embedded.js": {
+      "ids": [
+        "ai-chat-input",
+        "ai-chat-messages",
+        "ai-clear-btn",
+        "ai-minimize-btn",
+        "ai-model-select",
+        "ai-model-status",
+        "ai-send-btn",
+        "ai-source-select",
+        "ai-typing-indicator",
+        "assistant-cancel",
+        "assistant-message-retry",
+        "config"
+      ],
+      "selectors": [
+        ".ai-chat-empty",
+        ".ai-chat-empty, .empty-state",
+        ".ai-chat-panel-embedded",
+        ".ai-config-apply-btn",
+        ".ai-message-bubble",
+        ".ai-message.assistant",
+        ".ai-message.user",
+        ".copy-btn",
+        ".regen-btn",
+        ".status-text"
+      ],
+      "requests": [
+        "${this.config.apiUrl}/tags",
+        "/api/llm/providers"
+      ]
+    },
+    "static/js/profile.js": {
+      "ids": [
+        "activityList",
+        "profile-logout",
+        "profile-refresh",
+        "profile-stats-feedback",
+        "storageUsed"
+      ],
+      "selectors": [],
+      "requests": [
+        "/api/logout",
+        "/api/user_activity",
+        "/api/user_stats"
+      ]
+    },
+    "static/js/training-monitor.js": {
+      "ids": [
+        "compare-result",
+        "configuration-view",
+        "connection-banner",
+        "connection-text",
+        "curve-update-info",
+        "loss-chart-summary",
+        "metric-current-reward",
+        "metric-elapsed",
+        "metric-epoch",
+        "metric-eta",
+        "metric-loss",
+        "metric-reward",
+        "monitor-session",
+        "new-experiment",
+        "pause-btn",
+        "progress-bar",
+        "reconnect-training",
+        "results-content",
+        "results-panel",
+        "resume-btn",
+        "resume-hint",
+        "reward-chart-summary",
+        "saved-artifacts",
+        "start-button",
+        "status-message",
+        "stop-btn",
+        "training-controls",
+        "training-curve-img",
+        "training-curves-container",
+        "training-form",
+        "training-log",
+        "training-mode",
+        "training-section",
+        "view-",
+        "view-monitor",
+        "view-results",
+        "workspace-status"
+      ],
+      "selectors": [
+        "[data-field-error]",
+        "[role=",
+        "input, select"
+      ],
+      "requests": [
+        "/api/",
+        "/api/list_files",
+        "/api/start_training",
+        "/api/training_heartbeat/",
+        "/api/training_progress/",
+        "/api/training_sessions",
+        "/api/training_status/"
+      ]
+    },
+    "static/js/training-progress.js": {
+      "ids": [
+        "algorithm-select",
+        "batch-size",
+        "chip-edge-capacity",
+        "chip-grid-height",
+        "chip-grid-width",
+        "chip-num-nets",
+        "chip-obstacle-ratio",
+        "cost-type",
+        "dataset-filename",
+        "dataset-info",
+        "dataset-mode",
+        "dataset-range",
+        "dataset-size",
+        "epochs",
+        "flatten-stages",
+        "force-start-depot",
+        "ham-feedforward-hidden",
+        "ham-normalization",
+        "hard-time-windows",
+        "learning-rate",
+        "max-length",
+        "max-time",
+        "max-time-ffsp",
+        "min-time",
+        "model-select",
+        "n-ants",
+        "n-iterations-test",
+        "n-iterations-train",
+        "num-agents",
+        "num-augment",
+        "num-job",
+        "num-loc",
+        "num-machine",
+        "num-stage",
+        "num-starts",
+        "op-num-loc",
+        "pctsp-num-loc",
+        "pdp-num-loc",
+        "penalty-factor",
+        "prize-required",
+        "prize-type",
+        "problem-select",
+        "random-seed",
+        "results-content",
+        "resume-checkbox",
+        "service-time",
+        "spctsp-num-loc",
+        "spctsp-penalty-factor",
+        "spctsp-prize-required",
+        "symnco-alpha",
+        "symnco-beta",
+        "symnco-num-starts",
+        "time-window-width",
+        "train-data-size",
+        "training-form",
+        "val-data-size",
+        "vehicle-capacity"
+      ],
+      "selectors": [
+        "input[name],select[name]"
+      ],
+      "requests": []
+    },
+    "static/js/ui.js": {
+      "ids": [
+        "modal-cancel",
+        "modal-description",
+        "modal-error",
+        "modal-root",
+        "modal-submit",
+        "modal-title",
+        "toast-container"
+      ],
+      "selectors": [
+        "[role="
+      ],
+      "requests": []
+    }
+  },
+  "training_keys": {
+    "app.py": [
+      "epochs",
+      "model",
+      "problem"
+    ],
+    "app_auth.py": [
+      "email",
+      "password",
+      "username"
+    ],
+    "app_compat.py": [
+      "algorithm",
+      "model",
+      "problem"
+    ],
+    "app_files.py": [
+      "confirm",
+      "dataset_id",
+      "demands",
+      "depot",
+      "file_id",
+      "file_type",
+      "filename",
+      "num_cities",
+      "num_loc",
+      "penalties",
+      "prizes",
+      "problem_type",
+      "service_times",
+      "session_id",
+      "time_windows",
+      "upload_time"
+    ],
+    "app_gpu.py": [
+      "gpu_id",
+      "session_id"
+    ],
+    "app_llm.py": [
+      "choices"
+    ],
+    "app_ollama.py": [],
+    "app_pages.py": [],
+    "app_stats.py": [],
+    "app_training.py": [
+      "algorithm",
+      "gpu_id",
+      "model",
+      "num_loc",
+      "obstacle_ratio",
+      "problem",
+      "results",
+      "type"
+    ],
+    "auth_module.py": [
+      "email"
+    ],
+    "modules/algorithms/__init__.py": [],
+    "modules/algorithms/a2c_algo.py": [
+      "embed_dim",
+      "entropy_coef",
+      "gae_lambda",
+      "learning_rate",
+      "use_gae",
+      "value_loss_coef"
+    ],
+    "modules/algorithms/base_algorithm.py": [
+      "batch_size",
+      "learning_rate",
+      "train_data_size",
+      "val_data_size"
+    ],
+    "modules/algorithms/dqn_algo.py": [],
+    "modules/algorithms/ppo_algo.py": [
+      "clip_range",
+      "clip_ratio",
+      "embed_dim",
+      "entropy_coef",
+      "entropy_lambda",
+      "epochs_per_update",
+      "gae_lambda",
+      "ppo_epochs",
+      "value_loss_coef",
+      "vf_lambda"
+    ],
+    "modules/algorithms/qlearning_algo.py": [],
+    "modules/algorithms/reinforce_algo.py": [
+      "baseline",
+      "entropy_coef"
+    ],
+    "modules/compatibility.py": [
+      "algorithm",
+      "model",
+      "problem"
+    ],
+    "modules/policies/__init__.py": [],
+    "modules/policies/attention_model_policy.py": [],
+    "modules/policies/base_policy.py": [
+      "embed_dim",
+      "num_encoder_layers",
+      "num_heads"
+    ],
+    "modules/policies/chip_routing_policy.py": [],
+    "modules/policies/deepaco_policy.py": [
+      "n_ants",
+      "n_iterations_test",
+      "n_iterations_train"
+    ],
+    "modules/policies/ham_policy.py": [
+      "feedforward_hidden",
+      "normalization"
+    ],
+    "modules/policies/matnet_policy.py": [
+      "flatten_stages",
+      "normalization",
+      "num_stage",
+      "use_graph_context"
+    ],
+    "modules/policies/mdam_policy.py": [
+      "eg_step_gap",
+      "num_paths"
+    ],
+    "modules/policies/mdam_runtime.py": [],
+    "modules/policies/mdam_utils.py": [],
+    "modules/policies/pomo_policy.py": [
+      "num_starts"
+    ],
+    "modules/policies/ptrnet_policy.py": [
+      "dropout",
+      "hidden_dim",
+      "num_layers"
+    ],
+    "modules/policies/symnco_policy.py": [
+      "augment_fn",
+      "num_augment",
+      "num_starts",
+      "symnco_alpha",
+      "symnco_beta"
+    ],
+    "modules/problems/__init__.py": [],
+    "modules/problems/atsp.py": [],
+    "modules/problems/base_problem.py": [
+      "batch_size",
+      "num_loc"
+    ],
+    "modules/problems/chip_routing.py": [
+      "bend_weight",
+      "congestion_weight",
+      "edge_capacity",
+      "grid_height",
+      "grid_width",
+      "num_loc",
+      "num_nets",
+      "obstacle_ratio",
+      "overflow_weight",
+      "seed",
+      "unrouted_penalty"
+    ],
+    "modules/problems/cvrp.py": [
+      "num_vehicles",
+      "vehicle_capacity"
+    ],
+    "modules/problems/ffsp.py": [
+      "flatten_stages",
+      "max_time",
+      "min_time",
+      "num_job",
+      "num_machine",
+      "num_stage"
+    ],
+    "modules/problems/mtsp.py": [
+      "cost_type",
+      "num_agents"
+    ],
+    "modules/problems/sdvrp.py": [
+      "max_split_per_customer",
+      "num_vehicles",
+      "vehicle_capacity"
+    ],
+    "modules/problems/templates/problem_template.py": [
+      "another_param",
+      "some_param"
+    ],
+    "modules/problems/test_problems.py": [],
+    "modules/problems/tsp.py": [],
+    "modules/problems/vrptw.py": [
+      "hard_time_windows",
+      "max_time",
+      "num_vehicles",
+      "service_time",
+      "speed",
+      "time_window_width",
+      "vehicle_capacity"
+    ],
+    "modules/rl_training/__init__.py": [
+      "problem"
+    ],
+    "modules/rl_training/atsp_trainer.py": [],
+    "modules/rl_training/base_trainer.py": [
+      "algorithm",
+      "baseline",
+      "batch_size",
+      "best_reward",
+      "dataset_id",
+      "dataset_mode",
+      "embed_dim",
+      "epochs",
+      "final_loss",
+      "final_reward",
+      "gpu_id",
+      "learning_rate",
+      "model",
+      "num_augment",
+      "num_encoder_layers",
+      "num_heads",
+      "num_loc",
+      "num_starts",
+      "problem",
+      "problem_type",
+      "resume_checkpoint",
+      "symnco_alpha",
+      "symnco_beta",
+      "train_data_size",
+      "val_data_size"
+    ],
+    "modules/rl_training/chip_routing_trainer.py": [
+      "bend_weight",
+      "chip_train_batches",
+      "congestion_weight",
+      "edge_capacity",
+      "embed_dim",
+      "entropy_coef",
+      "eval_instances",
+      "grid_height",
+      "grid_width",
+      "num_encoder_layers",
+      "num_heads",
+      "num_loc",
+      "num_nets",
+      "obstacle_ratio",
+      "overflow_weight",
+      "resume_checkpoint",
+      "seed",
+      "unrouted_penalty"
+    ],
+    "modules/rl_training/cvrp_trainer.py": [
+      "demands",
+      "depot",
+      "num_vehicles",
+      "vehicle_capacity"
+    ],
+    "modules/rl_training/ffsp_trainer.py": [
+      "algorithm",
+      "embed_dim",
+      "flatten_stages",
+      "max_time",
+      "min_time",
+      "model",
+      "num_encoder_layers",
+      "num_heads",
+      "num_job",
+      "num_machine",
+      "num_stage",
+      "num_starts"
+    ],
+    "modules/rl_training/mtsp_trainer.py": [
+      "cost_type",
+      "depot",
+      "num_agents"
+    ],
+    "modules/rl_training/op_trainer.py": [
+      "depot",
+      "max_length",
+      "num_loc",
+      "prize_type",
+      "prizes"
+    ],
+    "modules/rl_training/pctsp_trainer.py": [
+      "depot",
+      "num_loc",
+      "penalties",
+      "penalty_factor",
+      "prize_required",
+      "prizes"
+    ],
+    "modules/rl_training/pdp_trainer.py": [
+      "depot",
+      "force_start_at_depot",
+      "num_loc"
+    ],
+    "modules/rl_training/sdvrp_trainer.py": [
+      "demands",
+      "depot",
+      "max_split_per_customer",
+      "num_vehicles",
+      "vehicle_capacity"
+    ],
+    "modules/rl_training/spctsp_trainer.py": [],
+    "modules/rl_training/templates/problem_trainer_template.py": [
+      "max_prize",
+      "time_limit"
+    ],
+    "modules/rl_training/templates/visualization_template.py": [],
+    "modules/rl_training/test_cvrp_fix.py": [],
+    "modules/rl_training/test_module.py": [],
+    "modules/rl_training/tsp_trainer.py": [],
+    "modules/rl_training/visualizations/__init__.py": [],
+    "modules/rl_training/visualizations/atsp_viz.py": [],
+    "modules/rl_training/visualizations/chip_routing_viz.py": [],
+    "modules/rl_training/visualizations/common.py": [],
+    "modules/rl_training/visualizations/cvrp_viz.py": [],
+    "modules/rl_training/visualizations/ffsp_viz.py": [],
+    "modules/rl_training/visualizations/mtsp_viz.py": [],
+    "modules/rl_training/visualizations/op_viz.py": [],
+    "modules/rl_training/visualizations/pctsp_viz.py": [],
+    "modules/rl_training/visualizations/pdp_viz.py": [],
+    "modules/rl_training/visualizations/sdvrp_viz.py": [],
+    "modules/rl_training/visualizations/spctsp_viz.py": [],
+    "modules/rl_training/visualizations/tsp_viz.py": [],
+    "modules/rl_training/visualizations/vrptw_viz.py": [],
+    "modules/rl_training/vrptw_trainer.py": [
+      "demands",
+      "depot",
+      "max_time",
+      "num_loc",
+      "service_time",
+      "service_times",
+      "time_window_width",
+      "time_windows",
+      "vehicle_capacity"
+    ]
+  },
+  "json_keys": {
+    "app.py": [
+      "best_reward",
+      "epoch",
+      "final_loss",
+      "final_reward",
+      "loss",
+      "message",
+      "model",
+      "problem",
+      "progress",
+      "results",
+      "reward",
+      "status",
+      "strategy",
+      "total_epochs",
+      "type"
+    ],
+    "app_auth.py": [
+      "message",
+      "success",
+      "user",
+      "user_id"
+    ],
+    "app_compat.py": [
+      "algorithms",
+      "data",
+      "level",
+      "message",
+      "policies",
+      "recommended",
+      "success",
+      "valid"
+    ],
+    "app_files.py": [
+      "all_files",
+      "animation",
+      "checkpoint",
+      "comparison",
+      "coord_range",
+      "coordinates",
+      "create_time",
+      "curve",
+      "dataset_id",
+      "dataset_info",
+      "datasets",
+      "deleted_files",
+      "file_count",
+      "filename",
+      "files",
+      "id",
+      "message",
+      "model_type",
+      "name",
+      "num_loc",
+      "other",
+      "path",
+      "problem_type",
+      "session_id",
+      "sessions",
+      "size",
+      "size_mb",
+      "start_time",
+      "status",
+      "success",
+      "total_files",
+      "total_sessions",
+      "total_size_mb",
+      "type",
+      "upload_time",
+      "user_id"
+    ],
+    "app_gpu.py": [
+      "allocated_at",
+      "gpus",
+      "id",
+      "is_mock",
+      "memory_pct",
+      "memory_total_mb",
+      "memory_used_mb",
+      "message",
+      "name",
+      "physical_id",
+      "session_id",
+      "sessions",
+      "source",
+      "status",
+      "success",
+      "timestamp",
+      "user_id",
+      "username",
+      "utilization_pct"
+    ],
+    "app_llm.py": [
+      "Authorization",
+      "Cache-Control",
+      "Content-Type",
+      "X-Accel-Buffering",
+      "api_key",
+      "base_url",
+      "content",
+      "default_model",
+      "done",
+      "error",
+      "id",
+      "message",
+      "messages",
+      "model",
+      "models",
+      "name",
+      "providers",
+      "role",
+      "stream"
+    ],
+    "app_ollama.py": [
+      "Accept",
+      "Cache-Control",
+      "Content-Type",
+      "X-Accel-Buffering",
+      "detail",
+      "done",
+      "error"
+    ],
+    "app_pages.py": [
+      "AM",
+      "DeepACO",
+      "HAM",
+      "MDAM",
+      "MatNet",
+      "POMO",
+      "Pointer",
+      "PointerNet",
+      "PtrNet",
+      "SymNCO",
+      "algorithms",
+      "create_time",
+      "email",
+      "last_login",
+      "policy",
+      "problems",
+      "username"
+    ],
+    "app_stats.py": [
+      "activities",
+      "completed_sessions",
+      "failed_sessions",
+      "message",
+      "running_sessions",
+      "stats",
+      "status",
+      "success",
+      "text",
+      "time",
+      "total_files",
+      "total_sessions",
+      "total_size_mb"
+    ],
+    "app_training.py": [
+      "Cache-Control",
+      "X-Accel-Buffering",
+      "_last_heartbeat",
+      "_started_at",
+      "best_reward",
+      "config",
+      "context",
+      "edge_capacity",
+      "epoch",
+      "finished_at",
+      "gpu_id",
+      "grid_height",
+      "grid_width",
+      "live",
+      "message",
+      "mode",
+      "model_type",
+      "num_nets",
+      "problem_type",
+      "session_id",
+      "started_at",
+      "status",
+      "success",
+      "type",
+      "user_id"
+    ],
+    "auth_module.py": [
+      "email",
+      "id",
+      "message",
+      "redirect",
+      "success",
+      "username"
+    ],
+    "modules/algorithms/__init__.py": [
+      "a2c",
+      "advantages",
+      "baseline",
+      "clip_ratio",
+      "cn_name",
+      "default",
+      "description",
+      "difficulty",
+      "disadvantages",
+      "dqn",
+      "entropy_coef",
+      "epochs_per_update",
+      "full_name",
+      "name",
+      "options",
+      "params",
+      "ppo",
+      "qlearning",
+      "range",
+      "reinforce",
+      "status",
+      "suitable_for",
+      "type",
+      "value_loss_coef"
+    ],
+    "modules/algorithms/a2c_algo.py": [
+      "embed_dim",
+      "entropy_coef",
+      "gae_lambda",
+      "lr",
+      "use_gae",
+      "value_loss_coef"
+    ],
+    "modules/algorithms/base_algorithm.py": [
+      "batch_size",
+      "learning_rate",
+      "lr",
+      "name",
+      "optimizer_kwargs",
+      "train_data_size",
+      "val_data_size"
+    ],
+    "modules/algorithms/dqn_algo.py": [],
+    "modules/algorithms/ppo_algo.py": [
+      "clip_ratio",
+      "embed_dim",
+      "entropy_coef",
+      "epochs_per_update",
+      "gae_lambda",
+      "lr",
+      "value_loss_coef"
+    ],
+    "modules/algorithms/qlearning_algo.py": [],
+    "modules/algorithms/reinforce_algo.py": [
+      "baseline",
+      "entropy_coef",
+      "lr"
+    ],
+    "modules/compatibility.py": [
+      "a2c",
+      "algorithm",
+      "algorithm_problem",
+      "am",
+      "atsp",
+      "attention",
+      "available_algorithms",
+      "available_policies",
+      "best",
+      "chip_routing",
+      "cvrp",
+      "deepaco",
+      "description",
+      "dqn",
+      "fast",
+      "ffsp",
+      "ham",
+      "matnet",
+      "mdam",
+      "message",
+      "mtsp",
+      "op",
+      "pctsp",
+      "pdp",
+      "policy",
+      "policy_algorithm",
+      "policy_problem",
+      "pomo",
+      "ppo",
+      "problem",
+      "ptr",
+      "ptrnet",
+      "qlearning",
+      "reason",
+      "recommendations",
+      "recommended",
+      "reinforce",
+      "sdvrp",
+      "severity",
+      "simple",
+      "spctsp",
+      "symnco",
+      "tsp",
+      "vrptw",
+      "warnings"
+    ],
+    "modules/policies/__init__.py": [
+      "advantages",
+      "am",
+      "attention",
+      "cn_name",
+      "deepaco",
+      "default",
+      "description",
+      "disadvantages",
+      "dropout",
+      "embed_dim",
+      "feedforward_hidden",
+      "flatten_stages",
+      "full_name",
+      "ham",
+      "hidden_dim",
+      "matnet",
+      "mdam",
+      "n_ants",
+      "n_iterations_test",
+      "n_iterations_train",
+      "name",
+      "normalization",
+      "note",
+      "num_augment",
+      "num_encoder_layers",
+      "num_heads",
+      "num_layers",
+      "num_starts",
+      "options",
+      "params",
+      "pomo",
+      "ptr",
+      "ptrnet",
+      "range",
+      "status",
+      "suitable_for",
+      "symnco",
+      "symnco_alpha",
+      "symnco_beta",
+      "type",
+      "use_graph_context",
+      "year"
+    ],
+    "modules/policies/attention_model_policy.py": [],
+    "modules/policies/base_policy.py": [
+      "embed_dim",
+      "name",
+      "num_encoder_layers",
+      "num_heads"
+    ],
+    "modules/policies/chip_routing_policy.py": [
+      "entropy",
+      "log_likelihood",
+      "order"
+    ],
+    "modules/policies/deepaco_policy.py": [
+      "test",
+      "train",
+      "val"
+    ],
+    "modules/policies/ham_policy.py": [
+      "feedforward_hidden",
+      "normalization"
+    ],
+    "modules/policies/matnet_policy.py": [
+      "flatten_stages",
+      "normalization",
+      "num_stage",
+      "use_graph_context"
+    ],
+    "modules/policies/mdam_policy.py": [
+      "eg_step_gap",
+      "num_paths"
+    ],
+    "modules/policies/mdam_runtime.py": [],
+    "modules/policies/mdam_utils.py": [],
+    "modules/policies/pomo_policy.py": [],
+    "modules/policies/ptrnet_policy.py": [
+      "description",
+      "dropout",
+      "full_name",
+      "hidden_dim",
+      "name",
+      "note",
+      "num_layers",
+      "policy_type",
+      "type",
+      "year"
+    ],
+    "modules/policies/symnco_policy.py": [
+      "alpha",
+      "augment_fn",
+      "beta",
+      "num_augment",
+      "num_starts"
+    ],
+    "modules/problems/__init__.py": [
+      "atsp",
+      "category",
+      "chip_routing",
+      "cn_name",
+      "cvrp",
+      "description",
+      "difficulty",
+      "features",
+      "ffsp",
+      "full_name",
+      "mtsp",
+      "name",
+      "op",
+      "params",
+      "pctsp",
+      "sdvrp",
+      "status",
+      "tsp",
+      "type",
+      "vrptw"
+    ],
+    "modules/problems/atsp.py": [
+      "animation",
+      "comparison",
+      "num_loc"
+    ],
+    "modules/problems/base_problem.py": [
+      "batch_size",
+      "num_loc"
+    ],
+    "modules/problems/chip_routing.py": [
+      "animation",
+      "batch_size",
+      "comparison",
+      "edge_capacity",
+      "grid_height",
+      "grid_width",
+      "num_nets",
+      "obstacle_ratio"
+    ],
+    "modules/problems/cvrp.py": [
+      "animation",
+      "comparison",
+      "num_loc",
+      "num_vehicles",
+      "vehicle_capacity"
+    ],
+    "modules/problems/ffsp.py": [
+      "batch_size",
+      "complexity_class",
+      "decision_steps",
+      "flatten_stages",
+      "gantt_chart",
+      "max_time",
+      "min_time",
+      "num_job",
+      "num_machine",
+      "num_machine_total",
+      "num_machines",
+      "num_stage",
+      "problem_scale",
+      "schedule_comparison",
+      "state_space_size"
+    ],
+    "modules/problems/mtsp.py": [
+      "animation",
+      "comparison",
+      "cost_type",
+      "max_num_agents",
+      "min_num_agents",
+      "num_agents",
+      "num_loc"
+    ],
+    "modules/problems/sdvrp.py": [
+      "allow_split",
+      "animation",
+      "comparison",
+      "max_split_per_customer",
+      "num_loc",
+      "num_vehicles",
+      "split_analysis",
+      "vehicle_capacity"
+    ],
+    "modules/problems/templates/problem_template.py": [
+      "batch_size",
+      "num_loc"
+    ],
+    "modules/problems/test_problems.py": [
+      "batch_size",
+      "num_loc",
+      "vehicle_capacity"
+    ],
+    "modules/problems/tsp.py": [
+      "animation",
+      "comparison",
+      "num_loc"
+    ],
+    "modules/problems/vrptw.py": [
+      "animation",
+      "comparison",
+      "hard_time_windows",
+      "max_time",
+      "num_loc",
+      "num_vehicles",
+      "service_time",
+      "speed",
+      "time_schedule",
+      "time_window_width",
+      "vehicle_capacity"
+    ],
+    "modules/rl_training/__init__.py": [
+      "current_epoch",
+      "message",
+      "progress",
+      "status",
+      "total_epochs",
+      "type"
+    ],
+    "modules/rl_training/atsp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "num_loc",
+      "plot_paths",
+      "training_curve"
+    ],
+    "modules/rl_training/base_trainer.py": [
+      "am",
+      "attention",
+      "best_reward",
+      "epoch",
+      "final_loss",
+      "final_reward",
+      "loss",
+      "lr",
+      "message",
+      "model",
+      "plot_url",
+      "pomo",
+      "problem",
+      "progress",
+      "reward",
+      "status",
+      "strategy",
+      "symnco",
+      "total_epochs",
+      "type"
+    ],
+    "modules/rl_training/chip_routing_trainer.py": [
+      "animation_paths",
+      "baseline_objective",
+      "best_reward",
+      "checkpoint_path",
+      "config",
+      "epoch",
+      "final_loss",
+      "final_reward",
+      "loss",
+      "model",
+      "objective_improvement",
+      "optimizer_state_dict",
+      "overflow",
+      "plot_paths",
+      "policy_state_dict",
+      "problem",
+      "progress",
+      "reward",
+      "routed_ratio",
+      "routing_metrics",
+      "status",
+      "strategy",
+      "total_epochs",
+      "trained_objective",
+      "training_curve",
+      "wirelength"
+    ],
+    "modules/rl_training/cvrp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "num_loc",
+      "plot_paths",
+      "training_curve",
+      "vehicle_capacity"
+    ],
+    "modules/rl_training/ffsp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "flatten_stages",
+      "improvement_percent",
+      "lr",
+      "makespan_after",
+      "makespan_before",
+      "max_time",
+      "metrics",
+      "min_time",
+      "num_job",
+      "num_machine",
+      "num_machine_total",
+      "num_stage",
+      "plot_paths",
+      "problem_type",
+      "total_operations",
+      "training_curve"
+    ],
+    "modules/rl_training/mtsp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "cost_type",
+      "locs",
+      "max_num_agents",
+      "min_num_agents",
+      "num_agents",
+      "num_loc",
+      "plot_paths",
+      "training_curve"
+    ],
+    "modules/rl_training/op_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "max_length",
+      "num_loc",
+      "num_locations",
+      "plot_paths",
+      "prize_type",
+      "training_curve"
+    ],
+    "modules/rl_training/pctsp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "num_loc",
+      "num_locations",
+      "penalty_factor",
+      "plot_paths",
+      "prize_required",
+      "training_curve"
+    ],
+    "modules/rl_training/pdp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "force_start_at_depot",
+      "num_loc",
+      "num_locations",
+      "num_pickup_delivery_pairs",
+      "plot_paths",
+      "training_curve"
+    ],
+    "modules/rl_training/sdvrp_trainer.py": [
+      "analysis_paths",
+      "animation_paths",
+      "checkpoint_path",
+      "num_loc",
+      "plot_paths",
+      "training_curve",
+      "vehicle_capacity"
+    ],
+    "modules/rl_training/spctsp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "num_loc",
+      "penalty_factor",
+      "plot_paths",
+      "prize_required",
+      "training_curve"
+    ],
+    "modules/rl_training/test_cvrp_fix.py": [
+      "demand",
+      "demands",
+      "locs"
+    ],
+    "modules/rl_training/test_module.py": [],
+    "modules/rl_training/tsp_trainer.py": [
+      "animation_paths",
+      "checkpoint_path",
+      "num_loc",
+      "plot_paths",
+      "training_curve"
+    ],
+    "modules/rl_training/visualizations/__init__.py": [],
+    "modules/rl_training/visualizations/atsp_viz.py": [
+      "cost_random",
+      "cost_trained",
+      "improvement"
+    ],
+    "modules/rl_training/visualizations/chip_routing_viz.py": [],
+    "modules/rl_training/visualizations/common.py": [],
+    "modules/rl_training/visualizations/cvrp_viz.py": [],
+    "modules/rl_training/visualizations/ffsp_viz.py": [
+      "improvement",
+      "makespan_after",
+      "makespan_before"
+    ],
+    "modules/rl_training/visualizations/mtsp_viz.py": [],
+    "modules/rl_training/visualizations/op_viz.py": [],
+    "modules/rl_training/visualizations/pctsp_viz.py": [],
+    "modules/rl_training/visualizations/pdp_viz.py": [],
+    "modules/rl_training/visualizations/sdvrp_viz.py": [
+      "num_customers",
+      "split_customers",
+      "split_percentage",
+      "total_splits",
+      "visit_count"
+    ],
+    "modules/rl_training/visualizations/spctsp_viz.py": [],
+    "modules/rl_training/visualizations/tsp_viz.py": [],
+    "modules/rl_training/visualizations/vrptw_viz.py": [],
+    "modules/rl_training/vrptw_trainer.py": [
+      "additional_viz",
+      "animation_paths",
+      "animation_title",
+      "checkpoint_path",
+      "comparison_title",
+      "plot_paths",
+      "training_curve"
+    ]
+  },
+  "source_templates": [
+    {
+      "file": "modules/rl_training/templates/problem_trainer_template.py",
+      "line": 18,
+      "reason": "invalid syntax"
+    },
+    {
+      "file": "modules/rl_training/templates/visualization_template.py",
+      "line": 33,
+      "reason": "expected '('"
+    }
+  ]
+}

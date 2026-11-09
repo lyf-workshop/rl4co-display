@@ -32,6 +32,7 @@ from .vrptw import VRPTWProblem
 from .atsp import ATSProblem
 from .mtsp import MTSProblem
 from .ffsp import FFSProblem
+from .chip_routing import ChipRoutingProblem
 
 # 问题类型注册表
 PROBLEM_REGISTRY = {
@@ -42,6 +43,7 @@ PROBLEM_REGISTRY = {
     'sdvrp': SDVRProblem,
     'vrptw': VRPTWProblem,
     'ffsp': FFSProblem,  # 柔性流水车间调度问题
+    'chip_routing': ChipRoutingProblem,
     # 未来扩展：
     # 'pctsp': PCTSProblem,
     # 'op': OProblem,
@@ -151,6 +153,23 @@ PROBLEM_INFO = {
         'params': ['num_stage', 'num_machine', 'num_job', 'min_time', 'max_time', 'flatten_stages'],
         'features': ['多阶段调度', '并行机器', '完工时间优化', '制造系统', 'NP-hard'],
     },
+    'chip_routing': {
+        'name': 'Chip Routing',
+        'full_name': 'Chip Global Routing',
+        'cn_name': '芯片全局布线',
+        'category': 'eda',
+        'difficulty': 'very_hard',
+        'status': 'prototype',
+        'description': '强化学习优化网络布线顺序，A*完成网格路径搜索',
+        'params': [
+            'grid_width',
+            'grid_height',
+            'num_nets',
+            'obstacle_ratio',
+            'edge_capacity',
+        ],
+        'features': ['G-Cell网格', '网络排序', '容量约束', '拥塞优化', 'A*混合求解'],
+    },
 }
 
 
@@ -241,6 +260,7 @@ __all__ = [
     'SDVRProblem',
     'VRPTWProblem',
     'FFSProblem',
+    'ChipRoutingProblem',
     'PROBLEM_REGISTRY',
     'PROBLEM_INFO',
     'get_problem_class',

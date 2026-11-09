@@ -1,11 +1,5 @@
-"""
-MDAM (Multi-Decoder Attention Model) 策略网络封装
+"""MDAM (Multi-Decoder Attention Model) 策略网络封装。"""
 
-多解码器注意力模型：同时运行多个 Transformer 解码器，
-推理时取最优路径，在与 AM 相同训练成本下提升解质量。
-"""
-
-from typing import Dict, Any
 from .base_policy import BasePolicy
 
 
@@ -21,8 +15,8 @@ class MDAMPolicyWrapper(BasePolicy):
     """
 
     def _init_policy_params(self):
-        """MDAM 使用标准 embed_dim/layers/heads，无额外参数"""
-        pass
+        self.num_paths = int(self.config.get("num_paths", 5))
+        self.eg_step_gap = int(self.config.get("eg_step_gap", 200))
 
     def get_policy_name(self) -> str:
         return 'mdam'
@@ -38,17 +32,45 @@ class MDAMPolicyWrapper(BasePolicy):
             MDAMPolicy 实例
         """
         try:
-            from rl4co.models.zoo.mdam import MDAMPolicy
-        except ImportError:
+            from .mdam_runtime import (
+                RL4CODisplayMDAMDecoder,
+                RL4CODisplayMDAMPolicy,
+            )
+        except ImportError as exc:
             raise ImportError(
                 "RL4CO库未安装或当前版本不包含MDAM。\n"
                 "请安装最新版: pip install rl4co"
-            )
+            ) from exc
 
-        policy = MDAMPolicy(
+        decoder = RL4CODisplayMDAMDecoder(
+            env_name=env.name,
+            embed_dim=self.embed_dim,
+            num_heads=self.num_heads,
+            num_paths=self.num_paths,
+            eg_step_gap=self.eg_step_gap,
+        )
+        policy = RL4CODisplayMDAMPolicy(
             env_name=env.name,
             embed_dim=self.embed_dim,
             num_encoder_layers=self.num_encoder_layers,
             num_heads=self.num_heads,
+            decoder=decoder,
         )
         return policy
+
+    def get_policy_params(self):
+        params = super().get_policy_params()
+        params.update(
+            {
+                "num_paths": self.num_paths,
+                "eg_step_gap": self.eg_step_gap,
+            }
+        )
+        return params
+
+    def _validate_policy_params(self):
+        if self.num_paths < 1:
+            return False, "num_paths必须大于0"
+        if self.eg_step_gap < 1:
+            return False, "eg_step_gap必须大于0"
+        return True, ""

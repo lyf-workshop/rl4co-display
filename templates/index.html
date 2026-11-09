@@ -1,890 +1,545 @@
 {% extends "base.html" %}
-
-{% block title %}RL4CO - 强化学习优化平台 | 启元实验室{% endblock %}
-
-{% block head %}
-<link rel="stylesheet" href="/static/css/ollama-chat-embedded-enhanced.css">
-<link rel="stylesheet" href="/static/css/index.css">
-{% endblock %}
-
+{% block title %}实验工作台 · RL4CO Studio{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/training.css"><link rel="stylesheet" href="/static/css/ai-assistant.css">{% endblock %}
 {% block content %}
-    <div class="main-container-with-chat">
-        <!-- 左侧：主内容区域 -->
-        <div class="main-content-area">
-        <section class="hero-section" id="home">
-            <h1>🚀 RL4CO 强化学习优化平台</h1>
-            <p class="subtitle">基于深度强化学习的组合优化问题求解平台</p>
-            <p class="subtitle">Reinforcement Learning for Combinatorial Optimization</p>
-            <div class="university-info">🎓 启元实验室 · QIYUAN LAB</div>
-        </section>
-
-        <div class="features-grid" id="features">
-            <div class="feature-item">
-                <h4>🎯 多样化模型</h4>
-                <p>支持 Attention Model、POMO、SymNCO 等先进模型</p>
-            </div>
-            <div class="feature-item">
-                <h4>⚡ 高效训练</h4>
-                <p>基于 PyTorch Lightning 的分布式训练框架</p>
-            </div>
-            <div class="feature-item">
-                <h4>🔬 学术研究</h4>
-                <p>适用于 TSP、VRP 等经典组合优化问题</p>
-            </div>
-        </div>
-
-        <!-- ========== 训练配置区域（重新设计） ========== -->
-        <form id="rl-config-form">
-        <section class="config-section" id="config">
-                
-                <!-- 第1步：问题配置 -->
-            <div class="config-card">
-                    <h3><span class="icon">📋</span> 第1步：问题配置</h3>
-                    
-                    <div class="form-group">
-                        <label for="problem-select">🎯 问题类型</label>
-                        <select id="problem-select" name="problem">
-                            <optgroup label="路由问题 (Routing)">
-                                <option value="tsp">TSP - 旅行商问题</option>
-                                <option value="atsp">ATSP - 非对称旅行商问题 ⭐</option>
-                                <option value="mtsp">mTSP - 多旅行商问题 ⭐</option>
-                                <option value="cvrp">CVRP - 车辆路径问题</option>
-                                <option value="sdvrp">SDVRP - 分割配送VRP</option>
-                                <option value="vrptw">VRPTW - 带时间窗VRP</option>
-                                <option value="pdp">PDP - 取送货问题 ⭐</option>
-                                <option value="op">OP - 定向问题 ⭐</option>
-                                <option value="pctsp">PCTSP - 奖励收集TSP 🆕</option>
-                                <option value="spctsp">SPCTSP - 随机奖励收集TSP 🆕</option>
-                            </optgroup>
-                            <optgroup label="调度问题 (Scheduling)">
-                                <option value="ffsp">FFSP - 柔性流水车间调度 🆕</option>
-                            </optgroup>
-                        </select>
-                        <p class="description">选择要解决的组合优化问题类型</p>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="num-loc">🏙️ 问题规模</label>
-                        <input type="number" id="num-loc" name="num_loc" value="50" min="5" max="1000">
-                        <p class="description">城市/客户数量（TSP: 5-1000, CVRP: 5-100）</p>
-            </div>
-
-                    <!-- CVRP/VRPTW特有参数 -->
-                    <div id="cvrp-params" class="form-group" style="display: none;">
-                        <label for="vehicle-capacity">🚚 车辆容量</label>
-                        <input type="number" id="vehicle-capacity" name="vehicle_capacity" value="1.0" min="0.1" max="10" step="0.1">
-                        <p class="description">车辆的最大载货容量</p>
-                    </div>
-                    
-                    <!-- VRPTW特有参数：时间窗参数 -->
-                    <div id="vrptw-params" class="form-group" style="display: none;">
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">⏰ 时间窗约束参数</h4>
-                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置客户访问的时间窗口约束</p>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                            <div>
-                                <label for="time-window-width">📏 时间窗宽度</label>
-                                <input type="number" id="time-window-width" name="time_window_width" value="100" min="10" max="500" step="10">
-                                <p class="description" style="font-size: 0.8rem;">每个客户的可访问时间范围</p>
-                            </div>
+<div class="page-heading"><div><h1 id="workspace-title">实验工作台</h1><p id="workspace-description">配置组合优化实验，跟踪训练过程与结果。</p></div><div class="actions"><span class="status" id="workspace-status">新实验</span><button type="button" class="btn" id="new-experiment" hidden>{{ icon('plus') }} 新实验</button></div></div>
+<nav class="workspace-tabs tabs" aria-label="实验视图"><button type="button" id="view-config" aria-selected="true">实验配置</button><button type="button" id="view-monitor" aria-selected="false" disabled>训练监控</button><button type="button" id="view-results" aria-selected="false" disabled>训练结果</button></nav>
+<div id="status-message" class="status-message" role="status"></div>
+<div id="configuration-view">
+<ol class="stepper"><li class="active"><span>1</span> 问题</li><li><span>2</span> 模型</li><li><span>3</span> 训练</li><li><span>4</span> 运行</li></ol>
+<form id="training-form" novalidate>
+<div class="two-column training-layout">
+<div class="page-stack" id="config">
+<section class="card"><div class="card-header"><h2>实验配置</h2><span class="badge">CONFIGURATION</span></div>
+<div class="field-grid"><div class="form-group">
+<label for="problem-select"> 问题类型</label>
+<select id="problem-select" name="problem">
+<optgroup label="路由问题 (Routing)">
+<option value="tsp">TSP - 旅行商问题</option>
+<option value="atsp">ATSP - 非对称旅行商问题</option>
+<option value="mtsp">mTSP - 多旅行商问题</option>
+<option value="cvrp">CVRP - 车辆路径问题</option>
+<option value="sdvrp">SDVRP - 分割配送VRP</option>
+<option value="vrptw">VRPTW - 带时间窗VRP</option>
+<option value="pdp">PDP - 取送货问题</option>
+<option value="op">OP - 定向问题</option>
+<option value="pctsp">PCTSP - 奖励收集TSP </option>
+<option value="spctsp">SPCTSP - 随机奖励收集TSP </option>
+</optgroup>
+<optgroup label="调度问题 (Scheduling)">
+<option value="ffsp">FFSP - 柔性流水车间调度 </option>
+</optgroup>
+<optgroup label="芯片设计 (EDA)">
+<option value="chip_routing">Chip Routing - 芯片全局布线（原型）</option>
+</optgroup>
+</select>
+<p class="description">选择要解决的组合优化问题类型</p>
+</div>
+<div class="form-group" id="num-loc-group">
+<label for="num-loc"> 问题规模</label>
+<input id="num-loc" max="1000" min="5" name="num_loc" type="number" value="50"/>
+<p class="description">城市/客户数量（TSP: 5-1000, CVRP: 5-100）</p>
+</div>
+<div class="form-group">
+<label for="model-select">
+                             策略模型
                             
-                            <div>
-                                <label for="service-time">🔧 服务时间</label>
-                                <input type="number" id="service-time" name="service_time" value="10" min="0" max="60" step="1">
-                                <p class="description" style="font-size: 0.8rem;">每个客户的服务时长</p>
-                            </div>
+</label>
+<select class="form-control" id="model-select" name="model">
+<option selected="" value="attention">Attention Model（经典，快速）</option>
+<option value="pomo">POMO（高质量，多起点）</option>
+<option value="symnco">SymNCO（对称优化，最高质量）</option>
+<option value="mdam">MDAM（多解码器，高质量）</option>
+<option value="deepaco">DeepACO（蚁群优化，混合方法）</option>
+<option value="ham">HAM（异构注意力，PDP专用）</option>
+<option value="matnet">MatNet（调度专用，矩阵注意力）</option>
+<option value="ptrnet">Pointer Network（开创性，教学）</option>
+</select>
+<p class="description" id="model-description">经典的基于Transformer的构造式模型，速度快，适合入门</p>
+</div>
+<div class="form-group">
+<label for="algorithm-select">
+                             训练算法
                             
-                            <div>
-                                <label for="max-time">⏱️ 最大配送时间</label>
-                                <input type="number" id="max-time" name="max_processing_time" value="480" min="60" max="1440" step="30">
-                                <p class="description" style="font-size: 0.8rem;">总配送时间上限（分钟）</p>
-                            </div>
-                            
-                            <div>
-                                <label for="hard-time-windows">⚡ 时间窗类型</label>
-                                <select id="hard-time-windows" name="hard_time_windows">
-                                    <option value="true">硬时间窗（必须遵守）</option>
-                                    <option value="false">软时间窗（可违反但有惩罚）</option>
-                                </select>
-                                <p class="description" style="font-size: 0.8rem;">约束严格程度</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- mTSP特有参数：多代理参数 -->
-                    <div id="mtsp-params" class="form-group" style="display: none;">
-                        <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">👥 多代理参数</h4>
-                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置多个旅行商协同工作的参数</p>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                            <div>
-                                <label for="num-agents">👥 代理数量</label>
-                                <input type="number" id="num-agents" name="num_agents" value="5" min="2" max="10" step="1">
-                                <p class="description" style="font-size: 0.8rem;">同时工作的旅行商数量（2-10，推荐5）</p>
-                            </div>
-                            
-                            <div>
-                                <label for="cost-type">🎯 优化目标</label>
-                                <select id="cost-type" name="cost_type">
-                                    <option value="minmax">MinMax - 最小化最长路径</option>
-                                    <option value="sum">Sum - 最小化总路径长度</option>
-                                </select>
-                                <p class="description" style="font-size: 0.8rem;">选择优化策略</p>
-                            </div>
-                        </div>
-                        
-                        <div style="background: #e7f3ff; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #333;">
-                            <strong>💡 提示：</strong>
-                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
-                                <li><strong>MinMax</strong>：均衡各代理负载，适合公平分配任务</li>
-                                <li><strong>Sum</strong>：总成本最优，适合追求整体效率</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- PDP特有参数 -->
-                    <div id="pdp-params" class="form-group" style="display: none;">
-                        <div style="background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">📦 取送货问题参数</h4>
-                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置取货点和送货点的数量（必须成对）</p>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
-                            <div>
-                                <label for="pdp-num-loc">🏙️ 地点数量（不含depot）</label>
-                                <input type="number" id="pdp-num-loc" name="pdp_num_loc" value="20" min="4" max="40" step="2">
-                                <p class="description" style="font-size: 0.8rem;">
-                                    取送货地点总数，必须是偶数<br>
-                                    <strong>num_loc/2</strong> 个取货点 + <strong>num_loc/2</strong> 个送货点
+</label>
+<select class="form-control" id="algorithm-select" name="algorithm">
+<option selected="" value="reinforce">REINFORCE（入门推荐）</option>
+<option value="ppo">PPO（生产推荐）</option>
+<option value="a2c">A3C（平衡选择）</option>
+<option value="dqn">DQN（深度Q网络）</option>
+<option value="qlearning">Q-Learning（Q学习）</option>
+</select>
+<p class="description" id="algorithm-description">最基础的策略梯度算法，简单易懂，适合学习</p>
+<p class="description algorithm-lock-note" id="algorithm-lock-note">
+                             <span id="algorithm-lock-text">该模型自带训练逻辑，算法已锁定为 REINFORCE</span>
+</p>
+</div>
+<div class="form-group">
+<label for="epochs"> 训练轮数（Epochs）</label>
+<input id="epochs" max="1000" min="1" name="epochs" type="number" value="10"/>
+<p class="description">建议：小规模5-10轮，大规模20-50轮</p>
+</div>
+<div class="form-group">
+<label for="batch-size"> 批次大小（Batch Size）</label>
+<input id="batch-size" max="2048" min="32" name="batch_size" step="32" type="number" value="512"/>
+<p class="description">建议：512（默认），显存不足时减小</p>
+</div>
+<div class="form-group">
+<label for="learning-rate"> 学习率（Learning Rate）</label>
+<input id="learning-rate" max="0.01" min="0.00001" name="learning_rate" step="0.00001" type="number" value="0.0001"/>
+<p class="description">建议：1e-4（默认），可微调</p>
+</div><div class="field"><label for="random-seed">随机种子（Seed）</label><input id="random-seed" name="seed" type="number" value="1234" min="0" max="4294967295" disabled><p class="description">芯片布线支持指定种子；其他问题使用现有随机生成逻辑。</p></div></div>
+<div class="actions recommend-actions"><button type="button" class="btn btn-small" id="use-recommended-btn">使用推荐配置</button><button type="button" class="btn btn-small" id="use-fast-btn">快速原型</button><a href="/model_info">了解模型 →</a></div>
+<div id="config-validation-alert" class="alert" role="status">正在检查兼容性…</div>
+<div class="conditional-grid"><div class="conditional-params full-width" id="cvrp-params" style="display: none;">
+<label for="vehicle-capacity"> 车辆容量</label>
+<input id="vehicle-capacity" max="10" min="0.1" name="vehicle_capacity" step="0.1" type="number" value="1.0"/>
+<p class="description">车辆的最大载货容量</p>
+</div>
+<div class="conditional-params full-width" id="vrptw-params" style="display: none;">
+<div>
+<h4> 时间窗约束参数</h4>
+<p>配置客户访问的时间窗口约束</p>
+</div>
+<div>
+<div>
+<label for="time-window-width"> 时间窗宽度</label>
+<input id="time-window-width" max="500" min="10" name="time_window_width" step="10" type="number" value="100"/>
+<p class="description">每个客户的可访问时间范围</p>
+</div>
+<div>
+<label for="service-time"> 服务时间</label>
+<input id="service-time" max="60" min="0" name="service_time" step="1" type="number" value="10"/>
+<p class="description">每个客户的服务时长</p>
+</div>
+<div>
+<label for="max-time"> 最大配送时间</label>
+<input id="max-time" max="1440" min="60" name="max_processing_time" step="30" type="number" value="480"/>
+<p class="description">总配送时间上限（分钟）</p>
+</div>
+<div>
+<label for="hard-time-windows"> 时间窗类型</label>
+<select id="hard-time-windows" name="hard_time_windows">
+<option value="true">硬时间窗（必须遵守）</option>
+<option value="false">软时间窗（可违反但有惩罚）</option>
+</select>
+<p class="description">约束严格程度</p>
+</div>
+</div>
+</div>
+<div class="conditional-params full-width" id="mtsp-params" style="display: none;">
+<div>
+<h4> 多代理参数</h4>
+<p>配置多个旅行商协同工作的参数</p>
+</div>
+<div>
+<div>
+<label for="num-agents"> 代理数量</label>
+<input id="num-agents" max="10" min="2" name="num_agents" step="1" type="number" value="5"/>
+<p class="description">同时工作的旅行商数量（2-10，推荐5）</p>
+</div>
+<div>
+<label for="cost-type"> 优化目标</label>
+<select id="cost-type" name="cost_type">
+<option value="minmax">MinMax - 最小化最长路径</option>
+<option value="sum">Sum - 最小化总路径长度</option>
+</select>
+<p class="description">选择优化策略</p>
+</div>
+</div>
+<div>
+<strong> 提示：</strong>
+<ul>
+<li><strong>MinMax</strong>：均衡各代理负载，适合公平分配任务</li>
+<li><strong>Sum</strong>：总成本最优，适合追求整体效率</li>
+</ul>
+</div>
+</div>
+<div class="conditional-params full-width" id="pdp-params" style="display: none;">
+<div>
+<h4> 取送货问题参数</h4>
+<p>配置取货点和送货点的数量（必须成对）</p>
+</div>
+<div>
+<div>
+<label for="pdp-num-loc"> 地点数量（不含depot）</label>
+<input id="pdp-num-loc" max="40" min="4" name="pdp_num_loc" step="2" type="number" value="20"/>
+<p class="description">
+                                    取送货地点总数，必须是偶数<br/>
+<strong>num_loc/2</strong> 个取货点 + <strong>num_loc/2</strong> 个送货点
                                 </p>
-                            </div>
-                            
-                            <div>
-                                <label for="force-start-depot">🏁 强制从depot开始</label>
-                                <select id="force-start-depot" name="force_start_depot">
-                                    <option value="false">否（默认）</option>
-                                    <option value="true">是</option>
-                                </select>
-                                <p class="description" style="font-size: 0.8rem;">
-                                    是否强制车辆从depot出发<br>
-                                    • <strong>否</strong>：可以从任意取货点开始（推荐）<br>
+</div>
+<div>
+<label for="force-start-depot"> 强制从depot开始</label>
+<select id="force-start-depot" name="force_start_depot">
+<option value="false">否（默认）</option>
+<option value="true">是</option>
+</select>
+<p class="description">
+                                    是否强制车辆从depot出发<br/>
+                                    • <strong>否</strong>：可以从任意取货点开始（推荐）<br/>
                                     • <strong>是</strong>：必须先访问depot
                                 </p>
-                            </div>
-                        </div>
-                        
-                        <div style="background: #d1ecf1; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #0c5460;">
-                            <strong>💡 提示：</strong>
-                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
-                                <li>PDP 要求先访问<strong>取货点</strong>，再访问对应的<strong>送货点</strong></li>
-                                <li>每对取送货点在可视化中使用相同颜色标识</li>
-                                <li>推荐配置：20 地点（10对）适合快速训练</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- OP特有参数 -->
-                    <div id="op-params" class="form-group" style="display: none;">
-                        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🎯 定向问题参数</h4>
-                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">在路径长度限制内最大化收集的奖励</p>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                            <div>
-                                <label for="op-num-loc">🏙️ 地点数量（不含depot）</label>
-                                <input type="number" id="op-num-loc" name="op_num_loc" value="20" min="10" max="100" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+</div>
+<div>
+<strong> 提示：</strong>
+<ul>
+<li>PDP 要求先访问<strong>取货点</strong>，再访问对应的<strong>送货点</strong></li>
+<li>每对取送货点在可视化中使用相同颜色标识</li>
+<li>推荐配置：20 地点（10对）适合快速训练</li>
+</ul>
+</div>
+</div>
+<div class="conditional-params full-width" id="op-params" style="display: none;">
+<div>
+<h4> 定向问题参数</h4>
+<p>在路径长度限制内最大化收集的奖励</p>
+</div>
+<div>
+<div>
+<label for="op-num-loc"> 地点数量（不含depot）</label>
+<input id="op-num-loc" max="100" min="10" name="op_num_loc" step="1" type="number" value="20"/>
+<p class="description">
                                     可选择访问的地点数量（10-100）
                                 </p>
-                            </div>
-                            
-                            <div>
-                                <label for="max-length">📏 最大路径长度</label>
-                                <input type="number" id="max-length" name="max_length" value="2.0" min="1.0" max="5.0" step="0.1">
-                                <p class="description" style="font-size: 0.8rem;">
-                                    路径长度约束（1.0-5.0）<br>
+</div>
+<div>
+<label for="max-length"> 最大路径长度</label>
+<input id="max-length" max="5.0" min="1.0" name="max_length" step="0.1" type="number" value="2.0"/>
+<p class="description">
+                                    路径长度约束（1.0-5.0）<br/>
                                     建议：20地点→2.0，50地点→3.0，100地点→4.0
                                 </p>
-                            </div>
-                            
-                            <div style="grid-column: 1 / -1;">
-                                <label for="prize-type">🎁 奖励类型</label>
-                                <select id="prize-type" name="prize_type">
-                                    <option value="dist">距离奖励（dist）- 距depot越远奖励越高</option>
-                                    <option value="unif">均匀随机（unif）- 奖励随机分布</option>
-                                    <option value="const">常量奖励（const）- 所有地点奖励相同</option>
-                                </select>
-                                <p class="description" style="font-size: 0.8rem;">
-                                    • <strong>dist</strong>：奖励与距离depot的距离成正比（推荐）<br>
-                                    • <strong>unif</strong>：奖励在范围内均匀随机分布<br>
+</div>
+<div>
+<label for="prize-type"> 奖励类型</label>
+<select id="prize-type" name="prize_type">
+<option value="dist">距离奖励（dist）- 距depot越远奖励越高</option>
+<option value="unif">均匀随机（unif）- 奖励随机分布</option>
+<option value="const">常量奖励（const）- 所有地点奖励相同</option>
+</select>
+<p class="description">
+                                    • <strong>dist</strong>：奖励与距离depot的距离成正比（推荐）<br/>
+                                    • <strong>unif</strong>：奖励在范围内均匀随机分布<br/>
                                     • <strong>const</strong>：所有地点奖励值相同
                                 </p>
-                            </div>
-                        </div>
-                        
-                        <div style="background: #fff3cd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #856404;">
-                            <strong>💡 提示：</strong>
-                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
-                                <li>OP 不需要访问所有地点，选择<strong>高价值</strong>地点在约束内最大化奖励</li>
-                                <li>可视化中，地点大小 ∝ 奖励值，便于识别高价值目标</li>
-                                <li>推荐配置：20 地点 + 最大路径 2.0 + 距离奖励</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- PCTSP特有参数 -->
-                    <div id="pctsp-params" class="form-group" style="display: none;">
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🏆 奖励收集TSP参数</h4>
-                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">选择性访问节点，权衡奖励收集与惩罚规避</p>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                            <div>
-                                <label for="pctsp-num-loc">🏙️ 客户节点数量（不含depot）</label>
-                                <input type="number" id="pctsp-num-loc" name="pctsp_num_loc" value="20" min="10" max="100" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+</div>
+<div>
+<strong> 提示：</strong>
+<ul>
+<li>OP 不需要访问所有地点，选择<strong>高价值</strong>地点在约束内最大化奖励</li>
+<li>可视化中，地点大小 ∝ 奖励值，便于识别高价值目标</li>
+<li>推荐配置：20 地点 + 最大路径 2.0 + 距离奖励</li>
+</ul>
+</div>
+</div>
+<div class="conditional-params full-width" id="pctsp-params" style="display: none;">
+<div>
+<h4> 奖励收集TSP参数</h4>
+<p>选择性访问节点，权衡奖励收集与惩罚规避</p>
+</div>
+<div>
+<div>
+<label for="pctsp-num-loc"> 客户节点数量（不含depot）</label>
+<input id="pctsp-num-loc" max="100" min="10" name="pctsp_num_loc" step="1" type="number" value="20"/>
+<p class="description">
                                     可选择访问的客户节点数（10-100）
                                 </p>
-                            </div>
-
-                            <div>
-                                <label for="penalty-factor">⚖️ 惩罚系数</label>
-                                <input type="number" id="penalty-factor" name="penalty_factor" value="3.0" min="1.0" max="5.0" step="0.1">
-                                <p class="description" style="font-size: 0.8rem;">
-                                    跳过节点的惩罚缩放系数（1.0-5.0）<br>
+</div>
+<div>
+<label for="penalty-factor"> 惩罚系数</label>
+<input id="penalty-factor" max="5.0" min="1.0" name="penalty_factor" step="0.1" type="number" value="3.0"/>
+<p class="description">
+                                    跳过节点的惩罚缩放系数（1.0-5.0）<br/>
                                     值越大，未访问节点代价越高
                                 </p>
-                            </div>
-
-                            <div style="grid-column: 1 / -1;">
-                                <label for="prize-required">🎯 最低奖励要求</label>
-                                <input type="number" id="prize-required" name="prize_required" value="1.0" min="0.5" max="2.0" step="0.1">
-                                <p class="description" style="font-size: 0.8rem;">
-                                    必须收集的最低总奖励才能返回depot（0.5-2.0，默认1.0）<br>
+</div>
+<div>
+<label for="prize-required"> 最低奖励要求</label>
+<input id="prize-required" max="2.0" min="0.5" name="prize_required" step="0.1" type="number" value="1.0"/>
+<p class="description">
+                                    必须收集的最低总奖励才能返回depot（0.5-2.0，默认1.0）<br/>
                                     值越大，必须访问的节点越多
                                 </p>
-                            </div>
-                        </div>
-
-                        <div style="background: #e8f4fd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #1565c0;">
-                            <strong>💡 PCTSP 提示：</strong>
-                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
-                                <li>奖励（prize）：访问节点获得，节点大小代表奖励大小</li>
-                                <li>惩罚（penalty）：<strong>未访问</strong>节点产生，边框颜色代表惩罚大小</li>
-                                <li>目标：最大化 节省的惩罚 − 路径长度</li>
-                                <li>推荐配置：20节点 + 惩罚系数3.0 + 最低奖励1.0</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- SPCTSP特有参数 -->
-                    <div id="spctsp-params" class="form-group" style="display: none;">
-                        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🎲 随机奖励收集TSP参数</h4>
-                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">PCTSP的随机版本：访问节点后才知道真实奖励</p>
-                        </div>
-
-                        <div style="background: #fff3e0; padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #e65100; border-left: 4px solid #ff9800;">
-                            <strong>🎲 随机奖励机制说明：</strong>
-                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
-                                <li><strong>期望奖励（deterministic_prize）</strong>：决策前可见，用于路径规划</li>
-                                <li><strong>真实奖励（real_prize）</strong>：访问节点后才揭晓，服从 Uniform(0, 2×期望)</li>
-                                <li>真实奖励期望值 = 期望奖励，但有随机波动</li>
-                                <li>策略必须依靠期望值做出鲁棒决策</li>
-                            </ul>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                            <div>
-                                <label for="spctsp-num-loc">🏙️ 客户节点数量（不含depot）</label>
-                                <input type="number" id="spctsp-num-loc" name="spctsp_num_loc" value="20" min="10" max="100" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+</div>
+<div>
+<strong> PCTSP 提示：</strong>
+<ul>
+<li>奖励（prize）：访问节点获得，节点大小代表奖励大小</li>
+<li>惩罚（penalty）：<strong>未访问</strong>节点产生，边框颜色代表惩罚大小</li>
+<li>目标：最大化 节省的惩罚 − 路径长度</li>
+<li>推荐配置：20节点 + 惩罚系数3.0 + 最低奖励1.0</li>
+</ul>
+</div>
+</div>
+<div class="conditional-params full-width" id="spctsp-params" style="display: none;">
+<div>
+<h4> 随机奖励收集TSP参数</h4>
+<p>PCTSP的随机版本：访问节点后才知道真实奖励</p>
+</div>
+<div>
+<strong> 随机奖励机制说明：</strong>
+<ul>
+<li><strong>期望奖励（deterministic_prize）</strong>：决策前可见，用于路径规划</li>
+<li><strong>真实奖励（real_prize）</strong>：访问节点后才揭晓，服从 Uniform(0, 2×期望)</li>
+<li>真实奖励期望值 = 期望奖励，但有随机波动</li>
+<li>策略必须依靠期望值做出鲁棒决策</li>
+</ul>
+</div>
+<div>
+<div>
+<label for="spctsp-num-loc"> 客户节点数量（不含depot）</label>
+<input id="spctsp-num-loc" max="100" min="10" name="spctsp_num_loc" step="1" type="number" value="20"/>
+<p class="description">
                                     可选择访问的客户节点数（10-100）
                                 </p>
-                            </div>
-
-                            <div>
-                                <label for="spctsp-penalty-factor">⚖️ 惩罚系数</label>
-                                <input type="number" id="spctsp-penalty-factor" name="spctsp_penalty_factor" value="3.0" min="1.0" max="5.0" step="0.1">
-                                <p class="description" style="font-size: 0.8rem;">
-                                    跳过节点的惩罚缩放系数（1.0-5.0）<br>
+</div>
+<div>
+<label for="spctsp-penalty-factor"> 惩罚系数</label>
+<input id="spctsp-penalty-factor" max="5.0" min="1.0" name="spctsp_penalty_factor" step="0.1" type="number" value="3.0"/>
+<p class="description">
+                                    跳过节点的惩罚缩放系数（1.0-5.0）<br/>
                                     值越大，未访问节点代价越高
                                 </p>
-                            </div>
-
-                            <div style="grid-column: 1 / -1;">
-                                <label for="spctsp-prize-required">🎯 最低奖励要求</label>
-                                <input type="number" id="spctsp-prize-required" name="spctsp_prize_required" value="1.0" min="0.5" max="2.0" step="0.1">
-                                <p class="description" style="font-size: 0.8rem;">
-                                    必须收集的最低总奖励才能返回depot（0.5-2.0，默认1.0）<br>
+</div>
+<div>
+<label for="spctsp-prize-required"> 最低奖励要求</label>
+<input id="spctsp-prize-required" max="2.0" min="0.5" name="spctsp_prize_required" step="0.1" type="number" value="1.0"/>
+<p class="description">
+                                    必须收集的最低总奖励才能返回depot（0.5-2.0，默认1.0）<br/>
                                     基于真实奖励计算，比PCTSP更难满足（有随机性）
                                 </p>
-                            </div>
-                        </div>
-
-                        <div style="background: #e8f4fd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #1565c0;">
-                            <strong>💡 SPCTSP vs PCTSP：</strong>
-                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
-                                <li>PCTSP：奖励确定，完全信息决策</li>
-                                <li>SPCTSP：奖励随机，不完全信息决策（更难，更接近现实）</li>
-                                <li>只支持 <strong>Attention Model</strong>（POMO/MatNet 不适用）</li>
-                                <li>推荐配置：20节点 + 惩罚系数3.0 + 最低奖励1.0 + PPO算法</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- FFSP特有参数 -->
-                    <div id="ffsp-params" class="form-group" style="display: none;">
-                        <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 1rem; border-radius: 10px; color: white; margin-bottom: 1rem;">
-                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem;">🏭 柔性流水车间调度参数</h4>
-                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">配置多阶段并行机器的作业调度问题</p>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                            <div>
-                                <label for="num-stage">📊 阶段数 (Stages)</label>
-                                <input type="number" id="num-stage" name="num_stage" value="3" min="2" max="10" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+</div>
+<div>
+<strong> SPCTSP vs PCTSP：</strong>
+<ul>
+<li>PCTSP：奖励确定，完全信息决策</li>
+<li>SPCTSP：奖励随机，不完全信息决策（更难，更接近现实）</li>
+<li>只支持 <strong>Attention Model</strong>（POMO/MatNet 不适用）</li>
+<li>推荐配置：20节点 + 惩罚系数3.0 + 最低奖励1.0 + PPO算法</li>
+</ul>
+</div>
+</div>
+<div class="conditional-params full-width" id="ffsp-params" style="display: none;">
+<div>
+<h4> 柔性流水车间调度参数</h4>
+<p>配置多阶段并行机器的作业调度问题</p>
+</div>
+<div>
+<div>
+<label for="num-stage"> 阶段数 (Stages)</label>
+<input id="num-stage" max="10" min="2" name="num_stage" step="1" type="number" value="3"/>
+<p class="description">
                                     生产流程的阶段数（2-10）
                                 </p>
-                            </div>
-                            
-                            <div>
-                                <label for="num-machine">🔧 机器数/阶段</label>
-                                <input type="number" id="num-machine" name="num_machine" value="4" min="1" max="10" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+<div>
+<label for="num-machine"> 机器数/阶段</label>
+<input id="num-machine" max="10" min="1" name="num_machine" step="1" type="number" value="4"/>
+<p class="description">
                                     每个阶段的并行机器数（1-10）
                                 </p>
-                            </div>
-                            
-                            <div>
-                                <label for="num-job">📦 作业数 (Jobs)</label>
-                                <input type="number" id="num-job" name="num_job" value="20" min="5" max="100" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+<div>
+<label for="num-job"> 作业数 (Jobs)</label>
+<input id="num-job" max="100" min="5" name="num_job" step="1" type="number" value="20"/>
+<p class="description">
                                     需要调度的作业数量（5-100）
                                 </p>
-                            </div>
-                            
-                            <div>
-                                <label for="min-time">⏱️ 最小加工时间</label>
-                                <input type="number" id="min-time" name="min_time" value="2" min="1" max="10" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+<div>
+<label for="min-time"> 最小加工时间</label>
+<input id="min-time" max="10" min="1" name="min_time" step="1" type="number" value="2"/>
+<p class="description">
                                     作业的最小加工时间（1-10）
                                 </p>
-                            </div>
-                            
-                            <div>
-                                <label for="max-time">⏱️ 最大加工时间</label>
-                                <input type="number" id="max-time-ffsp" name="max_time" value="10" min="2" max="50" step="1">
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+<div>
+<label for="max-time"> 最大加工时间</label>
+<input id="max-time-ffsp" max="50" min="2" name="max_time" step="1" type="number" value="10"/>
+<p class="description">
                                     作业的最大加工时间（2-50）
                                 </p>
-                            </div>
-                            
-                            <div>
-                                <label for="flatten-stages">🔄 阶段展平模式</label>
-                                <select id="flatten-stages" name="flatten_stages">
-                                    <option value="true">启用（推荐）</option>
-                                    <option value="false">禁用（多阶段策略）</option>
-                                </select>
-                                <p class="description" style="font-size: 0.8rem;">
+</div>
+<div>
+<label for="flatten-stages"> 阶段展平模式</label>
+<select id="flatten-stages" name="flatten_stages">
+<option value="true">启用（推荐）</option>
+<option value="false">禁用（多阶段策略）</option>
+</select>
+<p class="description">
                                     影响模型的embedding策略
                                 </p>
-                            </div>
-                        </div>
-                        
-                        <div style="background: #e7f3ff; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #004085; border-left: 4px solid #0066cc;">
-                            <strong>📌 问题规模计算：</strong>
-                            <p style="margin: 0.5rem 0;">
-                                • 总机器数 = 阶段数 × 每阶段机器数<br>
-                                • 总操作数 = 作业数 × 阶段数<br>
+</div>
+</div>
+<div>
+<strong> 问题规模计算：</strong>
+<p>
+                                • 总机器数 = 阶段数 × 每阶段机器数<br/>
+                                • 总操作数 = 作业数 × 阶段数<br/>
                                 • 当前配置：<span id="ffsp-scale-info">3阶段 × 4机器 × 20作业 = 总机器12台，总操作60个</span>
+</p>
+</div>
+<div>
+<strong> 提示：</strong>
+<ul>
+<li>FFSP 必须使用 <strong>MatNet</strong> 策略模型</li>
+<li>目标：最小化所有作业的<strong>完工时间 (Makespan)</strong></li>
+<li>推荐配置：3阶段 + 4机器 + 20作业 + PPO算法</li>
+<li>训练时间较长，建议先用小规模测试（10作业）</li>
+</ul>
+</div>
+</div>
+<div class="conditional-params full-width" id="chip-routing-params" style="display: none;">
+<div>
+<h4>芯片全局布线参数</h4>
+<p>
+                                Attention 策略学习网络顺序，A* 路由器完成实际走线
                             </p>
+</div>
+<div>
+<div>
+<label for="chip-grid-width">网格宽度</label>
+<input id="chip-grid-width" max="40" min="8" name="grid_width" step="1" type="number" value="18"/>
+<p class="description">G-Cell 横向数量（8-40）</p>
+</div>
+<div>
+<label for="chip-grid-height">网格高度</label>
+<input id="chip-grid-height" max="40" min="8" name="grid_height" step="1" type="number" value="18"/>
+<p class="description">G-Cell 纵向数量（8-40）</p>
+</div>
+<div>
+<label for="chip-num-nets">两端点网络数量</label>
+<input id="chip-num-nets" max="40" min="4" name="num_nets" step="1" type="number" value="12"/>
+<p class="description">需要完成连接的网络数量（4-40）</p>
+</div>
+<div>
+<label for="chip-obstacle-ratio">禁布区比例</label>
+<input id="chip-obstacle-ratio" max="0.30" min="0" name="obstacle_ratio" step="0.02" type="number" value="0.10"/>
+<p class="description">由宏单元占用的网格比例（0-0.30）</p>
+</div>
+<div>
+<label for="chip-edge-capacity">网格边容量</label>
+<input id="chip-edge-capacity" max="4" min="1" name="edge_capacity" step="1" type="number" value="1"/>
+<p class="description">单条网格边无溢出时可容纳的路线数</p>
+</div>
+</div>
+<div>
+<strong>首版求解目标：</strong>
+                            总成本 = 线长 + 转弯成本 + 拥塞溢出惩罚 + 未连通惩罚。
+                            训练结果包含训练前后布线对比、拥塞热力图和逐网络布线动画。
                         </div>
-                        
-                        <div style="background: #fff3cd; padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-size: 0.85rem; color: #856404;">
-                            <strong>💡 提示：</strong>
-                            <ul style="margin: 0.5rem 0 0 1.2rem; padding: 0;">
-                                <li>FFSP 必须使用 <strong>MatNet</strong> 策略模型</li>
-                                <li>目标：最小化所有作业的<strong>完工时间 (Makespan)</strong></li>
-                                <li>推荐配置：3阶段 + 4机器 + 20作业 + PPO算法</li>
-                                <li>训练时间较长，建议先用小规模测试（10作业）</li>
-                            </ul>
+</div>
+<div class="conditional-params full-width" id="pomo-params" style="display: none;">
+<label for="num-starts"> POMO起点数量</label>
+<input class="form-control" id="num-starts" max="100" min="10" name="num_starts" type="number" value="50"/>
+<p class="description">同时从多个起点构建路径（10-100，推荐50）</p>
+</div>
+<div class="conditional-params full-width" id="ham-params" style="display: none;">
+<div class="params-grid">
+<div class="form-group">
+<label for="ham-normalization"> 归一化方式</label>
+<select class="form-control" id="ham-normalization" name="normalization">
+<option selected="" value="batch">Batch Normalization</option>
+<option value="instance">Instance Normalization</option>
+<option value="layer">Layer Normalization</option>
+</select>
+<p class="description">编码器归一化类型（推荐 Batch）</p>
+</div>
+<div class="form-group">
+<label for="ham-feedforward-hidden"> 前馈层维度</label>
+<input class="form-control" id="ham-feedforward-hidden" max="1024" min="256" name="feedforward_hidden" step="128" type="number" value="512"/>
+<p class="description">前馈网络隐藏层维度（256-1024，推荐512）</p>
+</div>
+</div>
+<div class="alert">
+                             <strong>HAM</strong> 使用异构多头注意力区分 depot / pickup / delivery 节点，是 PDP 问题的首选模型。
                         </div>
-                    </div>
-                </div>
-
-                <!-- 第2步：模型配置 -->
-            <div class="config-card">
-                    <h3><span class="icon">🧠</span> 第2步：模型配置</h3>
-                    
-                    <div class="form-group">
-                        <label for="model-select">
-                            🏗️ 策略模型
-                            <span class="info-tooltip" title="神经网络架构，用于构建解决方案">ℹ️</span>
-                        </label>
-                        <select id="model-select" name="model" class="form-control">
-                            <option value="attention" selected>Attention Model（经典，快速）</option>
-                            <option value="pomo">POMO（高质量，多起点）</option>
-                            <option value="symnco">SymNCO（对称优化，最高质量）🆕</option>
-                            <option value="mdam">MDAM（多解码器，高质量）🆕</option>
-                            <option value="deepaco">DeepACO（蚁群优化，混合方法）🆕</option>
-                            <option value="ham">HAM（异构注意力，PDP专用）</option>
-                            <option value="matnet">MatNet（调度专用，矩阵注意力）</option>
-                            <option value="ptrnet">Pointer Network（开创性，教学）</option>
-                        </select>
-                        <p class="description" id="model-description">经典的基于Transformer的构造式模型，速度快，适合入门</p>
-                  </div>
-
-                    <div class="form-group">
-                        <label for="algorithm-select">
-                            ⚙️ 训练算法
-                            <span class="info-tooltip" title="强化学习训练算法">ℹ️</span>
-                        </label>
-                        <select id="algorithm-select" name="algorithm" class="form-control">
-                            <option value="reinforce" selected>REINFORCE（入门推荐）</option>
-                            <option value="ppo">PPO（生产推荐）</option>
-                            <option value="a2c">A3C（平衡选择）</option>
-                            <option value="dqn">DQN（深度Q网络）</option>
-                            <option value="qlearning">Q-Learning（Q学习）</option>
-                        </select>
-                        <p class="description" id="algorithm-description">最基础的策略梯度算法，简单易懂，适合学习</p>
-                        <p class="description algorithm-lock-note" id="algorithm-lock-note" style="display: none; color: #6c757d;">
-                            🔒 <span id="algorithm-lock-text">该模型自带训练逻辑，算法已锁定为 REINFORCE</span>
-                        </p>
-              </div>
-
-                    <!-- 推荐配置按钮 -->
-                    <div class="form-group" style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd;">
-                        <button type="button" class="btn-recommend" id="use-recommended-btn">
-                            ✨ 使用推荐配置
-                        </button>
-                        <button type="button" class="btn-recommend secondary" id="use-fast-btn">
-                            ⚡ 快速原型
-                        </button>
-                    </div>
-
-                    <!-- 配置验证提示 -->
-                    <div id="config-validation-alert" class="alert" style="display: none; margin-top: 15px;" role="alert"></div>
-
-                    <!-- POMO特有参数（条件显示） -->
-                    <div id="pomo-params" class="form-group advanced-params" style="display: none;">
-                        <label for="num-starts">🚩 POMO起点数量</label>
-                        <input type="number" id="num-starts" name="num_starts" class="form-control" 
-                               value="50" min="10" max="100">
-                        <p class="description">同时从多个起点构建路径（10-100，推荐50）</p>
-                    </div>
-
-                    <!-- HAM特有参数（条件显示） -->
-                    <div id="ham-params" class="form-group advanced-params" style="display: none;">
-                        <div class="params-grid">
-                            <div class="form-group">
-                                <label for="ham-normalization">📐 归一化方式</label>
-                                <select id="ham-normalization" name="normalization" class="form-control">
-                                    <option value="batch" selected>Batch Normalization</option>
-                                    <option value="instance">Instance Normalization</option>
-                                    <option value="layer">Layer Normalization</option>
-                                </select>
-                                <p class="description">编码器归一化类型（推荐 Batch）</p>
-                            </div>
-                            <div class="form-group">
-                                <label for="ham-feedforward-hidden">🔧 前馈层维度</label>
-                                <input type="number" id="ham-feedforward-hidden" name="feedforward_hidden" class="form-control"
-                                       value="512" min="256" max="1024" step="128">
-                                <p class="description">前馈网络隐藏层维度（256-1024，推荐512）</p>
-                            </div>
+</div>
+<div class="conditional-params full-width" id="symnco-params" style="display: none;">
+<div class="params-grid">
+<div class="form-group">
+<label for="num-augment"> 对称增强数量</label>
+<input class="form-control" id="num-augment" max="8" min="1" name="num_augment" type="number" value="4"/>
+<p class="description">二面体对称变换数量（推荐4，速度质量均衡；8为最高质量但慢2倍）</p>
+</div>
+<div class="form-group">
+<label for="symnco-num-starts"> 多起点数量</label>
+<input class="form-control" id="symnco-num-starts" max="50" min="0" name="num_starts" type="number" value="0"/>
+<p class="description">多起点数量（0=禁用，可与增强组合提升质量）</p>
+</div>
+<div class="form-group">
+<label for="symnco-alpha"> 不变性损失权重 α</label>
+<input class="form-control" id="symnco-alpha" max="1" min="0" name="symnco_alpha" step="0.05" type="number" value="0.2"/>
+<p class="description">投影嵌入不变性损失权重（推荐0.2）</p>
+</div>
+<div class="form-group">
+<label for="symnco-beta"> 解对称损失权重 β</label>
+<input class="form-control" id="symnco-beta" max="2" min="0" name="symnco_beta" step="0.1" type="number" value="1.0"/>
+<p class="description">解对称性损失权重（推荐1.0）</p>
+</div>
+</div>
+<div class="alert">
+                             <strong>SymNCO</strong> 利用二面体8对称增强和三种自定义损失（问题对称性 L<sub>ps</sub>、解对称性 L<sub>ss</sub>、不变性 L<sub>inv</sub>），无需额外选择训练算法，适合 TSP / mTSP / CVRP。
                         </div>
-                        <div class="alert" style="background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
-                            💡 <strong>HAM</strong> 使用异构多头注意力区分 depot / pickup / delivery 节点，是 PDP 问题的首选模型。
+</div>
+<div class="conditional-params full-width" id="deepaco-params" style="display: none;">
+<div class="params-grid">
+<div class="form-group">
+<label for="n-ants"> 蚂蚁数量（n_ants）</label>
+<input class="form-control" id="n-ants" max="200" min="5" name="n_ants" type="number" value="30"/>
+<p class="description">ACO搜索的蚂蚁数量，越多质量越高但越慢（推荐30）</p>
+</div>
+<div class="form-group">
+<label for="n-iterations-train"> 训练迭代次数</label>
+<input class="form-control" id="n-iterations-train" max="10" min="1" name="n_iterations_train" type="number" value="1"/>
+<p class="description">训练时每步ACO迭代数（推荐1，过多会显著增加训练时间）</p>
+</div>
+<div class="form-group">
+<label for="n-iterations-test"> 测试迭代次数</label>
+<input class="form-control" id="n-iterations-test" max="20" min="1" name="n_iterations_test" type="number" value="5"/>
+<p class="description">测试/验证时ACO迭代数（推荐5，更多迭代=更优解）</p>
+</div>
+</div>
+<div class="alert">
+                             <strong>DeepACO</strong> 将GNN学习到的信息素热图与蚁群算法结合：GNN编码器输出启发式矩阵，AntSystem利用该矩阵执行多蚂蚁搜索，展示深度学习与元启发式融合的混合范式。仅支持REINFORCE训练。
                         </div>
-                    </div>
-
-                    <!-- SymNCO特有参数（条件显示） -->
-                    <div id="symnco-params" class="form-group advanced-params" style="display: none;">
-                        <div class="params-grid">
-                            <div class="form-group">
-                                <label for="num-augment">🔄 对称增强数量</label>
-                                <input type="number" id="num-augment" name="num_augment" class="form-control"
-                                       value="4" min="1" max="8">
-                                <p class="description">二面体对称变换数量（推荐4，速度质量均衡；8为最高质量但慢2倍）</p>
-                            </div>
-                            <div class="form-group">
-                                <label for="symnco-num-starts">🚩 多起点数量</label>
-                                <input type="number" id="symnco-num-starts" name="num_starts" class="form-control"
-                                       value="0" min="0" max="50">
-                                <p class="description">多起点数量（0=禁用，可与增强组合提升质量）</p>
-                            </div>
-                            <div class="form-group">
-                                <label for="symnco-alpha">⚖️ 不变性损失权重 α</label>
-                                <input type="number" id="symnco-alpha" name="symnco_alpha" class="form-control"
-                                       value="0.2" min="0" max="1" step="0.05">
-                                <p class="description">投影嵌入不变性损失权重（推荐0.2）</p>
-                            </div>
-                            <div class="form-group">
-                                <label for="symnco-beta">⚖️ 解对称损失权重 β</label>
-                                <input type="number" id="symnco-beta" name="symnco_beta" class="form-control"
-                                       value="1.0" min="0" max="2" step="0.1">
-                                <p class="description">解对称性损失权重（推荐1.0）</p>
-                            </div>
-                        </div>
-                        <div class="alert" style="background-color: #f3e5f5; border-left: 4px solid #9c27b0; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
-                            💡 <strong>SymNCO</strong> 利用二面体8对称增强和三种自定义损失（问题对称性 L<sub>ps</sub>、解对称性 L<sub>ss</sub>、不变性 L<sub>inv</sub>），无需额外选择训练算法，适合 TSP / mTSP / CVRP。
-                        </div>
-                    </div>
-
-                    <!-- DeepACO特有参数（条件显示） -->
-                    <div id="deepaco-params" class="form-group advanced-params" style="display: none;">
-                        <div class="params-grid">
-                            <div class="form-group">
-                                <label for="n-ants">🐜 蚂蚁数量（n_ants）</label>
-                                <input type="number" id="n-ants" name="n_ants" class="form-control"
-                                       value="30" min="5" max="200">
-                                <p class="description">ACO搜索的蚂蚁数量，越多质量越高但越慢（推荐30）</p>
-                            </div>
-                            <div class="form-group">
-                                <label for="n-iterations-train">🔁 训练迭代次数</label>
-                                <input type="number" id="n-iterations-train" name="n_iterations_train" class="form-control"
-                                       value="1" min="1" max="10">
-                                <p class="description">训练时每步ACO迭代数（推荐1，过多会显著增加训练时间）</p>
-                            </div>
-                            <div class="form-group">
-                                <label for="n-iterations-test">🔍 测试迭代次数</label>
-                                <input type="number" id="n-iterations-test" name="n_iterations_test" class="form-control"
-                                       value="5" min="1" max="20">
-                                <p class="description">测试/验证时ACO迭代数（推荐5，更多迭代=更优解）</p>
-                            </div>
-                        </div>
-                        <div class="alert" style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px; margin-top: 10px; font-size: 0.9rem;">
-                            🐜 <strong>DeepACO</strong> 将GNN学习到的信息素热图与蚁群算法结合：GNN编码器输出启发式矩阵，AntSystem利用该矩阵执行多蚂蚁搜索，展示深度学习与元启发式融合的混合范式。仅支持REINFORCE训练。
-                        </div>
-                    </div>
-                </div>
-
-            </section>
-
-            <!-- 第3步：训练参数 -->
-            <section class="config-section" style="grid-template-columns: 1fr;">
-              <div class="config-card">
-                    <h3><span class="icon">⚙️</span> 第3步：训练参数</h3>
-                    
-                    <div class="params-grid">
-                        <div class="form-group">
-                            <label for="epochs">📊 训练轮数（Epochs）</label>
-                            <input type="number" id="epochs" name="epochs" value="10" min="1" max="1000">
-                            <p class="description">建议：小规模5-10轮，大规模20-50轮</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="batch-size">📦 批次大小（Batch Size）</label>
-                            <input type="number" id="batch-size" name="batch_size" value="512" min="32" max="2048" step="32">
-                            <p class="description">建议：512（默认），显存不足时减小</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="learning-rate">📈 学习率（Learning Rate）</label>
-                            <input type="number" id="learning-rate" name="learning_rate" value="0.0001" min="0.00001" max="0.01" step="0.00001">
-                            <p class="description">建议：1e-4（默认），可微调</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 第4步（新）：GPU 选择 -->
-            <section class="config-section" style="grid-template-columns: 1fr;">
-              <div class="config-card">
-                <h3><span class="icon">🖥️</span> 第4步：计算设备选择</h3>
-                <p style="color:#666;font-size:0.95rem;margin-bottom:1rem;">
-                  选择用于本次训练的 GPU。默认使用 CPU（较慢）；点击 GPU 卡片可切换到 GPU 训练。
-                </p>
-
-                <!-- 检测来源提示横幅 -->
-                <div id="gpu-mock-banner" style="display:none;
-                    background:#fff3cd;border-left:4px solid #ffc107;
-                    padding:0.6rem 1rem;border-radius:6px;font-size:0.88rem;
-                    margin-bottom:1rem;color:#856404;">
-                  ⚠️ 当前为演示数据（服务器未检测到真实 GPU）
-                </div>
-                <div id="gpu-torch-banner" style="display:none;
-                    background:#e8f4fd;border-left:4px solid #3498db;
-                    padding:0.6rem 1rem;border-radius:6px;font-size:0.88rem;
-                    margin-bottom:1rem;color:#1a6e9e;">
-                  ℹ️ 数据来源：PyTorch CUDA（利用率暂不可用，安装 <code>nvidia-ml-py</code> 可获取完整数据）
-                </div>
-                <div id="gpu-pynvml-banner" style="display:none;
-                    background:#eafaf1;border-left:4px solid #27ae60;
-                    padding:0.6rem 1rem;border-radius:6px;font-size:0.88rem;
-                    margin-bottom:1rem;color:#1a6e4e;">
-                  ✅ 数据来源：NVML（完整硬件数据）
-                </div>
-
-                <!-- 刷新按钮 + 时间戳 -->
-                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-                  <button type="button" onclick="loadGpuStatus()"
-                      style="background:linear-gradient(135deg,#667eea,#764ba2);
-                             color:white;border:none;padding:0.4rem 1rem;
-                             border-radius:20px;cursor:pointer;font-size:0.85rem;">
-                    🔄 刷新状态
-                  </button>
-                  <span id="gpu-last-update" style="color:#999;font-size:0.82rem;"></span>
-                </div>
-
-                <!-- GPU 卡片容器 -->
-                <div id="gpu-cards-container" style="
-                    display:grid;
-                    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-                    gap:0.8rem;">
-                  <div style="color:#aaa;font-size:0.9rem;padding:1rem;">
-                    加载中...
-                  </div>
-                </div>
-
-                <!-- CPU 选项 -->
-                <div style="margin-top:0.8rem;">
-                  <label style="display:flex;align-items:center;gap:0.5rem;
-                                cursor:pointer;padding:0.7rem 1rem;
-                                border:2px solid #ddd;border-radius:10px;
-                                transition:border-color 0.2s;"
-                         id="cpu-option-label">
-                    <input type="radio" name="gpu_select" value="cpu" id="gpu-select-cpu"
-                           style="accent-color:#667eea;" checked
-                           onchange="onGpuSelect(null)">
-                    <span style="font-size:0.95rem;">💻 使用 CPU（默认，无需 GPU）</span>
-                  </label>
-                </div>
-              </div>
-            </section>
-
-            <!-- 第5步：数据集（可选） -->
-            <section class="config-section" style="grid-template-columns: 1fr;">
-              <div class="config-card" style="background: #f8f9fa;">
-                <h3><span class="icon">📁</span> 第5步：数据集（可选）</h3>
-                <p id="dataset-description" style="color: #666; margin-bottom: 1rem; font-size: 0.95rem;">
-                    💡 默认使用随机生成数据集。如需使用自定义数据集，请在此上传。
-                </p>
-                
-                <div class="form-group">
-                    <label for="dataset-mode">数据集模式</label>
-                    <select id="dataset-mode" name="dataset_mode" onchange="toggleDatasetUpload()">
-                        <option value="random" selected>🎲 随机生成（推荐）</option>
-                        <option value="upload">📤 上传自定义数据集</option>
-                    </select>
-                </div>
-
-                <div id="dataset-upload-section" style="display: none;">
-                    <div class="form-group">
-                        <label for="dataset-file">选择文件</label>
-                        <input type="file" id="dataset-file" accept=".txt,.json,.tsp" style="padding: 0.5rem;">
-                        <p class="description" style="font-size: 0.85rem;">
-                            支持格式：TXT、JSON、TSP（TSPLIB格式）
-                        </p>
-                    </div>
-                    
-                    <button type="button" id="dataset-upload-btn" class="start-button" onclick="uploadDataset()" style="font-size: 1rem; padding: 0.8rem;">
-                        📤 上传数据集
-                    </button>
-                    
-                    <div id="upload-status" class="status-message" style="margin-top: 1rem;"></div>
-                    
-                    <div id="dataset-info" style="display: none; margin-top: 1rem; padding: 1rem; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #667eea;">
-                        <h4 style="color: #667eea; margin-bottom: 0.5rem; font-size: 1rem;">✅ 数据集已上传</h4>
-                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>文件名:</strong> <span id="dataset-filename"></span></p>
-                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>节点数量:</strong> <span id="dataset-size"></span></p>
-                        <p style="margin: 0.3rem 0; font-size: 0.9rem;"><strong>坐标范围:</strong> <span id="dataset-range"></span></p>
-                    </div>
-                    
-                    <button type="button" id="dataset-manager-btn" class="start-button" onclick="showDatasetManager()" style="margin-top: 1rem; font-size: 0.9rem; padding: 0.6rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-                        📂 管理已上传数据集
-                    </button>
-                </div>
-                    
-                    <!-- 数据集管理弹窗 -->
-                    <div id="dataset-manager-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;">
-                        <div style="max-width: 800px; margin: 50px auto; background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 10px 50px rgba(0,0,0,0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                                <h3 style="color: #667eea; margin: 0;">📂 我的数据集</h3>
-                                <button type="button" onclick="closeDatasetManager()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">✖</button>
-                            </div>
-                            <div id="datasets-list" style="max-height: 400px; overflow-y: auto;">
-                                <p style="text-align: center; color: #999;">正在加载...</p>
-                        </div>
-                    </div>
-                </div>
-              </div>
-
-        </section>
-
-            <!-- 第6步：开始训练 -->
-            <section class="config-section" style="grid-template-columns: 1fr;">
-                <div class="config-card" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                    <h3 style="color: white; margin-bottom: 1.5rem;"><span class="icon">🚀</span> 第6步：开始训练</h3>
-
-                    <!-- 继续上次训练开关 -->
-                    <div style="display: inline-flex; align-items: center; gap: 0.8rem;
-                                background: rgba(255,255,255,0.15); border-radius: 12px;
-                                padding: 0.75rem 1.5rem; margin-bottom: 1.5rem;
-                                border: 1px solid rgba(255,255,255,0.3); cursor: pointer;"
-                         onclick="document.getElementById('resume-checkbox').click()">
-                        <input type="checkbox" id="resume-checkbox" name="resume_checkpoint"
-                               style="width: 18px; height: 18px; accent-color: #fff; cursor: pointer;"
-                               onchange="updateResumeHint()">
-                        <div style="text-align: left;">
-                            <div style="font-size: 1rem; font-weight: 600;">🔄 继续上次训练</div>
-                            <div id="resume-hint" style="font-size: 0.8rem; opacity: 0.85; margin-top: 0.2rem;">
-                                未勾选：每次全新训练（默认，推荐）
-                            </div>
-                        </div>
-                    </div>
-
-                    <br>
-                    <button type="button" class="start-button-large" id="start-button" onclick="startTraining()">
-                        🚀 开始训练
-                    </button>
-                    <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
-                        点击后将启动强化学习训练，实时显示进度和结果
-                    </p>
-                </div>
-            </section>
-        </form>
-
-        <!-- 训练状态和结果区域 -->
-        <section class="training-panel" id="training-section" style="margin-top: 2rem;">
-
-            <div id="status-message" class="status-message"></div>
-
-            <!-- 训练进度显示 -->
-            <div id="progress-container" class="progress-container">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-                    <h4 style="color:#667eea; margin:0;">⏳ 训练进度</h4>
-                    <div id="training-controls" style="display:none; gap:0.5rem;">
-                        <button id="pause-btn" class="training-ctrl-btn pause-btn" onclick="pauseTraining()">⏸ 暂停</button>
-                        <button id="resume-btn" class="training-ctrl-btn resume-btn" onclick="resumeTraining()" style="display:none;">▶ 继续</button>
-                        <button id="stop-btn" class="training-ctrl-btn stop-btn" onclick="stopTraining()">■ 中止</button>
-                    </div>
-                </div>
-                <div class="progress-bar-container">
-                    <div id="progress-bar" class="progress-bar">0%</div>
-                </div>
-                
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-label">当前轮次</div>
-                        <div class="metric-value" id="metric-epoch">0/0</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-label">Loss</div>
-                        <div class="metric-value" id="metric-loss">0.0000</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-label">Reward</div>
-                        <div class="metric-value" id="metric-reward">0.0000</div>
-                    </div>
-                </div>
-
-                <div class="training-log" id="training-log">
-                    <div style="color: #999; text-align: center;">等待训练日志...</div>
-                </div>
-            </div>
-
-            <!-- 训练曲线显示 -->
-            <div id="training-curves-container" class="progress-container" style="display: none;">
-                <h4 style="color: #667eea; margin-bottom: 1rem;">📈 训练曲线（实时更新）</h4>
-                <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center;">
-                    <img id="training-curve-img" 
-                         src="" 
-                         alt="训练曲线" 
-                         style="width: 100%; max-width: 900px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                    <p id="curve-update-info" style="margin-top: 0.5rem; color: #27ae60; font-weight: bold;"></p>
-                </div>
-            </div>
-
-            <!-- 训练结果显示 -->
-            <div id="results-panel" class="results-panel">
-                <h3>🎉 训练完成！</h3>
-                <div class="results-grid" id="results-content">
-                    <!-- 结果将通过 JavaScript 动态填充 -->
-            </div>
-        </div>
-    </section>
-
-        </div><!-- main-content-area结束 -->
-
-        <!-- 右侧：AI智能助手面板（嵌入式） -->
-        <aside class="ai-chat-panel-embedded">
-
-            <!-- 头部 -->
-            <div class="ai-chat-header">
-                <div class="ai-chat-header-title">
-                    <span class="ai-header-icon">✦</span>
-                    <span>AI 智能助手</span>
-                </div>
-                <div class="ai-chat-controls">
-                    <button class="ai-chat-btn" id="ai-clear-btn" title="清空对话">🗑️</button>
-                </div>
-            </div>
-
-            <!-- 来源 + 模型 单行选择栏 -->
-            <div class="ai-selector-bar">
-                <div class="ai-sel-col">
-                    <span class="ai-sel-label">来源</span>
-                    <select id="ai-source-select" class="ai-sel-select">
-                        <option value="ollama">🏠 本地 Ollama</option>
-                    </select>
-                </div>
-                <div class="ai-sel-sep"></div>
-                <div class="ai-sel-col" style="flex:1.5">
-                    <span class="ai-sel-label">模型</span>
-                    <select id="ai-model-select" class="ai-sel-select">
-                        <option value="">加载中...</option>
-                    </select>
-                </div>
-                <div class="ai-model-status" id="ai-model-status">
-                    <span class="status-dot" title="连接状态"></span>
-                    <span class="status-text"></span>
-                </div>
-            </div>
-
-            <!-- 消息区 -->
-            <div class="ai-chat-messages" id="ai-chat-messages">
-                <div class="ai-chat-empty">
-                    <div class="ai-chat-empty-icon">✦</div>
-                    <div class="ai-chat-empty-text">有什么可以帮助您的？</div>
-                    <div class="ai-chat-empty-hint">描述你的优化问题，AI 会自动推荐配置</div>
-                </div>
-            </div>
-
-            <!-- 输入区 -->
-            <div class="ai-chat-input-container">
-                <div class="ai-chat-input-wrapper">
-                    <textarea
-                        class="ai-chat-input"
-                        id="ai-chat-input"
-                        placeholder="描述你的问题，例如：我需要规划50个城市的配送路线…"
-                        rows="1"
-                    ></textarea>
-                    <button class="ai-chat-send-btn" id="ai-send-btn" title="发送 (Enter)">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    </button>
-                </div>
-                <div class="ai-chat-hint">Enter 发送 · Shift+Enter 换行</div>
-            </div>
-
-        </aside>
-    </div><!-- main-container-with-chat结束 -->
-
-    <footer>
-            <p><strong>RL4CO - Reinforcement Learning for Combinatorial Optimization Platform</strong></p>
-            <p style="margin-top: 0.5rem; color: #999;">启元实验室 · QIYUAN LAB</p>
-    </footer>
+</div></div>
+</section>
+<section class="card"><h2>数据来源</h2><div class="form-group"><label for="dataset-mode">数据集模式</label><select id="dataset-mode" name="dataset_mode" onchange="toggleDatasetUpload()"><option value="random">随机生成</option><option value="upload">使用自定义数据集</option></select><p class="description" id="dataset-description"></p></div>
+<div id="dataset-upload-section" style="display: none;"><div class="form-group"><label for="dataset-file">选择数据集文件</label><input type="file" id="dataset-file" accept=".txt,.json,.tsp"><p class="description">支持 TXT、JSON、TSPLIB；单文件最多 5 MB。</p></div>
+<div class="actions"><button type="button" class="btn" id="dataset-upload-btn" onclick="uploadDataset()">上传数据集</button><button type="button" class="btn" id="dataset-manager-btn" onclick="showDatasetManager()">选择已有数据集</button></div>
+<div id="upload-status" class="status-message" role="status"></div><div id="dataset-info" class="banner banner-success" style="display: none;"><strong id="dataset-filename"></strong><p><span id="dataset-size"></span> · <span id="dataset-range"></span></p></div></div>
+</section>
+<section class="card"><details id="advanced-parameters"><summary>高级训练参数</summary><div class="field-grid"><div class="field"><label for="train-data-size">训练集大小</label><input type="number" id="train-data-size" name="train_data_size" value="10000" min="1" max="1000000"><p class="description">训练器当前默认值：10,000。</p></div><div class="field"><label for="val-data-size">验证集大小</label><input type="number" id="val-data-size" name="val_data_size" value="1000" min="1" max="1000000"><p class="description">训练器当前默认值：1,000。</p></div></div>
+<label class="check-label" for="resume-checkbox"><input type="checkbox" id="resume-checkbox" name="resume_checkpoint" onchange="updateResumeHint()"> 从上次保存的 Checkpoint 继续训练</label><p class="description" id="resume-hint">默认开始全新训练；续训需要匹配的问题与模型。</p></details></section>
+</div>
+<aside class="page-stack resource-column">
+<section class="card"><div class="card-header"><h2>运行资源</h2>{{ icon('gpu') }}</div><p class="description">选择计算设备，状态来自服务器。</p>
+<div id="gpu-mock-banner" class="banner banner-warning" style="display: none;">未检测到真实 GPU。服务器返回演示资源，当前使用 CPU。</div>
+<div id="gpu-torch-banner" class="banner" style="display: none;">PyTorch CUDA · 利用率不可用</div><div id="gpu-pynvml-banner" class="banner banner-success" style="display: none;">NVML · 实时资源状态</div>
+<div id="gpu-cards-container"><div class="loading-state">读取计算资源…</div></div>
+<label class="gpu-option" id="cpu-option-label"><input type="radio" name="gpu_select" value="cpu" id="gpu-select-cpu" checked onchange="onGpuSelect(null)"><span><strong>CPU</strong><small>无需 GPU，可用于小规模验证</small></span></label>
+<div class="actions"><button type="button" class="btn btn-small" onclick="loadGpuStatus()">刷新状态</button><span class="description" id="gpu-last-update"></span></div>
+</section>
+<section class="card"><h2>准备运行</h2><p class="muted">检查兼容性与资源后提交实验。训练会在后台运行。</p><button type="submit" class="btn btn-primary start-button-large" id="start-button" disabled>{{ icon('arrow') }} 开始训练</button><p class="description">进度、日志和产物均来自当前训练 Session。</p></section>
+</aside>
+</div>
+</form></div>
+<section id="training-section" class="page-stack" hidden>
+<div id="connection-banner" class="banner" role="status"><span id="connection-text">正在连接训练事件…</span><button type="button" class="btn btn-small" id="reconnect-training" hidden>重新连接</button></div>
+<div class="actions monitor-heading"><span class="data muted" id="monitor-session">—</span><div id="training-controls" class="actions"><button type="button" id="pause-btn" class="btn" onclick="pauseTraining()">暂停训练</button><button type="button" id="resume-btn" class="btn" onclick="resumeTraining()" style="display: none;">恢复训练</button><button type="button" id="stop-btn" class="btn btn-danger" onclick="stopTraining()">中止训练</button></div></div>
+<div id="progress-container" class="progress-container"><div class="metrics-grid"><div class="metric-card"><div class="metric-label">Epoch</div><div class="metric-value" id="metric-epoch">—</div><div class="metric-note">当前 / 总轮次</div></div><div class="metric-card"><div class="metric-label">Best Reward</div><div class="metric-value" id="metric-reward">—</div><div class="metric-note">当前 Reward <span id="metric-current-reward">—</span></div></div><div class="metric-card"><div class="metric-label">Training Loss</div><div class="metric-value" id="metric-loss">—</div><div class="metric-note">后端实时指标</div></div><div class="metric-card"><div class="metric-label">已用时间</div><div class="metric-value" id="metric-elapsed">—</div><div class="metric-note" id="metric-eta">ETA —</div></div></div><div class="progress-bar-container" role="progressbar" aria-label="训练进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-bar" class="progress-bar">0%</div></div></div>
+<div class="grid-two"><section class="card"><h2>Reward</h2><div id="reward-chart" class="chart" role="img" aria-label="Reward 随 Epoch 变化的曲线"></div><p id="reward-chart-summary" class="chart-caption">等待训练指标。</p></section><section class="card"><h2>Training Loss</h2><div id="loss-chart" class="chart" role="img" aria-label="Loss 随 Epoch 变化的曲线"></div><p id="loss-chart-summary" class="chart-caption">等待训练指标。</p></section></div>
+<section class="card"><div class="card-header"><h2>训练日志</h2><span class="badge">LIVE</span></div><div class="training-log" id="training-log" role="log" aria-live="off">等待训练日志…</div></section>
+<details id="training-curves-container" class="card" style="display: none;"><summary>服务端训练曲线</summary><img id="training-curve-img" alt="后端生成的训练曲线"><p id="curve-update-info" class="description"></p></details>
+</section>
+<section id="results-panel" class="results-panel page-stack" hidden><div class="actions"><span class="status status-success">实验结果</span><a class="btn" id="compare-result" href="/benchmark?source=experiments">加入算法对比</a><a class="btn" href="/file_manager">查看全部产物</a></div><div id="results-content" class="page-stack"></div></section>
+<div id="dataset-manager-modal" class="modal-overlay" hidden><section class="modal-dialog modal-wide" role="dialog" aria-modal="true" aria-labelledby="dataset-dialog-title" tabindex="-1"><div class="card-header"><h2 id="dataset-dialog-title">我的数据集</h2><button type="button" onclick="closeDatasetManager()" class="btn btn-icon" aria-label="关闭数据集选择">{{ icon('close') }}</button></div><div id="datasets-list"></div></section></div>
+{% include 'includes/assistant.html' %}
 {% endblock %}
-
-{% block scripts %}
-<script src="/static/js/index.js"></script>
-<script src="/static/js/training-progress.js"></script>
-<script src="/static/js/ollama-chat-embedded.js"></script>
-{% endblock %}
+{% block scripts %}<script src="/static/vendor/echarts.min.js"></script><script src="/static/js/charts.js"></script><script src="/static/js/index.js"></script><script src="/static/js/training-progress.js"></script><script src="/static/js/training-monitor.js"></script><script src="/static/js/ollama-chat-embedded.js"></script><script src="/static/js/ai-assistant.js"></script>{% endblock %}

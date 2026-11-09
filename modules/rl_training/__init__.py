@@ -41,6 +41,7 @@ try:
     from .pctsp_trainer import PCTSPTrainer, train_pctsp
     from .spctsp_trainer import SPCTSPTrainer, train_spctsp
     from .ffsp_trainer import FFSPTrainer, train_ffsp
+    from .chip_routing_trainer import ChipRoutingTrainer, train_chip_routing
     _RL4CO_TRAINERS_AVAILABLE = True
 except Exception as e:
     _RL4CO_TRAINERS_AVAILABLE = False
@@ -48,9 +49,9 @@ except Exception as e:
     # 定义占位符，避免 NameError
     TSPTrainer = ATSPTrainer = MTSPTrainer = CVRPTrainer = None
     SDVRPTrainer = VRPTWTrainer = PDPTrainer = OPTrainer = None
-    PCTSPTrainer = SPCTSPTrainer = FFSPTrainer = None
+    PCTSPTrainer = SPCTSPTrainer = FFSPTrainer = ChipRoutingTrainer = None
     train_tsp = train_atsp = train_mtsp = train_cvrp = train_sdvrp = None
-    train_vrptw = train_pdp = train_op = train_pctsp = train_spctsp = train_ffsp = None
+    train_vrptw = train_pdp = train_op = train_pctsp = train_spctsp = train_ffsp = train_chip_routing = None
 
 # 向后兼容：提供统一的训练入口
 def real_rl4co_training(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event=None):
@@ -106,6 +107,8 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
     elif problem_type == 'ffsp':
         # FFSP - 柔性流水车间调度问题
         train_ffsp(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
+    elif problem_type == 'chip_routing':
+        train_chip_routing(config, session_id, user_id, queue, training_status, get_background_db_func, pause_event)
     else:
         # 未支持的问题类型 - 先初始化状态再设置错误
         training_status[session_id] = {
@@ -117,7 +120,7 @@ def real_rl4co_training(config, session_id, user_id, queue, training_status, get
         }
         queue.put(json.dumps({
             'type': 'error',
-            'message': f'暂不支持的问题类型: {problem_type}，请选择 TSP、ATSP、mTSP、CVRP、SDVRP、VRPTW、PDP、OP、PCTSP、SPCTSP 或 FFSP'
+            'message': f'暂不支持的问题类型: {problem_type}'
         }))
 
 
@@ -144,6 +147,7 @@ __all__ = [
     'PCTSPTrainer',
     'SPCTSPTrainer',
     'FFSPTrainer',
+    'ChipRoutingTrainer',
     
     # 训练入口函数
     'real_rl4co_training',
@@ -158,6 +162,7 @@ __all__ = [
     'train_pctsp',
     'train_spctsp',
     'train_ffsp',
+    'train_chip_routing',
     
     # 向后兼容
     'create_route_animation',

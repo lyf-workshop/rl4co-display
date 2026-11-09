@@ -3,12 +3,20 @@ CVRP问题专用可视化函数
 提供CVRP路线动画、对比图等可视化
 """
 
-import os
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from PIL import Image
+from matplotlib.collections import LineCollection
+from matplotlib.patches import FancyArrowPatch
+
+from .common import (
+    DEFAULT_MAX_ANIMATION_FRAMES,
+    build_closed_depot_route,
+    figure_to_palette_image,
+    save_palette_gif,
+    select_animation_steps,
+)
 
 # 配置中文字体支持
 matplotlib.rcParams['font.sans-serif'] = [
@@ -23,202 +31,249 @@ matplotlib.rcParams['font.sans-serif'] = [
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
-def create_cvrp_route_animation(td, actions, save_path, title="CVRP路线生成过程", fps=2):
-    """
-    创建CVRP路线逐步生成的动态GIF
-    
-    参数:
-        td: TensorDict，包含客户坐标、需求、容量等信息
-        actions: numpy数组，访问节点的顺序
-        save_path: GIF保存路径
-        title: 图表标题
-        fps: 帧率（每秒帧数）
-    """
-    # 提取坐标信息
-    if hasattr(td, 'get'):
-        locs = td.get('locs', td['locs']).cpu().numpy()
-        depot = locs[0]  # 仓库位置
-        customers = locs[1:]  # 客户位置
-        demands = td.get('demand', td.get('demands', None))
-        if demands is not None:
-            demands = demands.cpu().numpy()
-    else:
-        locs = td['locs'].cpu().numpy()
-        depot = locs[0]
-        customers = locs[1:]
-        demands = td.get('demand', td.get('demands', None))
-        if demands is not None:
-            demands = demands.cpu().numpy()
-    
-    num_nodes = len(locs)
-    frames = []
-    
-    # 计算每一步的累计距离和载重
-    def calculate_metrics(locs, actions, step, capacity=1.0):
-        """计算到第step步为止的累计距离和当前载重"""
-        if step < 1:
-            return 0.0, 0.0
-        
-        total_dist = 0.0
-        current_load = 0.0
-        
-        for i in range(step):
-            node_a = actions[i]
-            
-            if i + 1 < len(actions):
-                node_b = actions[i + 1]
-            else:
-                node_b = 0  # 返回仓库
-            
-            # 计算距离
-            pos_a = locs[node_a]
-            pos_b = locs[node_b]
-            dist = np.sqrt(np.sum((pos_a - pos_b) ** 2))
-            total_dist += dist
-            
-            # 更新载重（如果访问客户）
-            if node_a > 0 and demands is not None:  # 不是仓库
-                # demands数组索引：如果包含仓库则用node_a，否则用node_a-1
-                demand_idx = node_a if len(demands) > node_a else node_a - 1
-                if demand_idx < len(demands):
-                    current_load += demands[demand_idx]
-            
-            # 如果返回仓库，重置载重
-            if node_b == 0:
-                current_load = 0.0
-        
-        return total_dist, current_load
-    
-    # 为每一步生成一帧图像
-    for step in range(len(actions) + 1):
-        fig, ax = plt.subplots(figsize=(10, 8))
-        
-        # 绘制仓库（特殊标记）
-        ax.scatter(depot[0], depot[1], c='red', s=400, marker='s', 
-                  zorder=5, edgecolors='darkred', linewidths=3, label='仓库')
-        
-        # 绘制所有客户点
-        ax.scatter(customers[:, 0], customers[:, 1], c='lightblue', s=200, 
-                  zorder=3, alpha=0.6, edgecolors='black', linewidths=2)
-        
-        # 标注节点编号和需求
-        ax.text(depot[0], depot[1], '0\n仓库', fontsize=10, ha='center', va='center',
-               fontweight='bold', color='white')
-        
-        for idx, (x, y) in enumerate(customers):
-            customer_id = idx + 1  # 显示的客户编号（1, 2, 3, ...）
-            demand_text = f'\n({demands[idx]:.2f})' if demands is not None else ''
-            ax.text(x, y, f'{customer_id}{demand_text}', fontsize=9, ha='center', va='center',
-                   fontweight='bold', color='darkblue')
-        
-        # 绘制已经构建的路径
-        if step > 0:
-            for i in range(step):
-                start_idx = actions[i]
-                if i + 1 < len(actions):
-                    end_idx = actions[i + 1]
-                else:
-                    end_idx = 0  # 最后返回仓库
-                
-                start_pos = locs[start_idx]
-                end_pos = locs[end_idx]
-                
-                # 如果是返回仓库，使用虚线
-                linestyle = '--' if end_idx == 0 else '-'
-                linewidth = 2 if end_idx == 0 else 3
-                
-                # 绘制路径线
-                ax.plot([start_pos[0], end_pos[0]], [start_pos[1], end_pos[1]], 
-                       'b-' if linestyle == '-' else 'g--', 
-                       linewidth=linewidth, alpha=0.7, zorder=1)
-                
-                # 添加箭头表示方向
-                mid_x = (start_pos[0] + end_pos[0]) / 2
-                mid_y = (start_pos[1] + end_pos[1]) / 2
-                dx = end_pos[0] - start_pos[0]
-                dy = end_pos[1] - start_pos[1]
-                ax.annotate('', xy=(mid_x + dx*0.1, mid_y + dy*0.1), 
-                          xytext=(mid_x - dx*0.1, mid_y - dy*0.1),
-                          arrowprops=dict(arrowstyle='->', 
-                                        color='blue' if linestyle == '-' else 'green', 
-                                        lw=2, alpha=0.7))
-        
-        # 高亮当前访问的节点
-        if step > 0 and step <= len(actions):
-            current_node = actions[step - 1]
-            current_pos = locs[current_node]
-            node_type = '仓库' if current_node == 0 else f'客户 {current_node}'
-            ax.scatter(current_pos[0], current_pos[1], 
-                      c='orange', s=400, zorder=6, marker='*', 
-                      edgecolors='darkorange', linewidths=2,
-                      label=f'当前: {node_type}')
-        
-        # 计算当前指标
-        current_dist, current_load = calculate_metrics(locs, actions, step)
-        
-        # 设置标题和信息
-        if step == 0:
-            info_text = "开始配送..."
-        elif step < len(actions):
-            info_text = f"第 {step} 步 | 累计距离: {current_dist:.3f} | 当前载重: {current_load:.2f}"
-        else:
-            info_text = f"完成！总距离: {current_dist:.3f}"
-        
-        ax.set_title(f"{title}\n{info_text}", fontsize=14, fontweight='bold', pad=20)
-        
-        # 设置坐标轴
-        ax.set_xlim(-0.05, 1.05)
-        ax.set_ylim(-0.05, 1.05)
-        ax.set_aspect('equal')
-        ax.grid(True, alpha=0.3, linestyle='--')
-        ax.set_xlabel('X 坐标', fontsize=12)
-        ax.set_ylabel('Y 坐标', fontsize=12)
-        
-        # 添加图例
-        ax.legend(loc='upper right', fontsize=10, framealpha=0.9)
-        
-        # 添加进度条
-        progress = step / len(actions) if len(actions) > 0 else 0
-        ax.text(0.5, -0.12, f"进度: {int(progress * 100)}%", 
-               ha='center', va='top', transform=ax.transAxes,
-               fontsize=11, bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-        
-        # 保存当前帧为图像
-        fig.tight_layout()
-        
-        # 将图形转换为PIL Image
-        fig.canvas.draw()
-        try:
-            buf = fig.canvas.buffer_rgba()
-            image = np.frombuffer(buf, dtype=np.uint8)
-            image = image.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-            image = image[:, :, :3]
-        except AttributeError:
-            try:
-                image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
-                image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            except AttributeError:
-                buf = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8)
-                buf = buf.reshape(fig.canvas.get_width_height()[::-1] + (4,))
-                image = buf[:, :, 1:]
-        
-        frames.append(Image.fromarray(image))
-        plt.close(fig)
-    
-    # 在最后一帧停留更长时间
-    for _ in range(3):
-        frames.append(frames[-1])
-    
-    # 保存为GIF
-    duration = int(1000 / fps)
-    frames[0].save(
-        save_path,
-        save_all=True,
-        append_images=frames[1:],
-        duration=duration,
-        loop=0,
-        optimize=False
+def _to_numpy(value):
+    if hasattr(value, "detach"):
+        value = value.detach()
+    if hasattr(value, "cpu"):
+        value = value.cpu()
+    return np.asarray(value)
+
+
+def _normalise_node_demands(demands, num_nodes):
+    if demands is None:
+        return np.zeros(num_nodes, dtype=float)
+
+    values = _to_numpy(demands).reshape(-1).astype(float)
+    if values.size == num_nodes:
+        return values
+    if values.size == num_nodes - 1:
+        return np.concatenate(([0.0], values))
+    raise ValueError(
+        f"CVRP demand length {values.size} does not match "
+        f"{num_nodes - 1} customers"
     )
+
+
+def _prepare_cvrp_route(locs, actions, demands=None):
+    """Build a closed route and precompute distance/load at every action step."""
+    locs = _to_numpy(locs).squeeze()
+    if locs.ndim != 2 or locs.shape[1] != 2 or len(locs) < 2:
+        raise ValueError("CVRP locations must have shape [num_nodes, 2]")
+
+    route = build_closed_depot_route(
+        _to_numpy(actions),
+        num_nodes=len(locs),
+        depot_index=0,
+    )
+    if len(route) < 2:
+        raise ValueError("CVRP route must visit at least one customer")
+
+    node_demands = _normalise_node_demands(demands, len(locs))
+    segments = np.stack((locs[route[:-1]], locs[route[1:]]), axis=1)
+    segment_distances = np.linalg.norm(segments[:, 1] - segments[:, 0], axis=1)
+    cumulative_distances = np.concatenate(([0.0], np.cumsum(segment_distances)))
+
+    loads = np.zeros(len(route), dtype=float)
+    current_load = 0.0
+    for step, destination in enumerate(route[1:], start=1):
+        if destination == 0:
+            current_load = 0.0
+        else:
+            current_load += node_demands[destination]
+        loads[step] = current_load
+
+    return locs, route, node_demands, segments, cumulative_distances, loads
+
+
+def create_cvrp_route_animation(
+    td,
+    actions,
+    save_path,
+    title="CVRP路线生成过程",
+    fps=2,
+    max_frames=DEFAULT_MAX_ANIMATION_FRAMES,
+    progress_callback=None,
+):
+    """Create a bounded-memory CVRP route animation."""
+    locs_value = td.get("locs") if hasattr(td, "get") else td["locs"]
+    demands = None
+    if hasattr(td, "get"):
+        demands = td.get("demand", td.get("demands", None))
+    elif "demand" in td:
+        demands = td["demand"]
+    elif "demands" in td:
+        demands = td["demands"]
+
+    locs, route, node_demands, segments, distances, loads = _prepare_cvrp_route(
+        locs_value,
+        actions,
+        demands,
+    )
+    customers = locs[1:]
+    route_steps = len(route) - 1
+    frame_steps = select_animation_steps(route_steps, max_frames=max_frames)
+    num_customers = len(customers)
+
+    marker_size = max(8, min(90, 1600 / max(num_customers, 1)))
+    line_width = max(0.7, min(2.5, 16 / np.sqrt(max(num_customers, 1))))
+    label_nodes = num_customers <= 100
+
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
+    frames = []
+    try:
+        ax.scatter(
+            customers[:, 0],
+            customers[:, 1],
+            c="#90caf9",
+            s=marker_size,
+            alpha=0.75,
+            edgecolors="#1f2937" if num_customers <= 200 else "none",
+            linewidths=0.5,
+            zorder=3,
+            label="客户",
+        )
+        ax.scatter(
+            locs[0, 0],
+            locs[0, 1],
+            c="#d32f2f",
+            s=max(90, marker_size * 2.2),
+            marker="s",
+            edgecolors="#7f1d1d",
+            linewidths=1.5,
+            zorder=5,
+            label="仓库",
+        )
+        if label_nodes:
+            ax.text(
+                locs[0, 0],
+                locs[0, 1],
+                "0",
+                color="white",
+                fontsize=8,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                zorder=6,
+            )
+            for node, (x_coord, y_coord) in enumerate(customers, start=1):
+                ax.text(
+                    x_coord,
+                    y_coord,
+                    f"{node}\n({node_demands[node]:.2f})",
+                    fontsize=6,
+                    color="#0f3b66",
+                    ha="center",
+                    va="center",
+                    zorder=4,
+                )
+
+        route_lines = LineCollection(
+            [],
+            linewidths=line_width,
+            alpha=0.8,
+            zorder=2,
+            label="配送路线",
+        )
+        ax.add_collection(route_lines)
+        current_marker = ax.scatter(
+            [locs[0, 0]],
+            [locs[0, 1]],
+            c="#ff9800",
+            s=max(110, marker_size * 2.6),
+            marker="*",
+            edgecolors="#9a4d00",
+            linewidths=1,
+            zorder=7,
+            label="当前位置",
+        )
+        direction_arrow = FancyArrowPatch(
+            locs[0],
+            locs[0],
+            arrowstyle="-|>",
+            mutation_scale=11,
+            linewidth=max(1.0, line_width),
+            color="#1565c0",
+            alpha=0.9,
+            zorder=6,
+        )
+        direction_arrow.set_visible(False)
+        ax.add_patch(direction_arrow)
+
+        minimum = locs.min(axis=0)
+        maximum = locs.max(axis=0)
+        span = np.maximum(maximum - minimum, 1e-3)
+        margin = np.maximum(span * 0.06, 0.02)
+        ax.set_xlim(minimum[0] - margin[0], maximum[0] + margin[0])
+        ax.set_ylim(minimum[1] - margin[1], maximum[1] + margin[1])
+        ax.set_aspect("equal", adjustable="box")
+        ax.grid(True, alpha=0.25, linestyle="--")
+        ax.set_xlabel("X 坐标")
+        ax.set_ylabel("Y 坐标")
+        ax.legend(loc="upper right", fontsize=8, framealpha=0.9)
+        title_artist = ax.set_title(title, fontsize=12, fontweight="bold", pad=12)
+        progress_artist = ax.text(
+            0.5,
+            -0.10,
+            "",
+            ha="center",
+            va="top",
+            transform=ax.transAxes,
+            fontsize=9,
+        )
+        fig.tight_layout()
+
+        notify_stride = max(1, len(frame_steps) // 10)
+        for frame_index, step in enumerate(frame_steps):
+            route_lines.set_segments(segments[:step])
+            destinations = route[1:step + 1]
+            route_lines.set_colors(
+                ["#2e7d32" if node == 0 else "#1565c0" for node in destinations]
+            )
+            route_lines.set_linestyles(
+                ["dashed" if node == 0 else "solid" for node in destinations]
+            )
+
+            current_position = locs[route[step]]
+            current_marker.set_offsets(current_position.reshape(1, 2))
+            if step:
+                direction_arrow.set_positions(segments[step - 1, 0], segments[step - 1, 1])
+                direction_arrow.set_color(
+                    "#2e7d32" if route[step] == 0 else "#1565c0"
+                )
+                direction_arrow.set_visible(True)
+            else:
+                direction_arrow.set_visible(False)
+
+            percent = int(round(step * 100 / route_steps))
+            if step == 0:
+                status = "开始配送"
+            elif step == route_steps:
+                status = f"配送完成 | 总距离: {distances[step]:.3f}"
+            else:
+                status = (
+                    f"第 {step}/{route_steps} 步 | "
+                    f"累计距离: {distances[step]:.3f} | "
+                    f"当前载重: {loads[step]:.2f}"
+                )
+            title_artist.set_text(f"{title}\n{status}")
+            progress_artist.set_text(f"进度: {percent}%")
+            frames.append(figure_to_palette_image(fig))
+
+            if progress_callback and (
+                frame_index == 0
+                or frame_index == len(frame_steps) - 1
+                or frame_index % notify_stride == 0
+            ):
+                progress_callback(percent, int(step), route_steps)
+    except Exception:
+        for frame in frames:
+            frame.close()
+        raise
+    finally:
+        plt.close(fig)
+
+    save_palette_gif(frames, save_path, fps)
+    return save_path
 
 
 def create_cvrp_comparison_plot(env, td, actions_untrained, rewards_untrained, 

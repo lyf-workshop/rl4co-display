@@ -9,7 +9,7 @@ class OllamaChatEmbedded {
         this.config = {
             apiUrl: '/api/ollama',   // 走 Flask 代理，绕过 CORS 和 CSP 限制
             defaultModel: 'llama2',
-            storageKey: 'ollama_chat_history_embedded',
+            storageKey: 'ollama_chat_history_embedded:'+document.body.dataset.userId,
             maxHistoryLength: 50
         };
 
@@ -231,10 +231,11 @@ class OllamaChatEmbedded {
         const sel = this.elements.sourceSelect;
         if (!sel || this.state.cloudProviders.length === 0) return;
         // 保留 Ollama 选项，追加云端服务商
+        [...sel.options].filter(option => option.value !== 'ollama').forEach(option => option.remove());
         this.state.cloudProviders.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
-            opt.textContent = `🌐 ${p.name}`;
+            opt.textContent = p.name;
             sel.appendChild(opt);
         });
     }
@@ -368,6 +369,10 @@ class OllamaChatEmbedded {
             return;
         }
 
+        if (!this.state.currentModel) {
+            this.showNotification('请先选择可用模型', 'warning');
+            return;
+        }
         // 添加用户消息
         this.addMessage('user', text);
         this.elements.input.value = '';
@@ -377,11 +382,12 @@ class OllamaChatEmbedded {
         this.showTypingIndicator();
         this.state.isTyping = true;
         this.elements.sendBtn.disabled = true;
+        document.getElementById('assistant-cancel').hidden = false;
 
         try {
             // 构建带 system prompt 的消息列表
             const chatMessages = [
-                { role: 'system', content: this.systemPrompt }
+                { role: 'system', content: this.systemPrompt + '\n当前实际平台规则与实验上下文（以此为准）：\n' + JSON.stringify(window.getAssistantContext?.() || {}) }
             ];
             // 只取最近的对话历史（避免 token 过长）
             const recentMessages = this.state.messages.slice(-20);
@@ -395,25 +401,30 @@ class OllamaChatEmbedded {
                 ? { provider_id: this.state.source, model: this.state.currentModel, messages: chatMessages, stream: true }
                 : { model: this.state.currentModel, messages: chatMessages, stream: true };
 
+            this.abortController = new AbortController();
             const response = await fetch(chatUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(chatBody),
+                signal: this.abortController.signal,
             });
 
             if (!response.ok) {
-                throw new Error(`API错误: ${response.status}`);
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || error.error || `API错误: ${response.status}`);
             }
 
             await this.handleStreamResponse(response);
 
         } catch (error) {
-            console.error('发送消息失败:', error);
             this.hideTypingIndicator();
-            this.addMessage('assistant', `抱歉，发生了错误：${error.message}`);
+            this.showNotification(error.name === 'AbortError' ? '已停止生成，收到的内容已保留。' : '请求失败：'+error.message, error.name === 'AbortError' ? 'info' : 'error');
+            const retry = document.getElementById('assistant-message-retry');
+            if (retry) retry.hidden = false;
         } finally {
             this.state.isTyping = false;
             this.elements.sendBtn.disabled = false;
+            document.getElementById('assistant-cancel').hidden = true;
         }
     }
 
@@ -812,13 +823,14 @@ class OllamaChatEmbedded {
      * 添加消息到界面
      */
     addMessage(role, content, saveToHistory = true) {
-        const emptyState = this.elements.messages.querySelector('.ai-chat-empty');
+        const emptyState = this.elements.messages.querySelector('.ai-chat-empty, .empty-state');
         if (emptyState) {
             emptyState.remove();
         }
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `ai-message ${role}`;
+        messageDiv.dataset.content = content;
         
         const avatar = role === 'user' ? '👤' : '🤖';
         
@@ -827,8 +839,8 @@ class OllamaChatEmbedded {
             <div class="ai-message-content">
                 <div class="ai-message-bubble">${this.formatMessage(content)}</div>
                 <div class="ai-message-actions">
-                    <button class="ai-message-action-btn copy-btn" title="复制">📋 复制</button>
-                    ${role === 'assistant' ? '<button class="ai-message-action-btn regen-btn" title="重新生成">🔄 重新生成</button>' : ''}
+                    <button type="button" class="ai-message-action-btn copy-btn" title="复制">复制</button>
+                    ${role === 'assistant' ? '<button type="button" class="ai-message-action-btn regen-btn" title="重新生成">重新生成</button>' : ''}
                 </div>
             </div>
         `;
@@ -836,7 +848,7 @@ class OllamaChatEmbedded {
         this.elements.messages.appendChild(messageDiv);
 
         const copyBtn = messageDiv.querySelector('.copy-btn');
-        copyBtn.addEventListener('click', () => this.copyMessage(content));
+        copyBtn.addEventListener('click', () => this.copyMessage(messageDiv.dataset.content));
 
         if (role === 'assistant') {
             const regenBtn = messageDiv.querySelector('.regen-btn');
@@ -861,6 +873,7 @@ class OllamaChatEmbedded {
      * 更新消息内容
      */
     updateMessageContent(messageElement, content) {
+        messageElement.dataset.content = content;
         const bubble = messageElement.querySelector('.ai-message-bubble');
         if (bubble) {
             bubble.innerHTML = this.formatMessage(content);
@@ -964,6 +977,7 @@ class OllamaChatEmbedded {
      * 重新生成回复
      */
     async regenerateResponse() {
+        if (this.state.isTyping) return this.showNotification('请先等待或停止当前生成。', 'warning');
         // Remove last assistant message from state and DOM
         if (this.state.messages.length > 0 &&
             this.state.messages[this.state.messages.length - 1].role === 'assistant') {

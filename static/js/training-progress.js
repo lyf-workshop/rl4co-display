@@ -1,275 +1,5 @@
-// ============================================================
-// 全局变量
-// ============================================================
-let eventSource = null;
-let currentSessionId = null;
-let heartbeatTimer = null;
-
-let _prevLoss   = null;
-let _prevReward = null;
-
-// 训练会话持久化工具（localStorage + TTL，2小时过期）
-const SESSION_STORAGE_KEY = 'rl4co_training_session';
-const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2小时
-
-function saveTrainingSession(sessionId) {
-    const data = {
-        session_id: sessionId,
-        saved_at: Date.now()
-    };
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
-}
-
-function loadTrainingSession() {
-    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    try {
-        const data = JSON.parse(raw);
-        const age = Date.now() - (data.saved_at || 0);
-        if (age > SESSION_TTL_MS) {
-            localStorage.removeItem(SESSION_STORAGE_KEY);
-            return null;
-        }
-        return data.session_id;
-    } catch {
-        localStorage.removeItem(SESSION_STORAGE_KEY);
-        return null;
-    }
-}
-
-function clearTrainingSession() {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-}
-
-// 心跳机制：每30秒向服务器报告客户端仍在监控
-function startHeartbeat(sessionId) {
-    stopHeartbeat();
-    heartbeatTimer = setInterval(async () => {
-        try {
-            await fetch(`/api/training_heartbeat/${sessionId}`, { method: 'POST' });
-        } catch (e) {
-            console.warn('心跳发送失败:', e);
-        }
-    }, 30000); // 30秒
-}
-
-function stopHeartbeat() {
-    if (heartbeatTimer) {
-        clearInterval(heartbeatTimer);
-        heartbeatTimer = null;
-    }
-}
-
-// ============================================================
-// 浏览器通知工具（Web Notification API）
-// ============================================================
-function requestNotificationPermission() {
-    if (!('Notification' in window)) {
-        return;
-    }
-    if (Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-}
-
-function sendNotification(title, body, icon = '🎉') {
-    // 始终显示页面内横幅通知（兜底）
-    showInPageBanner(title, body);
-
-    if (!('Notification' in window)) {
-        return;
-    }
-    if (Notification.permission !== 'granted') {
-        // 尝试再次请求权限（用户可能之前未处理弹窗）
-        Notification.requestPermission().then(p => {
-            if (p === 'granted') {
-                _fireNotification(title, body);
-            }
-        });
-        return;
-    }
-    _fireNotification(title, body);
-}
-
-function _fireNotification(title, body) {
-    try {
-        const notification = new Notification(title, {
-            body: body,
-            icon: '/static/favicon.ico',
-            tag: 'rl4co-training',
-            requireInteraction: false,
-            silent: false
-        });
-        notification.onclick = function() {
-            window.focus();
-            notification.close();
-        };
-        setTimeout(() => notification.close(), 5000);
-    } catch (e) {
-        console.warn('[通知] 发送桌面通知失败:', e);
-    }
-}
-
-function showInPageBanner(title, body) {
-    let banner = document.getElementById('inpage-notify-banner');
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'inpage-notify-banner';
-        banner.style.cssText = [
-            'position:fixed', 'top:20px', 'right:20px', 'z-index:99999',
-            'max-width:360px', 'padding:14px 18px', 'border-radius:10px',
-            'background:rgba(30,30,40,0.95)', 'color:#fff',
-            'box-shadow:0 4px 20px rgba(0,0,0,0.4)',
-            'font-size:14px', 'line-height:1.5',
-            'transition:opacity .4s', 'opacity:0', 'pointer-events:none'
-        ].join(';');
-        document.body.appendChild(banner);
-    }
-    banner.innerHTML = `<strong style="font-size:15px">${title}</strong><br><span style="opacity:.85">${body}</span>`;
-    banner.style.opacity = '1';
-    banner.style.pointerEvents = 'auto';
-    clearTimeout(banner._hideTimer);
-    banner._hideTimer = setTimeout(() => {
-        banner.style.opacity = '0';
-        banner.style.pointerEvents = 'none';
-    }, 6000);
-}
-
-// 页面加载时尝试重连上次未完成的训练会话
-async function tryReconnectSession() {
-    const savedId = loadTrainingSession();
-    if (!savedId) return;
-
-    try {
-        const resp = await fetch(`/api/training_status/${savedId}`);
-        if (!resp.ok) {
-            clearTrainingSession();
-            return;
-        }
-        const data = await resp.json();
-        if (!data.success) {
-            clearTrainingSession();
-            return;
-        }
-
-        const status = data.status.status;
-        const statusMsg        = document.getElementById('status-message');
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar      = document.getElementById('progress-bar');
-        const startButton      = document.getElementById('start-button');
-
-        // ── 训练已在后台完成 ──────────────────────────────────────
-        if (status === 'completed') {
-            clearTrainingSession();
-            progressContainer.className = 'progress-container show';
-            progressBar.style.width = '100%';
-            progressBar.textContent = '100%';
-            const pct2 = data.status.progress || 100;
-            const ep2  = data.status.epoch || 0;
-            statusMsg.className = 'status-message show success';
-            statusMsg.innerHTML = `✅ 训练已在后台完成！（Epoch ${ep2}，进度 ${Math.round(pct2)}%）`;
-            addLogEntry(`✅ 训练已在后台完成（Epoch ${ep2}）`);
-
-            // 发送浏览器通知
-            sendNotification('🎉 训练已在后台完成！', `Epoch ${ep2} | 最优 Reward: ${(data.status.best_reward || 0).toFixed(4)}`);
-            return;
-        }
-
-        // ── 训练已在后台被中止 ────────────────────────────────────
-        if (status === 'stopped') {
-            clearTrainingSession();
-            const ep3 = data.status.epoch || 0;
-            progressContainer.className = 'progress-container show';
-            statusMsg.className = 'status-message show';
-            statusMsg.style.cssText += 'background:#fff3cd;color:#856404;border-color:#ffc107;';
-            statusMsg.innerHTML = `■ 训练已在后台被中止（已完成 Epoch ${ep3}）`;
-
-            // 发送浏览器通知
-            sendNotification('■ 训练已中止', `已完成 Epoch ${ep3}`);
-            return;
-        }
-
-        // ── 训练出错 ──────────────────────────────────────────────
-        if (status === 'error') {
-            clearTrainingSession();
-            return;
-        }
-
-        // ── 仍在进行中：running / pausing / paused / stopping ─────
-        if (!['running', 'pausing', 'paused', 'stopping'].includes(status)) {
-            clearTrainingSession();
-            return;
-        }
-
-        currentSessionId = savedId;
-        const trainingControls = document.getElementById('training-controls');
-        const pauseBtn = document.getElementById('pause-btn');
-        const resumeBtn = document.getElementById('resume-btn');
-
-        progressContainer.className = 'progress-container show';
-        trainingControls.style.display = 'flex';
-        startButton.disabled = true;
-        startButton.style.opacity = '0.6';
-        startButton.textContent = '训练进行中...';
-
-        // 恢复进度条数值
-        const pct = data.status.progress || 0;
-        progressBar.style.width = pct + '%';
-        progressBar.textContent = Math.round(pct) + '%';
-        const metricEpoch = document.getElementById('metric-epoch');
-        const metricLoss = document.getElementById('metric-loss');
-        const metricReward = document.getElementById('metric-reward');
-        if (metricEpoch) metricEpoch.textContent = `${data.status.epoch || 0}/...`;
-        if (metricLoss)  metricLoss.textContent  = (data.status.loss  || 0).toFixed(4);
-        if (metricReward) metricReward.textContent = (data.status.reward || 0).toFixed(4);
-
-        if (status === 'paused') {
-            progressBar.classList.add('paused');
-            pauseBtn.style.display = 'none';
-            resumeBtn.style.display = '';
-            statusMsg.className = 'status-message show';
-            statusMsg.innerHTML = `⏸ 训练已在后台暂停，可点击"继续"恢复`;
-            addLogEntry(`⏸ 已重连暂停中的训练会话 ${savedId.substring(0, 8)}...`);
-            // 暂停状态下也启动心跳（表明用户仍在关注）
-            startHeartbeat(savedId);
-        } else if (status === 'stopping') {
-            // 中止中：禁用所有控制按钮，等待 stopped 事件
-            pauseBtn.style.display = 'none';
-            resumeBtn.style.display = 'none';
-            const stopBtn = document.getElementById('stop-btn');
-            stopBtn.disabled = true;
-            stopBtn.textContent = '■ 中止中...';
-            statusMsg.className = 'status-message show';
-            statusMsg.innerHTML = `■ 训练正在后台中止，请稍候...`;
-            listenToTrainingProgress(savedId); // 内部会启动心跳
-        } else {
-            // running / pausing：后台训练中，自动重连 SSE
-            pauseBtn.style.display = '';
-            resumeBtn.style.display = 'none';
-            statusMsg.className = 'status-message show success';
-            statusMsg.innerHTML = `▶ 训练正在后台运行，已自动重连（会话 ${savedId.substring(0, 8)}...）`;
-            addLogEntry(`▶ 训练一直在后台运行，已自动重连`);
-            listenToTrainingProgress(savedId); // 内部会启动心跳
-        }
-    } catch (e) {
-        // 网络异常，静默忽略
-        clearTrainingSession();
-    }
-}
-
-// 开始训练功能
-function updateResumeHint() {
-    const checked = document.getElementById('resume-checkbox').checked;
-    const hint = document.getElementById('resume-hint');
-    if (checked) {
-        hint.textContent = '已勾选：从上次保存的检查点继续训练（相同问题+模型）';
-    } else {
-        hint.textContent = '未勾选：每次全新训练（默认，推荐）';
-    }
-}
-
-async function startTraining() {
-    // 获取所有配置参数
+// The original request fields remain here so additions to problem/policy controls stay reviewable.
+function buildTrainingConfig() {
     const problem = document.getElementById('problem-select').value;
     const model = document.getElementById('model-select').value;
     const algorithm = document.getElementById('algorithm-select').value;
@@ -277,30 +7,6 @@ async function startTraining() {
     const epochs = document.getElementById('epochs').value;
     const batchSize = document.getElementById('batch-size').value;
     const learningRate = document.getElementById('learning-rate').value;
-
-    const statusMsg = document.getElementById('status-message');
-    const startButton = document.getElementById('start-button');
-    const progressContainer = document.getElementById('progress-container');
-    const resultsPanel = document.getElementById('results-panel');
-
-    if (
-        problem === 'tsp'
-        && (!Number.isInteger(numLoc) || numLoc < 5 || numLoc > 1000)
-    ) {
-        statusMsg.className = 'status-message show error';
-        statusMsg.textContent = '❌ TSP节点数量必须是5到1000之间的整数';
-        return;
-    }
-
-    // 禁用开始按钮
-    startButton.disabled = true;
-    startButton.style.opacity = '0.6';
-    startButton.textContent = '⏳ 训练中...';
-
-    // 隐藏之前的结果
-    resultsPanel.className = 'results-panel';
-
-    // 准备训练配置
     const config = {
         problem: problem,
         model: model,
@@ -376,8 +82,7 @@ async function startTraining() {
         if (penaltyFactor) config.penalty_factor = parseFloat(penaltyFactor.value);
         if (prizeRequired) config.prize_required = parseFloat(prizeRequired.value);
 
-        // PCTSP 强制使用 Attention Model
-        config.model = 'attention';
+
     }
 
     // 添加SPCTSP特有参数
@@ -390,22 +95,7 @@ async function startTraining() {
         if (spctspPenaltyFactor) config.penalty_factor = parseFloat(spctspPenaltyFactor.value);
         if (spctspPrizeRequired) config.prize_required = parseFloat(spctspPrizeRequired.value);
 
-        // SPCTSP 强制使用 Attention Model
-        config.model = 'attention';
-    }
 
-    // 添加SPCTSP特有参数
-    if (problem === 'spctsp') {
-        const spctspNumLoc = document.getElementById('spctsp-num-loc');
-        const spctspPenaltyFactor = document.getElementById('spctsp-penalty-factor');
-        const spctspPrizeRequired = document.getElementById('spctsp-prize-required');
-
-        if (spctspNumLoc) config.num_loc = parseInt(spctspNumLoc.value);
-        if (spctspPenaltyFactor) config.penalty_factor = parseFloat(spctspPenaltyFactor.value);
-        if (spctspPrizeRequired) config.prize_required = parseFloat(spctspPrizeRequired.value);
-
-        // SPCTSP 强制使用 Attention Model
-        config.model = 'attention';
     }
 
     // 添加FFSP特有参数
@@ -426,6 +116,24 @@ async function startTraining() {
 
         // FFSP 强制使用 MatNet
         config.model = 'matnet';
+    }
+
+    // 芯片全局布线首版：Attention 网络排序 + REINFORCE + A* 路由
+    if (problem === 'chip_routing') {
+        config.grid_width = parseInt(document.getElementById('chip-grid-width').value);
+        config.grid_height = parseInt(document.getElementById('chip-grid-height').value);
+        config.num_nets = parseInt(document.getElementById('chip-num-nets').value);
+        config.num_loc = config.num_nets;
+        config.obstacle_ratio = parseFloat(
+            document.getElementById('chip-obstacle-ratio').value
+        );
+        config.edge_capacity = parseInt(
+            document.getElementById('chip-edge-capacity').value
+        );
+        config.model = 'attention';
+        config.algorithm = 'reinforce';
+        config.dataset_mode = 'random';
+        config.dataset_id = null;
     }
 
     // 添加POMO特有参数
@@ -466,514 +174,71 @@ async function startTraining() {
         if (nIterTest) config.n_iterations_test = parseInt(nIterTest.value);
     }
 
-    try {
-        // 发送训练请求到后端
-        const response = await fetch('/api/start_training', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            // 显示成功消息
-            statusMsg.className = 'status-message show success';
-            statusMsg.innerHTML = `✅ 训练已启动！会话 ID: ${result.session_id.substring(0, 8)}...`;
-
-            // 显示进度容器
-            progressContainer.className = 'progress-container show';
-
-            // 显示训练控制按钮（暂停/继续）
-            const trainingControls = document.getElementById('training-controls');
-            const pauseBtn = document.getElementById('pause-btn');
-            const resumeBtn = document.getElementById('resume-btn');
-            trainingControls.style.display = 'flex';
-            pauseBtn.style.display = '';
-            resumeBtn.style.display = 'none';
-            const stopBtn = document.getElementById('stop-btn');
-            stopBtn.disabled = false;
-            stopBtn.textContent = '■ 中止';
-
-            // 持久化 session_id（localStorage + TTL），关闭浏览器后仍可重连
-            saveTrainingSession(result.session_id);
-
-            // 开始监听训练进度
-            listenToTrainingProgress(result.session_id);
-
-        } else {
-            throw new Error(result.message || '启动训练失败');
-        }
-
-    } catch (error) {
-        statusMsg.className = 'status-message show error';
-        statusMsg.innerHTML = `❌ 错误: ${error.message}`;
-
-        // 重新启用按钮
-        startButton.disabled = false;
-        startButton.style.opacity = '1';
-        startButton.textContent = '🚀 开始训练';
-    }
+    config.train_data_size = Number(document.getElementById('train-data-size').value);
+    config.val_data_size = Number(document.getElementById('val-data-size').value);
+    if (problem === 'chip_routing') config.seed = Number(document.getElementById('random-seed').value);
+    return config;
 }
 
-// 监听训练进度（使用 Server-Sent Events）
-function listenToTrainingProgress(sessionId) {
-    currentSessionId = sessionId;
-
-    // 关闭之前的连接和心跳
-    if (eventSource) {
-        eventSource.close();
+function getTrainingAlgorithmDisplayName(value) { return String(value || '').toLowerCase() === 'a2c' ? 'A3C' : String(value || '—').toUpperCase(); }
+function restoreTrainingForm(config) {
+    const manager = compatibilityManager;
+    for (const [key,id] of [['problem','problem-select'],['model','model-select'],['algorithm','algorithm-select']]) {
+        const select = document.getElementById(id);
+        if (config[key] != null && [...select.options].some(option => option.value === config[key])) select.value = config[key];
     }
-    stopHeartbeat();
-
-    // 创建新的 SSE 连接
-    eventSource = new EventSource(`/api/training_progress/${sessionId}`);
-
-    // 启动心跳定时器（每30秒向服务器报告客户端在线）
-    startHeartbeat(sessionId);
-
-    // 重置趋势追踪
-    _prevLoss   = null;
-    _prevReward = null;
-
-    // 清空日志
-    const trainingLog = document.getElementById('training-log');
-    trainingLog.innerHTML = '';
-
-    eventSource.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-
-        switch(data.type) {
-            case 'progress':
-                updateProgress(data);
-                break;
-            case 'info':
-                addLogEntry(data.message);
-                break;
-            case 'plot':
-                updateTrainingCurve(data.plot_url, data.message);
-                addLogEntry('📊 ' + data.message);
-                break;
-            case 'complete':
-                handleTrainingComplete(data);
-                break;
-            case 'error':
-                handleTrainingError(data);
-                break;
-            case 'paused':
-                handleTrainingPaused(data);
-                break;
-            case 'resumed':
-                handleTrainingResumed(data);
-                break;
-            case 'stopped':
-                handleTrainingStopped(data);
-                break;
-            case 'warning':
-                addLogEntry('⚠️ ' + data.message);
-                break;
-            case 'heartbeat':
-                // 心跳消息，不做处理
-                break;
-        }
-    };
-
-    eventSource.onerror = function(error) {
-        console.error('SSE Error:', error);
-        eventSource.close();
-    };
-}
-
-// 更新进度显示
-function updateProgress(data) {
-    const progressBar  = document.getElementById('progress-bar');
-    const metricEpoch  = document.getElementById('metric-epoch');
-    const metricLoss   = document.getElementById('metric-loss');
-    const metricReward = document.getElementById('metric-reward');
-    const lossTrend    = document.getElementById('metric-loss-trend');
-    const rewardTrend  = document.getElementById('metric-reward-trend');
-
-    // 更新进度条
-    progressBar.style.width = data.progress + '%';
-    progressBar.textContent = Math.round(data.progress) + '%';
-
-    // 更新指标数值
-    metricEpoch.textContent  = `${data.epoch}/${data.total_epochs}`;
-    metricLoss.textContent   = data.loss.toFixed(4);
-    metricReward.textContent = data.reward.toFixed(4);
-
-    // 趋势箭头（loss 越小越好，reward 越大越好）
-    const THRESHOLD = 0.0005;
-    if (lossTrend && _prevLoss !== null) {
-        const d = data.loss - _prevLoss;
-        if (d < -THRESHOLD)      { lossTrend.textContent = ' ↓'; lossTrend.className = 'trend-indicator trend-good'; }
-        else if (d > THRESHOLD)  { lossTrend.textContent = ' ↑'; lossTrend.className = 'trend-indicator trend-bad'; }
-        else                     { lossTrend.textContent = ' →'; lossTrend.className = 'trend-indicator trend-neutral'; }
+    manager.currentProblem = document.getElementById('problem-select').value;
+    manager.currentPolicy = document.getElementById('model-select').value;
+    manager.currentAlgorithm = document.getElementById('algorithm-select').value;
+    updateDatasetSection(manager.currentProblem); manager.showProblemSpecificParams(); manager.showPolicySpecificParams(); manager.updatePolicyDescription(); manager.updateAlgorithmDescription(); manager.updateAvailableOptions();
+    for (const input of document.getElementById('training-form').querySelectorAll('input[name],select[name]')) {
+        if (input.name === 'gpu_select' || ['problem','model','algorithm'].includes(input.name)) continue;
+        const value = config[input.name === 'force_start_depot' ? 'force_start_at_depot' : input.name];
+        if (value == null) continue;
+        if (input.type === 'checkbox') input.checked = Boolean(value); else input.value = String(value);
     }
-    if (rewardTrend && _prevReward !== null) {
-        const d = data.reward - _prevReward;
-        if (d > THRESHOLD)       { rewardTrend.textContent = ' ↑'; rewardTrend.className = 'trend-indicator trend-good'; }
-        else if (d < -THRESHOLD) { rewardTrend.textContent = ' ↓'; rewardTrend.className = 'trend-indicator trend-bad'; }
-        else                     { rewardTrend.textContent = ' →'; rewardTrend.className = 'trend-indicator trend-neutral'; }
+    window.uploadedDatasetId = config.dataset_id || null;
+    toggleDatasetUpload(); updateResumeHint(); window.selectedGpuId = config.gpu_id ?? null;
+    if (config.dataset_id) {document.getElementById('dataset-info').style.display = 'block'; document.getElementById('dataset-filename').textContent = '数据集 '+config.dataset_id; document.getElementById('dataset-size').textContent = config.num_loc+' 个节点'; document.getElementById('dataset-range').textContent = '当前 Session 的原数据集';}
+    manager.validateConfiguration();
+}
+function renderTrainingResults(results = {}, context = {}) {
+    const target = document.getElementById('results-content'); target.replaceChildren();
+    const metrics = document.createElement('div'); metrics.className = 'metric-grid';
+    const add = (label, value) => { const card = document.createElement('div'); card.className = 'metric-card'; const title = document.createElement('div'); title.className = 'metric-label'; title.textContent = label; const content = document.createElement('div'); content.className = 'metric-value'; content.textContent = value; card.append(title, content); metrics.append(card); };
+    add('Best Reward', Studio.number(results.best_reward));
+    add('Final Loss', Studio.number(results.final_loss));
+    add('Final Reward', Studio.number(results.final_reward));
+    if (context.started_at && context.finished_at) add('训练耗时', formatTrainingTime(context.finished_at-context.started_at));
+    if (results.best_epoch != null) add('Best Epoch', results.best_epoch);
+    target.append(metrics);
+    const metadata = document.createElement('p'); metadata.className = 'muted data'; metadata.textContent = [results.problem || context.config?.problem, results.model || context.config?.model, getTrainingAlgorithmDisplayName(results.strategy || context.config?.algorithm)].filter(Boolean).join(' · '); target.append(metadata);
+    if (results.routing_metrics) {
+        const section = document.createElement('section'); section.className = 'card'; const h = document.createElement('h2'); h.textContent = '芯片布线质量'; section.append(h);
+        for (const [key,label] of [['baseline_objective','训练前目标值'],['trained_objective','训练后目标值'],['objective_improvement','目标值改善'],['wirelength','平均线长'],['overflow','拥塞溢出'],['routed_ratio','连通率']]) {
+            if (results.routing_metrics[key] == null) continue;
+            const p = document.createElement('p'); p.textContent = label+'：'+Studio.number(results.routing_metrics[key]); section.append(p);
+        } target.append(section);
     }
-
-    _prevLoss   = data.loss;
-    _prevReward = data.reward;
-}
-
-// 更新训练曲线图
-function updateTrainingCurve(plotUrl, message) {
-    const container = document.getElementById('training-curves-container');
-    const img = document.getElementById('training-curve-img');
-    const info = document.getElementById('curve-update-info');
-
-    // 显示曲线容器
-    container.style.display = 'block';
-
-    // 添加时间戳防止浏览器缓存
-    const timestamp = new Date().getTime();
-    img.src = plotUrl + '?t=' + timestamp;
-
-    // 更新提示信息
-    info.textContent = message;
-
-    // 添加淡入效果
-    img.style.opacity = '0.5';
-    img.onload = function() {
-        img.style.transition = 'opacity 0.3s';
-        img.style.opacity = '1';
-    };
-}
-
-// 暂停训练
-async function pauseTraining() {
-    if (!currentSessionId) return;
-    const pauseBtn = document.getElementById('pause-btn');
-    pauseBtn.disabled = true;
-    pauseBtn.textContent = '⏸ 暂停中...';
-    try {
-        const resp = await fetch(`/api/pause_training/${currentSessionId}`, { method: 'POST' });
-        const data = await resp.json();
-        if (!data.success) {
-            addLogEntry('⚠️ 暂停失败: ' + data.message);
-            pauseBtn.disabled = false;
-            pauseBtn.textContent = '⏸ 暂停';
-        }
-        // 成功时等待后端发来 paused SSE 事件再切换 UI
-    } catch (e) {
-        addLogEntry('⚠️ 暂停请求失败: ' + e.message);
-        pauseBtn.disabled = false;
-        pauseBtn.textContent = '⏸ 暂停';
+    const artifacts = document.createElement('div'); artifacts.className = 'artifact-grid'; target.append(artifacts);
+    const images = [
+        ...(results.training_curve ? [{path:results.training_curve,label:'训练曲线'}] : []),
+        ...(results.plot_paths || []).map((path,i) => ({path,label:'路径结果 / 训练前后对比 '+(i+1)})),
+        ...(results.animation_paths || []).map((path,i) => ({path,label:'动态路线 '+(i+1)})),
+        ...(results.analysis_paths || []).map((path,i) => ({path,label:'分析结果 '+(i+1)}))
+    ];
+    for (const {path,label} of images) {
+        if (!safeArtifactPath(path)) continue;
+        const card = document.createElement('section'); card.className = 'card'; const h = document.createElement('h3'); h.textContent = label;
+        const img = document.createElement('img'); img.src = path; img.alt = label; img.loading = 'lazy';
+        img.onerror = () => { img.replaceWith(Object.assign(document.createElement('p'), {textContent:'产物暂不可读，可从文件与数据重试。',className:'banner banner-warning'})); };
+        const actions = document.createElement('div'); actions.className = 'actions';
+        for (const [text,download] of [['查看',false],['下载',true]]) { const link = document.createElement('a'); link.className = 'btn btn-small'; link.href = path; link.textContent = text; if (download) link.download = ''; else {link.target = '_blank';link.rel = 'noopener';} actions.append(link); }
+        card.append(h,img,actions); artifacts.append(card);
     }
-}
-
-// 继续训练
-async function resumeTraining() {
-    if (!currentSessionId) return;
-    const resumeBtn = document.getElementById('resume-btn');
-    resumeBtn.disabled = true;
-    resumeBtn.textContent = '▶ 恢复中...';
-    try {
-        const resp = await fetch(`/api/resume_training/${currentSessionId}`, { method: 'POST' });
-        const data = await resp.json();
-        if (data.success) {
-            // 若 SSE 连接不存在（页面曾跳转离开），立即重建，
-            // 否则沿用现有连接——resumed 事件到达后 handleTrainingResumed 负责切换 UI
-            if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
-                listenToTrainingProgress(currentSessionId);
-            }
-        } else {
-            addLogEntry('⚠️ 恢复失败: ' + data.message);
-            resumeBtn.disabled = false;
-            resumeBtn.textContent = '▶ 继续';
-        }
-    } catch (e) {
-        addLogEntry('⚠️ 恢复请求失败: ' + e.message);
-        resumeBtn.disabled = false;
-        resumeBtn.textContent = '▶ 继续';
-    }
-}
-
-// 处理训练暂停事件
-function handleTrainingPaused(data) {
-    const progressBar = document.getElementById('progress-bar');
-    const pauseBtn = document.getElementById('pause-btn');
-    const resumeBtn = document.getElementById('resume-btn');
-
-    // 进度条变为橙色暂停状态
-    progressBar.classList.add('paused');
-
-    // 切换按钮：隐藏暂停，显示继续
-    pauseBtn.style.display = 'none';
-    pauseBtn.disabled = false;
-    pauseBtn.textContent = '⏸ 暂停';
-    resumeBtn.style.display = '';
-    resumeBtn.disabled = false;
-    resumeBtn.textContent = '▶ 继续';
-
-    addLogEntry('⏸ ' + data.message);
-}
-
-// 处理训练恢复事件
-function handleTrainingResumed(data) {
-    const progressBar = document.getElementById('progress-bar');
-    const pauseBtn = document.getElementById('pause-btn');
-    const resumeBtn = document.getElementById('resume-btn');
-
-    // 进度条恢复正常颜色
-    progressBar.classList.remove('paused');
-
-    // 切换按钮：显示暂停，隐藏继续
-    resumeBtn.style.display = 'none';
-    resumeBtn.disabled = false;
-    resumeBtn.textContent = '▶ 继续';
-    pauseBtn.style.display = '';
-    pauseBtn.disabled = false;
-    pauseBtn.textContent = '⏸ 暂停';
-
-    addLogEntry('▶ ' + data.message);
-}
-
-// 中止训练
-async function stopTraining() {
-    if (!currentSessionId) return;
-    if (!confirm('确定要中止当前训练吗？\n中止后将在本轮 Epoch 结束时停止，已完成的进度不会丢失。')) return;
-    const stopBtn = document.getElementById('stop-btn');
-    stopBtn.disabled = true;
-    stopBtn.textContent = '■ 中止中...';
-    try {
-        const resp = await fetch(`/api/stop_training/${currentSessionId}`, { method: 'POST' });
-        const data = await resp.json();
-        if (!data.success) {
-            addLogEntry('⚠️ 中止失败: ' + data.message);
-            stopBtn.disabled = false;
-            stopBtn.textContent = '■ 中止';
-        }
-        // 成功时等待后端发来 stopped SSE 事件再更新 UI
-    } catch (e) {
-        addLogEntry('⚠️ 中止请求失败: ' + e.message);
-        stopBtn.disabled = false;
-        stopBtn.textContent = '■ 中止';
-    }
-}
-
-// 处理训练中止事件
-function handleTrainingStopped(data) {
-    const statusMsg   = document.getElementById('status-message');
-    const startButton = document.getElementById('start-button');
-    const progressBar = document.getElementById('progress-bar');
-
-    if (eventSource) eventSource.close();
-    stopHeartbeat();
-
-    document.getElementById('training-controls').style.display = 'none';
-    progressBar.classList.remove('paused');
-    currentSessionId = null;
-    clearTrainingSession();
-
-    addLogEntry('■ ' + data.message);
-
-    startButton.disabled = false;
-    startButton.style.opacity = '1';
-    startButton.textContent = '🚀 开始训练';
-
-    statusMsg.className = 'status-message show';
-    statusMsg.style.background = '#fff3cd';
-    statusMsg.style.color = '#856404';
-    statusMsg.style.borderColor = '#ffc107';
-    statusMsg.innerHTML = `■ 训练已中止（已完成 Epoch ${data.epoch || 0}，进度 ${Math.round(data.progress || 0)}%）`;
-
-    // 发送浏览器通知
-    sendNotification('■ 训练已中止', `已完成 Epoch ${data.epoch || 0}，进度 ${Math.round(data.progress || 0)}%`);
-}
-
-// 添加日志条目
-function addLogEntry(message) {
-    const trainingLog = document.getElementById('training-log');
-    const logEntry = document.createElement('div');
-    logEntry.className = 'log-entry';
-
-    const timestamp = new Date().toLocaleTimeString();
-    logEntry.textContent = `[${timestamp}] ${message}`;
-
-    trainingLog.appendChild(logEntry);
-
-    // 自动滚动到底部
-    trainingLog.scrollTop = trainingLog.scrollHeight;
-}
-
-// 处理训练完成
-function handleTrainingComplete(data) {
-    const statusMsg = document.getElementById('status-message');
-    const startButton = document.getElementById('start-button');
-    const resultsPanel = document.getElementById('results-panel');
-    const resultsContent = document.getElementById('results-content');
-
-    // 关闭 SSE 连接
-    if (eventSource) {
-        eventSource.close();
-    }
-    stopHeartbeat();
-
-    // 隐藏训练控制按钮，清理暂停状态
-    document.getElementById('training-controls').style.display = 'none';
-    document.getElementById('progress-bar').classList.remove('paused');
-    currentSessionId = null;
-    clearTrainingSession();
-
-    // 显示完成消息
-    addLogEntry('✅ ' + data.message);
-
-    // 重新启用按钮
-    startButton.disabled = false;
-    startButton.style.opacity = '1';
-    startButton.textContent = '🚀 开始训练';
-
-    // 显示训练结果
-    const results = data.results;
-    // 安全格式化数值：将 null/undefined/非数字 统一转为 0 再格式化
-    const fmt = (v) => (typeof v === 'number' && isFinite(v) ? v : parseFloat(v) || 0).toFixed(4);
-    let resultsHTML = `
-        <div class="result-item">
-            <div class="result-label">模型</div>
-            <div class="result-value">${(results.model || '').toUpperCase()}</div>
-        </div>
-        <div class="result-item">
-            <div class="result-label">问题类型</div>
-            <div class="result-value">${(results.problem || '').toUpperCase()}</div>
-        </div>
-        <div class="result-item">
-            <div class="result-label">训练策略</div>
-            <div class="result-value">${(results.strategy || '').toUpperCase()}</div>
-        </div>
-        <div class="result-item">
-            <div class="result-label">训练轮数</div>
-            <div class="result-value">${results.total_epochs ?? '-'}</div>
-        </div>
-        <div class="result-item">
-            <div class="result-label">最终 Loss</div>
-            <div class="result-value">${fmt(results.final_loss)}</div>
-        </div>
-        <div class="result-item">
-            <div class="result-label">最终 Reward</div>
-            <div class="result-value">${fmt(results.final_reward)}</div>
-        </div>
-        <div class="result-item" style="grid-column: 1 / -1;">
-            <div class="result-label">最佳 Reward</div>
-            <div class="result-value" style="font-size: 2rem;">🏆 ${fmt(results.best_reward)}</div>
-        </div>
-    `;
-
-    // 如果有训练曲线，显示训练曲线
-    if (results.training_curve) {
-        resultsHTML += `
-            <div style="grid-column: 1 / -1; margin-top: 1rem;">
-                <div class="result-label" style="margin-bottom: 1rem;">📈 训练曲线</div>
-                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 12px;">
-                    <img src="${results.training_curve}?t=${new Date().getTime()}"
-                         style="width: 100%; border-radius: 8px; background: white;"
-                         alt="训练曲线">
-                    <p style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.9; text-align: center;">
-                        📊 Loss 和 Reward 随训练轮次的变化趋势
-                    </p>
-                </div>
-            </div>
-        `;
-    }
-
-    // 如果有可视化图片，添加图片展示
-    if (results.plot_paths && results.plot_paths.length > 0) {
-        resultsHTML += '<div style="grid-column: 1 / -1; margin-top: 1rem;">';
-        resultsHTML += '<div class="result-label" style="margin-bottom: 1rem;">📊 路径可视化对比</div>';
-        resultsHTML += '<div style="display: grid; gap: 1.5rem;">';
-        results.plot_paths.forEach((path, index) => {
-            resultsHTML += `
-                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 12px;">
-                    <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">问题 ${index + 1} - 静态对比图</h4>
-                    <img src="${path}" style="width: 100%; border-radius: 8px; margin-bottom: 1rem;" alt="路径对比图 ${index + 1}">
-
-                    ${results.animation_paths && results.animation_paths[index] ? `
-                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255,255,255,0.2);">
-                            <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">🎬 动态路线生成过程</h4>
-                            <img src="${results.animation_paths[index]}" style="width: 100%; border-radius: 8px; background: white;" alt="动态路线图 ${index + 1}">
-                            <p style="margin-top: 0.5rem; font-size: 0.9rem; opacity: 0.9; text-align: center;">
-                                ⏱️ 动画展示路线逐步构建过程和成本变化
-                            </p>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        });
-        resultsHTML += '</div></div>';
-    }
-
-    // SDVRP 会额外返回分割配送分析图，单独展示以免被静态对比图索引吞掉。
-    if (results.analysis_paths && results.analysis_paths.length > 0) {
-        resultsHTML += '<div style="grid-column: 1 / -1; margin-top: 1rem;">';
-        resultsHTML += '<div class="result-label" style="margin-bottom: 1rem;">分割配送分析</div>';
-        resultsHTML += '<div style="display: grid; gap: 1.5rem;">';
-        results.analysis_paths.forEach((path, index) => {
-            resultsHTML += `
-                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 12px;">
-                    <h4 style="margin-bottom: 1rem; font-size: 1.1rem;">问题 ${index + 1} - 分割配送详情</h4>
-                    <img src="${path}" style="width: 100%; border-radius: 8px; background: white;" alt="分割配送分析图 ${index + 1}">
-                </div>
-            `;
-        });
-        resultsHTML += '</div></div>';
-    }
-    // 如果有 checkpoint 路径，显示
     if (results.checkpoint_path) {
-        resultsHTML += `
-            <div class="result-item" style="grid-column: 1 / -1;">
-                <div class="result-label">检查点已保存</div>
-                <div class="result-value" style="font-size: 0.9rem; word-break: break-all;">${results.checkpoint_path}</div>
-            </div>
-        `;
+        const name = String(results.checkpoint_path).split(/[\\/]/).at(-1); const link = document.createElement('a'); link.className = 'btn'; link.href = '/api/download_checkpoint/'+encodeURIComponent(name); link.textContent = '下载 Checkpoint · '+name; target.append(link);
     }
-
-    resultsContent.innerHTML = resultsHTML;
-    resultsPanel.className = 'results-panel show';
-
-    // 更新状态消息
-    statusMsg.className = 'status-message show success';
-    statusMsg.innerHTML = '✅ 训练完成！请查看下方结果详情。';
-
-    // 发送浏览器通知（复用上方已声明的 results 变量）
-    const notifyBody = `${(results.problem || '').toUpperCase()}-${(results.model || '').toUpperCase()} | 最优 Reward: ${(results.best_reward || 0).toFixed(4)}`;
-    sendNotification('🎉 训练完成！', notifyBody);
+    if (!images.length && !results.checkpoint_path) { const empty = document.createElement('div'); Studio.state(empty, 'empty', context.mode === 'simulation' ? '模拟训练未生成路径图或 Checkpoint。' : '当前响应未包含可下载产物，可从文件与数据查看已保存文件。'); target.append(empty); }
 }
-
-// 处理训练错误
-function handleTrainingError(data) {
-    const statusMsg = document.getElementById('status-message');
-    const startButton = document.getElementById('start-button');
-
-    // 关闭 SSE 连接
-    if (eventSource) {
-        eventSource.close();
-    }
-    stopHeartbeat();
-
-    // 隐藏训练控制按钮，清理暂停状态
-    document.getElementById('training-controls').style.display = 'none';
-    document.getElementById('progress-bar').classList.remove('paused');
-    currentSessionId = null;
-    clearTrainingSession();
-
-    // 显示错误消息
-    addLogEntry('❌ ' + data.message);
-
-    // 重新启用按钮
-    startButton.disabled = false;
-    startButton.style.opacity = '1';
-    startButton.textContent = '🚀 开始训练';
-
-    statusMsg.className = 'status-message show error';
-    statusMsg.innerHTML = '❌ 训练出错: ' + data.message;
-
-    // 发送浏览器通知
-    sendNotification('❌ 训练出错', data.message);
-}
+function safeArtifactPath(path) { try { const url = new URL(path, location.origin); return url.origin === location.origin && url.pathname.startsWith('/static/model_plots/'); } catch { return false; } }

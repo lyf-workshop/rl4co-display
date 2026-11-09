@@ -1,19 +1,45 @@
+{% from 'includes/icons.html' import icon %}
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}RL4CO 平台 | 启元实验室{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    <link rel="stylesheet" href="/static/css/base.css">
-    {% block head %}{% endblock %}
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}RL4CO Studio · 启元实验室{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/images/studio-icon.svg">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
 </head>
-<body>
-    {% block nav %}
-        {% include "includes/navbar.html" %}
+<body data-page="{{ active_page|default('auth') }}" data-user-id="{{ session.get('user_id', '') }}">
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  {% block nav %}{% include 'includes/navbar.html' %}{% endblock %}
+  <div class="{% block frame_class %}app-frame{% endblock %}">
+    {% block header %}
+    <header class="app-header">
+      <div class="actions"><button type="button" class="btn btn-icon menu-toggle" aria-label="打开导航" aria-expanded="false">{{ icon('menu') }}</button><span class="header-caption">QIYUAN LAB / 强化学习组合优化</span></div>
+      <div class="header-actions">
+        {% if active_page == 'home' %}<button type="button" class="btn btn-small" data-open-assistant>{{ icon('spark') }} AI 助手</button>{% endif %}
+        <a class="user-chip" href="{{ url_for('pages.profile') }}"><span class="avatar">{{ session.get('username', 'U')[:1]|upper }}</span><span>{{ session.get('username', '我的账户') }}</span></a>
+      </div>
+    </header>
     {% endblock %}
-    {% block content %}{% endblock %}
-    <script src="/static/js/navigation.js"></script>
-    {% block scripts %}{% endblock %}
+    <main id="main-content" class="{% block main_class %}app-content{% endblock %}">
+      {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<p class="banner" role="status">{{ message }}</p>{% endfor %}{% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+  <div id="modal-root" class="modal-overlay" hidden>
+    <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" tabindex="-1">
+      <h2 id="modal-title"></h2><p id="modal-description" class="muted"></p>
+      <div id="modal-error" class="banner banner-error modal-error" role="alert" hidden></div>
+      <div class="modal-actions"><button type="button" class="btn" id="modal-cancel">取消</button><button type="button" class="btn btn-danger" id="modal-submit">确认</button></div>
+    </section>
+  </div>
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app-shell.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

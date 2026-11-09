@@ -212,4 +212,7 @@ data/logs/
 *_TODO.md
 docs/competition/作品报告_人工智能实践赛_初稿.md
 docs/competition/作品报告_人工智能实践赛_初稿.md
+
+# 本地基础设施运维记录（包含服务器地址、端口和设备 UUID）
+docs/deployment/*.local.md
 AGENTS.md

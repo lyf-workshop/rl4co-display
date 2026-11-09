@@ -1,17 +1,9 @@
-<header class="header">
-    <nav class="nav">
-        <div class="logo-section">
-            <a href="/" class="lab-logo-link" title="启元实验室 · QIYUAN LAB">
-                <img src="/static/images/qiyuan-lab-logo.png" alt="启元实验室 QIYUAN LAB" class="lab-logo">
-            </a>
-            <div class="university-badge">RL4CO 平台</div>
-        </div>
-        <div class="nav-links">
-            <a href="/" {% if active_page == 'home' %}class="active"{% endif %}>🏠 训练首页</a>
-            <a href="/benchmark" {% if active_page == 'benchmark' %}class="active"{% endif %}>📊 算法对比</a>
-            <a href="/model_info" {% if active_page == 'model_info' %}class="active"{% endif %}>📚 模型知识库</a>
-            <a href="/file_manager" {% if active_page == 'file_manager' %}class="active"{% endif %}>🗂️ 文件管理</a>
-            <a href="/profile" {% if active_page == 'profile' %}class="active"{% endif %}>👤 我的账户</a>
-        </div>
-    </nav>
-</header>
+{% set navigation = [('home', 'pages.index', 'experiment', '实验工作台', '实验'), ('benchmark', 'pages.benchmark', 'compare', '算法对比', '对比'), ('file_manager', 'pages.file_manager', 'files', '文件与数据', '文件'), ('model_info', 'pages.model_info_list', 'models', '模型知识库', '模型'), ('profile', 'pages.profile', 'user', '我的账户', '我的')] %}
+<div class="sidebar-overlay" hidden></div>
+<aside class="app-sidebar" id="app-sidebar" aria-label="主导航" tabindex="-1">
+  <a class="brand" href="{{ url_for('pages.index') }}"><span class="brand-mark">{{ icon('experiment') }}</span><span class="brand-title">RL4CO Studio</span></a>
+  <div class="brand-caption">QIYUAN LAB · 实验工作台</div>
+  <nav class="sidebar-nav">{% for key, endpoint, symbol, label, short in navigation %}<a href="{{ url_for(endpoint) }}" {% if active_page == key %}class="active" aria-current="page"{% endif %}>{{ icon(symbol) }}<span>{{ label }}</span></a>{% endfor %}</nav>
+  <div class="sidebar-bottom"><div class="sidebar-gpu" aria-live="polite"><strong id="shell-gpu-name">计算资源</strong><span id="shell-gpu-status">正在读取状态…</span></div><span>RL4CO · 启元实验室</span></div>
+</aside>
+<nav class="mobile-nav" aria-label="移动端主导航">{% for key, endpoint, symbol, label, short in navigation %}<a href="{{ url_for(endpoint) }}" {% if active_page == key %}class="active" aria-current="page"{% endif %}>{{ icon(symbol) }}<span>{{ short }}</span></a>{% endfor %}</nav>

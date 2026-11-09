@@ -19,6 +19,9 @@ from .visualizations.vrptw_viz import (
 )
 
 
+LARGE_VRPTW_NODE_THRESHOLD = 100
+
+
 class VRPTWTrainer(BaseTrainer):
     """
     VRPTW训练器
@@ -188,13 +191,28 @@ class VRPTWTrainer(BaseTrainer):
             schedule_path = os.path.join(self.user_plots_dir, schedule_filename)
 
             # 生成动画
+            num_customers = int(td_init["locs"].shape[-2]) - 1
+            if num_customers >= LARGE_VRPTW_NODE_THRESHOLD:
+                self.send_message(
+                    'info',
+                    f'VRPTW规模为{num_customers}个客户：动态路线图最多保留100帧，'
+                    '以控制生成耗时和内存。',
+                )
             self.send_message('info', '生成路线动画（带时间轴）...')
+
+            def report_animation_progress(percent, step, total_steps):
+                self.send_message(
+                    'info',
+                    f'VRPTW动态路线图：{percent}%（{step}/{total_steps}步）',
+                )
+
             create_vrptw_route_animation(
                 td_init,
                 actions_after.numpy(),
                 animation_path,
                 title=f'VRPTW路线生成（{self.num_loc}个客户，带时间窗）',
-                fps=2
+                fps=4 if num_customers >= LARGE_VRPTW_NODE_THRESHOLD else 2,
+                progress_callback=report_animation_progress,
             )
             animation_paths.append(f'/static/model_plots/user_{self.user_id}/{animation_filename}')
             if self.bg_file_manager:

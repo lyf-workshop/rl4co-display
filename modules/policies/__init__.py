@@ -19,6 +19,11 @@ from .ham_policy import HAMPolicyWrapper
 from .symnco_policy import SymNCOPolicyWrapper
 from .mdam_policy import MDAMPolicyWrapper
 from .deepaco_policy import DeepACOPolicyWrapper
+from .chip_routing_policy import (
+    NetOrderingPolicy,
+    build_feature_batch,
+    build_net_features,
+)
 
 # 策略注册表
 POLICY_REGISTRY = {
@@ -251,6 +256,9 @@ __all__ = [
     'SymNCOPolicyWrapper',
     'MDAMPolicyWrapper',
     'DeepACOPolicyWrapper',
+    'NetOrderingPolicy',
+    'build_feature_batch',
+    'build_net_features',
     'POLICY_REGISTRY',
     'POLICY_INFO',
     'get_policy_class',

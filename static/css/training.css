@@ -1,0 +1,229 @@
+.stepper {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  gap: 24px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.stepper li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stepper span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+}
+.stepper .active {
+  color: var(--color-brand);
+}
+.stepper .active span {
+  background: var(--color-brand);
+  color: white;
+  border-color: var(--color-brand);
+}
+.conditional-grid {
+  display: grid;
+  gap: 20px;
+}
+.conditional-params {
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+}
+.conditional-params .form-group {
+  margin-bottom: 12px;
+}
+.conditional-params > div:has(> h4) {
+  background: var(--color-background);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.conditional-params > div:has(> div > input) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.recommend-actions {
+  margin: 20px 0 16px;
+}
+.recommend-actions a {
+  margin-left: auto;
+  font-size: 12px;
+}
+.resource-column {
+  position: sticky;
+  top: 24px;
+}
+.resource-column .banner {
+  margin: 16px 0;
+}
+.resource-column .card {
+  padding: 20px;
+}
+.gpu-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 12px 0;
+}
+.gpu-option:has(:checked) {
+  border-color: var(--color-brand);
+  background: var(--color-brand-tint);
+}
+.gpu-option:has(:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.gpu-option strong,
+.gpu-option small {
+  display: block;
+}
+.gpu-option strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.gpu-option small {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.gpu-option span {
+  min-width: 0;
+}
+.gpu-option input {
+  margin: 4px 0;
+}
+.resource-column .start-button-large {
+  width: 100%;
+}
+.status-message {
+  display: none;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+.status-message.show {
+  display: block;
+}
+.status-message.success {
+  background: var(--color-success-tint);
+  color: var(--color-success);
+}
+.status-message.error {
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
+}
+.progress-bar-container {
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--color-border);
+  margin-top: 20px;
+}
+.progress-bar {
+  height: 100%;
+  background: var(--color-brand);
+  width: 0;
+  font-size: 0;
+  transition: width 0.3s;
+}
+.progress-bar.paused {
+  background: var(--color-warning);
+}
+.monitor-heading {
+  justify-content: space-between;
+}
+.monitor-heading .data {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.training-log {
+  background: var(--color-background);
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 280px;
+  overflow: auto;
+  font: 12px/1.9 var(--font-data);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+.log-entry + .log-entry {
+  border-top: 1px solid var(--color-border);
+  padding-top: 3px;
+}
+.check-label {
+  margin-top: 20px;
+}
+#dataset-upload-section {
+  margin-top: 16px;
+}
+#dataset-upload-section > .actions {
+  margin: 16px 0;
+}
+#dataset-info p {
+  margin: 6px 0 0;
+}
+.dataset-choice {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.dataset-choice .actions {
+  margin-top: 12px;
+}
+.artifact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.artifact-grid img {
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+.artifact-grid .card {
+  padding: 18px;
+}
+.artifact-grid .actions {
+  margin-top: 12px;
+}
+@media (max-width: 767px) {
+  .stepper {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .conditional-params > div:has(> div > input),
+  .artifact-grid {
+    grid-template-columns: 1fr;
+  }
+  .resource-column {
+    position: static;
+  }
+  .monitor-heading {
+    align-items: stretch;
+  }
+  #training-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+  #training-controls .btn {
+    padding: 9px 6px;
+    font-size: 12px;
+  }
+}

@@ -1,483 +1,114 @@
-// 平滑滚动效果
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
-});
-
-// ============================================================
-// GPU 选择模块
-// ============================================================
-window.selectedGpuId = null;   // null 表示使用 CPU
+// GPU and dataset adapters preserve the original IDs and API payload keys.
+window.selectedGpuId = null;
 let _gpuPollTimer = null;
-
-/** 渲染单块 GPU 卡片 */
-function _buildGpuCard(gpu) {
-    const memPct = gpu.memory_pct;
-    const isOccupied = gpu.status === 'occupied';
-    const isBusy    = gpu.status === 'busy';
-    const isIdle    = gpu.status === 'idle';
-    const isSelected = window.selectedGpuId === gpu.id;
-
-    const statusColor = isOccupied ? '#dc3545' : isBusy ? '#fd7e14' : '#28a745';
-    const statusText  = isOccupied ? '占用中' : isBusy ? '高负载' : '空闲';
-    const memBarColor = memPct > 85 ? '#dc3545' : memPct > 60 ? '#fd7e14' : '#28a745';
-
-    const sessions = gpu.sessions || [];
-    const sessionTip = sessions.length
-        ? sessions.map(s => `@${s.username}`).join(', ')
-        : '';
-
-    const borderStyle = isSelected
-        ? 'border:2px solid #667eea;box-shadow:0 0 0 3px rgba(102,126,234,0.25);'
-        : 'border:2px solid #eee;';
-    const disabledAttr = isOccupied ? 'disabled' : '';
-
-    return `
-    <label style="display:block;cursor:${isOccupied?'not-allowed':'pointer'};
-                  border-radius:12px;padding:0.9rem;background:white;
-                  transition:box-shadow 0.2s,border-color 0.2s;
-                  position:relative;${borderStyle}"
-           title="${sessionTip}">
-      <input type="radio" name="gpu_select" value="${gpu.id}"
-             id="gpu-select-${gpu.id}" style="display:none;"
-             ${isSelected ? 'checked' : ''} ${disabledAttr}
-             onchange="onGpuSelect(${gpu.id})">
-
-      <!-- Mock 角标 -->
-      <span id="gpu-mock-badge-${gpu.id}" style="display:none;
-          position:absolute;top:6px;right:6px;font-size:0.68rem;
-          background:#ffc107;color:#856404;padding:1px 6px;border-radius:8px;">
-        演示
-      </span>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-        <span style="font-weight:600;font-size:0.88rem;color:#333;">
-          GPU ${gpu.id}
-        </span>
-        <span style="font-size:0.78rem;padding:2px 8px;border-radius:10px;
-                     background:${statusColor}22;color:${statusColor};font-weight:600;">
-          ${statusText}
-        </span>
-      </div>
-
-      <div style="font-size:0.8rem;color:#555;margin-bottom:0.5rem;
-                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
-           title="${gpu.name}">
-        ${gpu.name}
-      </div>
-
-      <!-- 显存进度条 -->
-      <div style="font-size:0.75rem;color:#888;margin-bottom:3px;">
-        显存 ${gpu.memory_used_mb} / ${gpu.memory_total_mb} MB (${memPct}%)
-      </div>
-      <div style="height:6px;background:#eee;border-radius:3px;overflow:hidden;">
-        <div style="height:100%;width:${memPct}%;
-                    background:${memBarColor};border-radius:3px;
-                    transition:width 0.4s;"></div>
-      </div>
-
-      <!-- 利用率 -->
-      <div style="font-size:0.75rem;color:#888;margin-top:0.4rem;">
-        GPU 利用率 ${gpu.utilization_pct === -1 ? 'N/A' : gpu.utilization_pct + '%'}
-      </div>
-
-      ${sessionTip ? `<div style="font-size:0.72rem;color:#dc3545;margin-top:0.3rem;">
-        占用：${sessionTip}</div>` : ''}
-
-    </label>`;
-}
-
-/** 渲染所有 GPU 卡片 */
 function _renderGpuCards(gpus, source) {
     const container = document.getElementById('gpu-cards-container');
-    if (!container) return;
-
-    // 控制三种横幅的显示
-    document.getElementById('gpu-mock-banner').style.display   = source === 'mock'   ? 'block' : 'none';
-    document.getElementById('gpu-torch-banner').style.display  = source === 'torch'  ? 'block' : 'none';
-    document.getElementById('gpu-pynvml-banner').style.display = source === 'pynvml' ? 'block' : 'none';
-
-    if (!gpus || gpus.length === 0) {
-        container.innerHTML = '<div style="color:#aaa;font-size:0.9rem;padding:1rem;">未检测到 GPU，将使用 CPU 训练</div>';
-        return;
-    }
-
-    container.innerHTML = gpus.map(g => _buildGpuCard(g)).join('');
-
-    // Mock 模式加演示角标
-    if (source === 'mock') {
-        gpus.forEach(g => {
-            const badge = document.getElementById(`gpu-mock-badge-${g.id}`);
-            if (badge) badge.style.display = 'inline';
-        });
-    }
+    ['mock','torch','pynvml'].forEach(name => { document.getElementById('gpu-'+name+'-banner').style.display = source === name ? 'block' : 'none'; });
+    if (source === 'mock') { window.selectedGpuId = null; container.replaceChildren(); return; }
+    if (!gpus?.length) { Studio.state(container, 'empty', '未检测到 GPU，可使用 CPU。'); return; }
+    if (!gpus.some(g => g.id === window.selectedGpuId && (g.status !== 'occupied' || (g.sessions || []).some(session => typeof currentSessionId !== 'undefined' && session.session_id === currentSessionId)))) window.selectedGpuId = null;
+    container.innerHTML = gpus.map(g => {
+        const occupied = g.status === 'occupied';
+        return '<label class="gpu-option"><input type="radio" name="gpu_select" value="'+g.id+'" '+(window.selectedGpuId === g.id ? 'checked' : '')+' '+(occupied ? 'disabled' : '')+'><span><strong>GPU '+g.id+' · '+Studio.escape(g.name)+'</strong><small>'+ (occupied ? '占用中' : g.status === 'busy' ? '高负载' : '可用')+' · '+((g.memory_total_mb-g.memory_used_mb)/1024).toFixed(1)+' / '+(g.memory_total_mb/1024).toFixed(1)+' GB 空闲</small><small>利用率 '+(g.utilization_pct < 0 ? '—' : g.utilization_pct+'%')+'</small>'+((g.sessions||[]).map(s => '<small>'+Studio.escape(s.username)+' · '+Studio.escape(s.session_id)+'</small>').join(''))+'</span></label>';
+    }).join('');
+    container.querySelectorAll('input').forEach(input => input.onchange = () => onGpuSelect(Number(input.value)));
+    document.getElementById('gpu-select-cpu').checked = window.selectedGpuId === null;
 }
-
-/** 加载 GPU 状态（调接口） */
 async function loadGpuStatus() {
-    const container = document.getElementById('gpu-cards-container');
     try {
-        const resp = await fetch('/api/gpu_status');
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                container.innerHTML = '<div style="color:#e74c3c;padding:1rem;">⚠️ 请先登录以查看 GPU 状态</div>';
-            } else {
-                container.innerHTML = `<div style="color:#e74c3c;padding:1rem;">⚠️ 加载失败 (HTTP ${resp.status})</div>`;
-            }
-            return;
-        }
-        const data = await resp.json();
-        if (data.success) {
-            // 兼容旧版（无 source 字段时根据 is_mock 推断）
-            const source = data.source || (data.is_mock ? 'mock' : 'pynvml');
-            _renderGpuCards(data.gpus, source);
-            const ts = new Date(data.timestamp);
-            const el = document.getElementById('gpu-last-update');
-            if (el) el.textContent = `上次更新：${ts.toLocaleTimeString()}`;
-        } else {
-            container.innerHTML = `<div style="color:#e74c3c;padding:1rem;">⚠️ ${data.message || '查询失败'}</div>`;
-        }
-    } catch(e) {
-        console.error('GPU 状态加载失败:', e);
-        if (container) {
-            container.innerHTML = `<div style="color:#e74c3c;padding:1rem;">⚠️ 网络错误: ${e.message}</div>`;
-        }
-    }
+        const data = await Studio.request('/api/gpu_status');
+        _renderGpuCards(data.gpus, data.source || (data.is_mock ? 'mock' : 'pynvml'));
+        document.getElementById('gpu-last-update').textContent = new Date(data.timestamp).toLocaleTimeString();
+    } catch (error) { Studio.state(document.getElementById('gpu-cards-container'), 'error', error.message, loadGpuStatus); }
 }
+function onGpuSelect(id) { window.selectedGpuId = id; loadGpuStatus(); }
+function startGpuPolling() { stopGpuPolling(); _gpuPollTimer = setInterval(loadGpuStatus, 10000); }
+function stopGpuPolling() { clearInterval(_gpuPollTimer); _gpuPollTimer = null; }
+window.addEventListener('studio:gpu', e => _renderGpuCards(e.detail.gpus, e.detail.source));
+window.addEventListener('pagehide', stopGpuPolling);
+window.addEventListener('pageshow', event => { if (event.persisted) {loadGpuStatus(); startGpuPolling();} });
 
-/** 用户选择 GPU */
-function onGpuSelect(gpuId) {
-    window.selectedGpuId = gpuId;
-    // 更新 CPU 选项和 GPU 卡片的选中边框
-    const cpuLabel = document.getElementById('cpu-option-label');
-    if (cpuLabel) {
-        cpuLabel.style.borderColor = gpuId === null ? '#667eea' : '#ddd';
-    }
-    // 重新渲染边框（简单刷新一次状态即可）
-    loadGpuStatus();
-}
-
-/** 启动/停止 GPU 状态轮询（每 5 秒） */
-function startGpuPolling() {
-    stopGpuPolling();
-    _gpuPollTimer = setInterval(loadGpuStatus, 5000);
-}
-function stopGpuPolling() {
-    if (_gpuPollTimer) { clearInterval(_gpuPollTimer); _gpuPollTimer = null; }
-}
-
-// 页面加载完成后立即拉取 GPU 状态并启动轮询
-document.addEventListener('DOMContentLoaded', function() {
-    loadGpuStatus();
-    startGpuPolling();
-    requestNotificationPermission();
-    tryReconnectSession();
-});
-
-// 页面滚动效果
-window.addEventListener('scroll', function() {
-    const header = document.querySelector('.header');
-    if (window.scrollY > 50) {
-        header.style.boxShadow = '0 2px 30px rgba(0,0,0,0.15)';
-    } else {
-        header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
-    }
-});
-
-// 表单验证
-document.getElementById('epochs').addEventListener('input', function() {
-    if (this.value < 1) this.value = 1;
-    if (this.value > 10000) this.value = 10000;
-});
-
-document.getElementById('batch-size').addEventListener('input', function() {
-    if (this.value < 1) this.value = 1;
-    if (this.value > 2048) this.value = 2048;
-});
-
-// 各问题类型的数据集说明文字
 const DATASET_DESCRIPTIONS = {
-    tsp:    '💡 支持格式：JSON（含 coordinates 字段）、TXT（每行 x y）、TSP（TSPLIB 格式）。',
-    cvrp:   '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot（仓库坐标）、demands（需求量，值域 0-1）。',
-    sdvrp:  '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot（仓库坐标）、demands（需求量，值域 0-1）。',
-    mtsp:   '💡 上传 JSON 文件。必填：coordinates（城市坐标列表）。可选：depot（仓库坐标）。',
-    op:     '💡 上传 JSON 文件。必填：coordinates（地点坐标列表）。可选：depot（仓库坐标）、prizes（各地点奖励值，≥0）。',
-    pdp:    '💡 上传 JSON 文件。必填：coordinates（节点坐标，数量必须是偶数，前半为取货点，后半为送货点）。可选：depot（仓库坐标）。',
-    pctsp:  '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot、prizes（奖励）、penalties（惩罚）。',
-    spctsp: '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot、prizes（期望奖励）、penalties（惩罚）。',
-    vrptw:  '💡 上传 JSON 文件。必填：coordinates（客户坐标列表）。可选：depot、demands（需求量，值域 0-1）、time_windows（每项 [start, end]）、service_times（服务时长）。',
-    atsp:   '⛔ ATSP 使用代价矩阵而非坐标，暂不支持上传自定义数据集。',
-    ffsp:   '⛔ FFSP 使用作业工时矩阵而非坐标，暂不支持上传自定义数据集。',
+    tsp: '支持 JSON（coordinates）、TXT（每行 x y）、TSPLIB。',
+    cvrp: 'JSON：coordinates；可选 depot、demands（0–1）。',
+    sdvrp: 'JSON：coordinates；可选 depot、demands（0–1）。',
+    mtsp: 'JSON：coordinates；可选 depot。',
+    vrptw: 'JSON：coordinates；可选 depot、demands、time_windows、service_times。',
+    pdp: 'JSON：coordinates，节点数为偶数，前半取货、后半送货；可选 depot。',
+    op: 'JSON：coordinates；可选 depot、prizes。',
+    pctsp: 'JSON：coordinates；可选 depot、prizes、penalties。',
+    spctsp: 'JSON：coordinates；可选 depot、prizes、penalties。',
+    atsp: 'ATSP 当前使用随机代价矩阵，不支持上传数据集。',
+    ffsp: 'FFSP 当前使用随机作业工时矩阵，不支持上传数据集。',
+    chip_routing: '芯片布线当前使用随机网格，不支持上传数据集。'
 };
-
-function updateDatasetSection(problemType) {
-    const unsupported = ['atsp', 'ffsp'];
-    const disabled = unsupported.includes(problemType);
-
-    // 切换问题类型后，之前上传的数据集属于旧问题，不再适用：清理上传状态，
-    // 避免开训时携带类型不匹配的 dataset_id（后端会静默回退到随机数据）。
+function updateDatasetSection(problem) {
+    document.getElementById('random-seed').disabled = problem !== 'chip_routing';
     window.uploadedDatasetId = null;
-    const datasetInfoEl = document.getElementById('dataset-info');
-    if (datasetInfoEl) datasetInfoEl.style.display = 'none';
-    const uploadStatusEl = document.getElementById('upload-status');
-    if (uploadStatusEl) uploadStatusEl.className = 'status-message';
-    const fileInputEl = document.getElementById('dataset-file');
-    if (fileInputEl) fileInputEl.value = '';
-
-    const desc = DATASET_DESCRIPTIONS[problemType] || DATASET_DESCRIPTIONS['tsp'];
-    const descEl = document.getElementById('dataset-description');
-    if (descEl) {
-        descEl.textContent = desc;
-        descEl.style.color = disabled ? '#dc3545' : '#666';
-    }
-
-    const modeEl = document.getElementById('dataset-mode');
-    const fileEl = document.getElementById('dataset-file');
-    const uploadBtn = document.getElementById('dataset-upload-btn');
-    const managerBtn = document.getElementById('dataset-manager-btn');
-
-    if (modeEl) modeEl.disabled = disabled;
-    if (fileEl) fileEl.disabled = disabled;
-    if (uploadBtn) uploadBtn.disabled = disabled;
-    if (managerBtn) managerBtn.disabled = disabled;
-
-    if (disabled) {
-        if (modeEl) modeEl.value = 'random';
-        const uploadSection = document.getElementById('dataset-upload-section');
-        if (uploadSection) uploadSection.style.display = 'none';
-    }
+    document.getElementById('dataset-info').style.display = 'none';
+    document.getElementById('upload-status').className = 'status-message';
+    const unsupported = ['atsp','ffsp','chip_routing'].includes(problem);
+    const mode = document.getElementById('dataset-mode'); mode.disabled = unsupported; mode.value = 'random';
+    document.getElementById('dataset-description').textContent = DATASET_DESCRIPTIONS[problem] || '';
+    document.getElementById('dataset-file').value = ''; toggleDatasetUpload();
 }
-
-// 切换数据集上传区域显示
-function toggleDatasetUpload() {
-    const mode = document.getElementById('dataset-mode').value;
-    const uploadSection = document.getElementById('dataset-upload-section');
-
-    if (mode === 'upload') {
-        uploadSection.style.display = 'block';
-    } else {
-        uploadSection.style.display = 'none';
-    }
-}
-
-// 上传数据集
-async function uploadDataset() {
-    const fileInput = document.getElementById('dataset-file');
-    const uploadStatus = document.getElementById('upload-status');
-    const datasetInfo = document.getElementById('dataset-info');
-
-    if (!fileInput.files || fileInput.files.length === 0) {
-        uploadStatus.className = 'status-message show error';
-        uploadStatus.textContent = '❌ 请先选择一个数据集文件';
-        return;
-    }
-
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append('dataset', file);
-    formData.append('problem_type', document.getElementById('problem-select').value);
-
-    // 显示上传中状态
-    uploadStatus.className = 'status-message show';
-    uploadStatus.style.background = '#fff3cd';
-    uploadStatus.style.color = '#856404';
-    uploadStatus.textContent = '⏳ 正在上传和解析数据集...';
-
-    try {
-        const response = await fetch('/api/upload_dataset', {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            // 先保存数据集ID（务必在任何 DOM 更新之前，避免某个展示元素缺失时
-            // 抛错导致 dataset_id 丢失、训练时回退到随机数据）
-            window.uploadedDatasetId = result.dataset_id;
-
-            uploadStatus.className = 'status-message show success';
-            uploadStatus.textContent = '✅ ' + result.message;
-
-            // 显示数据集信息（逐个判空，缺元素不影响上传结果）
-            datasetInfo.style.display = 'block';
-            const info = result.dataset_info || {};
-            const setText = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = val;
-            };
-            setText('dataset-filename', info.filename);
-            setText('dataset-size', (info.num_loc || info.num_cities) + ' 个节点');
-            setText('dataset-range', info.coord_range);
-        } else {
-            uploadStatus.className = 'status-message show error';
-            uploadStatus.textContent = '❌ ' + result.message;
-            datasetInfo.style.display = 'none';
-        }
-    } catch (error) {
-        uploadStatus.className = 'status-message show error';
-        uploadStatus.textContent = '❌ 上传失败: ' + error.message;
-        datasetInfo.style.display = 'none';
-    }
-}
-
-// 显示数据集管理器
-async function showDatasetManager() {
-    const modal = document.getElementById('dataset-manager-modal');
-    const listDiv = document.getElementById('datasets-list');
-
-    modal.style.display = 'block';
-    listDiv.innerHTML = '<p style="text-align: center; color: #999;">正在加载...</p>';
-
-    try {
-        const response = await fetch('/api/list_datasets');
-        const result = await response.json();
-
-        if (result.success) {
-            if (result.datasets.length === 0) {
-                listDiv.innerHTML = '<p style="text-align: center; color: #999;">还没有上传任何数据集</p>';
-            } else {
-                const currentProblem = document.getElementById('problem-select').value;
-                const sorted = [...result.datasets].sort((a, b) => {
-                    const aMatch = (a.problem_type || 'tsp') === currentProblem ? 0 : 1;
-                    const bMatch = (b.problem_type || 'tsp') === currentProblem ? 0 : 1;
-                    return aMatch - bMatch;
-                });
-                let html = '<div style="display: grid; gap: 1rem;">';
-                sorted.forEach(dataset => {
-                    const uploadTime = new Date(dataset.upload_time).toLocaleString('zh-CN');
-                    const numLoc = dataset.num_loc || dataset.num_cities || '?';
-                    const ptLabel = (dataset.problem_type || 'tsp').toUpperCase();
-                    const matched = (dataset.problem_type || 'tsp') === currentProblem;
-                    html += `
-                        <div style="border: 2px solid ${matched ? '#667eea' : '#e0e0e0'}; border-radius: 8px; padding: 1rem; background: #f8f9fa; opacity: ${matched ? 1 : 0.5};">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="flex: 1;">
-                                    <div style="margin-bottom: 0.4rem;">
-                                        <span style="display:inline-block; padding:2px 8px; border-radius:12px; background:#667eea; color:#fff; font-size:0.75rem; margin-right:0.5rem;">${ptLabel}</span>
-                                        <strong style="color: #333;">📁 ${dataset.filename}</strong>
-                                    </div>
-                                    <p style="margin: 0.3rem 0; color: #666; font-size: 0.9rem;">
-                                        <strong>节点数量:</strong> ${numLoc}
-                                    </p>
-                                    <p style="margin: 0.3rem 0; color: #999; font-size: 0.85rem;">上传时间: ${uploadTime}</p>
-                                    ${!matched ? '<p style="margin: 0.2rem 0; color: #dc3545; font-size: 0.8rem;">⚠️ 与当前问题类型不匹配</p>' : ''}
-                                </div>
-                                <div>
-                                    <button type="button" onclick="selectDataset('${dataset.dataset_id}', '${dataset.filename}', ${numLoc})"
-                                            ${!matched ? 'disabled title="请切换到对应问题类型后再选择"' : ''}
-                                            style="padding: 0.5rem 1rem; background: ${matched ? '#667eea' : '#aaa'}; color: white; border: none; border-radius: 5px; cursor: ${matched ? 'pointer' : 'not-allowed'}; margin-right: 0.5rem;">
-                                        选择
-                                    </button>
-                                    <button type="button" onclick="deleteDataset('${dataset.dataset_id}')"
-                                            style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                                        删除
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                listDiv.innerHTML = html;
-            }
-        } else {
-            listDiv.innerHTML = `<p style="text-align: center; color: #dc3545;">加载失败: ${result.message}</p>`;
-        }
-    } catch (error) {
-        listDiv.innerHTML = `<p style="text-align: center; color: #dc3545;">加载失败: ${error.message}</p>`;
-    }
-}
-
-// 关闭数据集管理器
-function closeDatasetManager() {
-    document.getElementById('dataset-manager-modal').style.display = 'none';
-}
-
-// 选择数据集
-function selectDataset(datasetId, filename, numCities) {
-    window.uploadedDatasetId = datasetId;
-
-    // 切换到上传模式
-    document.getElementById('dataset-mode').value = 'upload';
-    toggleDatasetUpload();
-
-    // 显示数据集信息
-    const datasetInfo = document.getElementById('dataset-info');
-    datasetInfo.style.display = 'block';
+function toggleDatasetUpload() { document.getElementById('dataset-upload-section').style.display = document.getElementById('dataset-mode').value === 'upload' ? 'block' : 'none'; }
+function selectDataset(datasetId, filename, numLoc) {
+    window.uploadedDatasetId = datasetId; document.getElementById('dataset-mode').value = 'upload'; toggleDatasetUpload();
+    document.getElementById('dataset-info').style.display = 'block';
     document.getElementById('dataset-filename').textContent = filename;
-    document.getElementById('dataset-size').textContent = numCities + ' 个城市';
+    document.getElementById('dataset-size').textContent = numLoc + ' 个节点';
     document.getElementById('dataset-range').textContent = '已选择';
-
-    // 关闭弹窗
-    closeDatasetManager();
-
-    // 显示提示
-    const uploadStatus = document.getElementById('upload-status');
-    uploadStatus.className = 'status-message show success';
-    uploadStatus.textContent = '✅ 已选择数据集: ' + filename;
+    const problem = document.getElementById('problem-select').value;
+    const sizeId = {pdp:'pdp-num-loc',op:'op-num-loc',pctsp:'pctsp-num-loc',spctsp:'spctsp-num-loc'}[problem] || 'num-loc';
+    document.getElementById(sizeId).value = numLoc;
+    closeDatasetManager(); Studio.toast('已选择数据集：' + filename, 'success');
 }
-
-// 删除数据集
-async function deleteDataset(datasetId) {
-    if (!confirm('确定要删除这个数据集吗？此操作无法撤销。')) {
-        return;
-    }
-
+async function uploadDataset() {
+    const file = document.getElementById('dataset-file').files[0], button = document.getElementById('dataset-upload-btn'), status = document.getElementById('upload-status');
+    if (!file) { status.className = 'status-message show error'; status.textContent = '请选择数据集文件。'; return; }
+    const problem = document.getElementById('problem-select').value;
+    const data = new FormData(); data.append('dataset', file); data.append('problem_type', problem);
+    Studio.busy(button, true); status.className = 'status-message show'; status.textContent = '正在上传并解析…';
     try {
-        const response = await fetch('/api/delete_dataset', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ dataset_id: datasetId })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert('✅ ' + result.message);
-            // 刷新数据集列表
-            showDatasetManager();
-
-            // 如果删除的是当前选中的数据集，清除选择
-            if (window.uploadedDatasetId === datasetId) {
-                window.uploadedDatasetId = null;
-                document.getElementById('dataset-info').style.display = 'none';
-                document.getElementById('upload-status').className = 'status-message';
-            }
-        } else {
-            alert('❌ ' + result.message);
-        }
-    } catch (error) {
-        alert('❌ 删除失败: ' + error.message);
+        const result = await Studio.request('/api/upload_dataset', {method:'POST', body:data});
+        if (document.getElementById('problem-select').value !== problem) { status.textContent = '上传完成，问题类型已切换，请从已有数据集重新选择。'; return; }
+        selectDataset(result.dataset_id, result.dataset_info.filename, result.dataset_info.num_loc);
+        status.className = 'status-message show success'; status.textContent = result.message;
+    } catch (error) { status.className = 'status-message show error'; status.textContent = error.message; }
+    finally { Studio.busy(button, false); }
+}
+let datasetLayerClose;
+async function showDatasetManager() {
+    const root = document.getElementById('dataset-manager-modal'), list = document.getElementById('datasets-list');
+    if (!datasetLayerClose) datasetLayerClose = Studio.openLayer(root, closeDatasetManager);
+    root.onclick = e => { if (e.target === root) closeDatasetManager(); };
+    Studio.state(list, 'loading', '正在读取数据集…');
+    try {
+        const data = await Studio.request('/api/list_datasets'); if (!data.datasets.length) return Studio.state(list, 'empty', '还没有上传数据集。');
+        const problem = document.getElementById('problem-select').value;
+        list.innerHTML = data.datasets.map(d => '<div class="dataset-choice"><strong>'+Studio.escape(d.filename)+'</strong><p class="description">'+Studio.escape(d.problem_type.toUpperCase())+' · '+d.num_loc+' 个节点</p><div class="actions"><button type="button" onclick="selectDataset(this.dataset.id, this.dataset.name, Number(this.dataset.size))" class="btn btn-small" data-id="'+Studio.escape(d.dataset_id)+'" data-name="'+Studio.escape(d.filename)+'" data-size="'+d.num_loc+'" '+(d.problem_type !== problem ? 'disabled title="与当前问题类型不匹配"' : '')+'>使用</button><button type="button" onclick="deleteDataset(this.dataset.id)" class="btn btn-small btn-danger" data-id="'+Studio.escape(d.dataset_id)+'">删除</button><a class="btn btn-small" href="/api/download_dataset/'+encodeURIComponent(d.dataset_id)+'">下载</a></div></div>').join('');
+    } catch (error) { Studio.state(list, 'error', error.message, showDatasetManager); }
+}
+function closeDatasetManager() { datasetLayerClose?.(); datasetLayerClose = null; }
+async function deleteDataset(datasetId) {
+    const success = await Studio.confirmAction({title:'删除数据集', description:'将删除此数据集，操作无法撤销。已生成的训练产物不受影响。', action:() => Studio.post('/api/delete_dataset', {dataset_id:datasetId})});
+    if (success) {
+        if (window.uploadedDatasetId === datasetId) updateDatasetSection(document.getElementById('problem-select').value);
+        Studio.toast('数据集已删除', 'success'); showDatasetManager();
     }
 }
-
-// 查看模型详情
-
-// ============================================
-// 兼容性管理器
-// ============================================
 class CompatibilityManager {
     constructor() {
         this.compatibilityData = null;
-        this.currentProblem = 'tsp';
-        this.currentPolicy = 'attention';
-        this.currentAlgorithm = 'reinforce';
+        this.currentProblem = document.getElementById('problem-select').value;
+        this.currentPolicy = document.getElementById('model-select').value;
+        this.currentAlgorithm = document.getElementById('algorithm-select').value;
 
         // ── 约束表（与后端 modules/compatibility.py 保持一致，唯一前端副本）──
         // 策略 → 支持的问题（对应 POLICY_PROBLEM_COMPATIBILITY）
         this.POLICY_PROBLEM_COMPAT = {
-            'attention': ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp'],
+            'attention': ['tsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp', 'chip_routing'],
             'pomo':      ['tsp', 'cvrp'],
             'symnco':    ['tsp', 'mtsp', 'cvrp'],
             'ham':       ['pdp'],
@@ -500,13 +131,15 @@ class CompatibilityManager {
         };
         // 算法 → 支持的问题（对应 ALGORITHM_PROBLEM_COMPATIBILITY，仅列出受限者）
         this.ALGO_PROBLEM_COMPAT = {
+            'ppo': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp', 'ffsp'],
+            'a2c': ['tsp', 'atsp', 'mtsp', 'cvrp', 'sdvrp', 'vrptw', 'op', 'pdp', 'pctsp', 'spctsp', 'ffsp'],
             'dqn': ['tsp'],
             'qlearning': ['tsp'],
         };
         // 自带训练逻辑的策略（用于锁定说明文案）
         this.SELF_CONTAINED_POLICIES = ['pomo', 'symnco', 'mdam', 'deepaco', 'matnet'];
 
-        this.init();
+        this.ready = this.init();
     }
 
     async init() {
@@ -518,6 +151,7 @@ class CompatibilityManager {
         this.showPolicySpecificParams();
         this.updatePolicyDescription();
         this.updateAlgorithmDescription();
+        await this.validateConfiguration();
     }
 
     async loadCompatibilityData() {
@@ -526,20 +160,39 @@ class CompatibilityManager {
             const result = await response.json();
             if (result.success) {
                 this.compatibilityData = result.data;
-                console.log('✅ 兼容性数据加载成功');
+                this.POLICY_PROBLEM_COMPAT = result.data.policy_problem;
+                this.POLICY_ALGO_COMPAT = result.data.policy_algorithm;
+                this.ALGO_PROBLEM_COMPAT = result.data.algorithm_problem;
+                console.log(' 兼容性数据加载成功');
             }
         } catch (error) {
-            console.error('❌ 加载兼容性数据失败:', error);
+            console.error(' 加载兼容性数据失败:', error);
         }
     }
 
     bindEvents() {
-        document.getElementById('problem-select').addEventListener('change', (e) => {
-            this.currentProblem = e.target.value;
+        for (const id of ['problem-select', 'model-select', 'algorithm-select']) {
+            document.getElementById(id).addEventListener('change', () => {
+                window.configurationValid = false;
+                document.getElementById('start-button').disabled = true;
+            });
+        }
+        document.getElementById('problem-select').addEventListener('change', async (e) => {
+            const selectedProblem = e.target.value;
+            this.currentProblem = selectedProblem;
             this.showProblemSpecificParams();
             this.updateAvailableOptions();
-            this.validateConfiguration();
-            updateDatasetSection(e.target.value);
+            updateDatasetSection(selectedProblem);
+            const recommendationApplied = await this.applyRecommendedConfig(
+                'best',
+                { automatic: true }
+            );
+            if (
+                !recommendationApplied
+                && this.currentProblem === selectedProblem
+            ) {
+                this.validateConfiguration();
+            }
         });
 
         document.getElementById('model-select').addEventListener('change', (e) => {
@@ -571,60 +224,53 @@ class CompatibilityManager {
     }
 
     async validateConfiguration() {
+        const sequence = this.validationSequence = (this.validationSequence || 0) + 1;
+        const button = document.getElementById('start-button');
+        window.configurationValid = false; button.disabled = true;
+        const alert = document.getElementById('config-validation-alert');
+        alert.className = 'alert'; alert.textContent = '正在检查兼容性…'; alert.style.display = 'block';
         try {
-            const response = await fetch('/api/compatibility/validate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    problem: this.currentProblem,
-                    model: this.currentPolicy,
-                    algorithm: this.currentAlgorithm
-                })
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                this.showValidationMessage(result.valid, result.message, result.level);
-            }
+            const result = await Studio.post('/api/compatibility/validate', {problem:this.currentProblem, model:this.currentPolicy, algorithm:this.currentAlgorithm});
+            if (sequence !== this.validationSequence) return;
+            this.showValidationMessage(result.valid, result.message, result.level);
         } catch (error) {
-            console.error('验证配置失败:', error);
+            if (sequence !== this.validationSequence) return;
+            alert.className = 'alert error'; alert.textContent = '兼容性检查失败：'+error.message;
+            const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'btn btn-small'; retry.textContent = '重试检查'; retry.onclick = () => this.validateConfiguration(); alert.append(retry);
         }
     }
 
     showValidationMessage(valid, message, level) {
         const alert = document.getElementById('config-validation-alert');
-        alert.className = 'alert';
-
-        if (level === 'success') {
-            alert.style.backgroundColor = '#d4edda';
-            alert.style.color = '#155724';
-        } else if (level === 'warning') {
-            alert.style.backgroundColor = '#fff3cd';
-            alert.style.color = '#856404';
-        } else {
-            alert.style.backgroundColor = '#f8d7da';
-            alert.style.color = '#721c24';
+        alert.className = 'alert '+(valid ? (level === 'warning' ? 'warning' : 'success') : 'error');
+        alert.textContent = (valid ? '兼容性检查通过 · ' : '配置不兼容 · ')+String(message).replace(/[\u2600-\u27BF\uFE0F]/g, '');
+        if (!valid) {
+            const alternatives = Object.entries(this.POLICY_PROBLEM_COMPAT).filter(([,problems]) => problems.includes(this.currentProblem)).map(([policy]) => policy);
+            alert.textContent += ' 可用模型：'+alternatives.join('、');
         }
-
-        alert.innerHTML = message;
         alert.style.display = 'block';
-        alert.style.padding = '10px';
-        alert.style.borderRadius = '4px';
-
-        if (level === 'success') {
-            setTimeout(() => { alert.style.display = 'none'; }, 3000);
-        }
+        window.configurationValid = valid;
+        document.getElementById('start-button').disabled = !valid || Boolean(window.trainingActive);
     }
 
-    async applyRecommendedConfig(preference = 'best') {
+    async applyRecommendedConfig(preference = 'best', options = {}) {
+        const requestedProblem = this.currentProblem;
+        const automatic = options.automatic === true;
         try {
-            const response = await fetch(`/api/compatibility/recommend?problem=${this.currentProblem}&preference=${preference}`);
+            const response = await fetch(
+                `/api/compatibility/recommend?problem=${requestedProblem}&preference=${preference}`
+            );
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
             const result = await response.json();
 
-            if (result.success) {
+            if (result.success && requestedProblem === this.currentProblem) {
                 const { policy, algorithm } = result.recommended;
-                document.getElementById('model-select').value = policy;
-                document.getElementById('algorithm-select').value = algorithm;
+                const modelSelect = document.getElementById('model-select');
+                const algorithmSelect = document.getElementById('algorithm-select');
+                modelSelect.value = policy;
+                algorithmSelect.value = algorithm;
 
                 this.currentPolicy = policy;
                 this.currentAlgorithm = algorithm;
@@ -634,17 +280,15 @@ class CompatibilityManager {
                 this.showPolicySpecificParams();
                 // 重新计算约束并应用算法锁定（推荐配置可能切到自带训练的策略）
                 this.updateAlgorithmConstraints();
-                this.validateConfiguration();
+                await this.validateConfiguration();
 
-                // 显示成功提示
-                this.showValidationMessage(
-                    true,
-                    `✅ 已应用${preference === 'best' ? '最佳' : '快速'}推荐配置`,
-                    'success'
-                );
+                Studio.toast('已应用推荐配置', 'success');
+                return true;
             }
+            return false;
         } catch (error) {
             console.error('应用推荐配置失败:', error);
+            return false;
         }
     }
 
@@ -702,6 +346,9 @@ class CompatibilityManager {
         const mtspParams = document.getElementById('mtsp-params');
         const pdpParams = document.getElementById('pdp-params');
         const opParams = document.getElementById('op-params');
+        const chipRoutingParams = document.getElementById('chip-routing-params');
+        const numLocGroup = document.getElementById('num-loc-group');
+        const isChipRouting = this.currentProblem === 'chip_routing';
 
         if (cvrpParams) {
             const isCVRP = this.currentProblem === 'cvrp' || this.currentProblem === 'sdvrp' || this.currentProblem === 'vrptw';
@@ -750,6 +397,14 @@ class CompatibilityManager {
             ffspParams.style.display = this.currentProblem === 'ffsp' ? 'block' : 'none';
         }
 
+        if (chipRoutingParams) {
+            chipRoutingParams.style.display = isChipRouting ? 'block' : 'none';
+        }
+
+        if (numLocGroup) {
+            numLocGroup.style.display = isChipRouting ? 'none' : 'block';
+        }
+
         // ── 统一的策略模型与算法约束 ──
         this.updatePolicyConstraints();
         this.updateAlgorithmConstraints();
@@ -762,7 +417,7 @@ class CompatibilityManager {
             'tsp': 'TSP', 'atsp': 'ATSP', 'mtsp': 'mTSP',
             'cvrp': 'CVRP', 'sdvrp': 'SDVRP', 'vrptw': 'VRPTW',
             'op': 'OP', 'pdp': 'PDP', 'pctsp': 'PCTSP',
-            'spctsp': 'SPCTSP', 'ffsp': 'FFSP',
+            'spctsp': 'SPCTSP', 'ffsp': 'FFSP', 'chip_routing': 'Chip Routing',
         };
 
         const modelSelect = document.getElementById('model-select');
@@ -811,6 +466,11 @@ class CompatibilityManager {
 
         const policy = this.currentPolicy;
         const compatAlgos = POLICY_ALGO_COMPAT[policy] || ['reinforce', 'ppo', 'a2c'];
+        const allowedAlgos = compatAlgos.filter(algorithm => {
+            const compatibleProblems = ALGO_PROBLEM_COMPAT[algorithm];
+            return !compatibleProblems
+                || compatibleProblems.includes(this.currentProblem);
+        });
         let hasValidSelection = false;
         let firstValidValue = null;
 
@@ -840,7 +500,7 @@ class CompatibilityManager {
         }
 
         // ── 锁定：策略仅支持单一算法时，禁用算法下拉框并说明 ──
-        this.applyAlgorithmLock(policy, compatAlgos);
+        this.applyAlgorithmLock(policy, allowedAlgos);
     }
 
     /**
@@ -903,10 +563,27 @@ class CompatibilityManager {
 // 初始化兼容性管理器
 let compatibilityManager;
 document.addEventListener('DOMContentLoaded', () => {
+    const query = new URLSearchParams(location.search);
+    for (const [key, id] of [['problem','problem-select'], ['model','model-select']]) {
+        const select = document.getElementById(id);
+        if ([...select.options].some(option => option.value === query.get(key))) select.value = query.get(key);
+    }
     compatibilityManager = new CompatibilityManager();
+    loadGpuStatus(); startGpuPolling();
+    tryReconnectSession();
 
     // 初始化数据集区域（根据默认问题类型）
     updateDatasetSection(document.getElementById('problem-select').value);
+    compatibilityManager.ready.then(async () => {
+        const datasetId = query.get('dataset');
+        if (!datasetId) return;
+        try {
+            const data = await Studio.request('/api/list_datasets');
+            const dataset = data.datasets.find(item => item.dataset_id === datasetId);
+            if (!dataset || dataset.problem_type !== document.getElementById('problem-select').value) throw new Error('数据集不存在或与当前问题类型不匹配。');
+            selectDataset(dataset.dataset_id, dataset.filename, dataset.num_loc);
+        } catch (error) { Studio.toast(error.message, 'error'); }
+    });
 
     // FFSP 参数实时更新逻辑
     const updateFFSPScale = () => {
@@ -941,28 +618,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 退出登录功能
 async function logout() {
-    if (!confirm('确定要退出登录吗？')) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/logout', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert('已退出登录');
-            window.location.href = '/login';
-        } else {
-            alert('退出失败：' + result.message);
-        }
-    } catch (error) {
-        console.error('退出登录错误:', error);
-        alert('网络错误，请重试');
-    }
+    try { await Studio.post('/api/logout'); location.href = '/login'; }
+    catch (error) { Studio.toast(error.message, 'error'); }
 }

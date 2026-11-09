@@ -32,8 +32,17 @@ SCHEDULING_PROBLEMS_INTEGRATED = [
     'ffsp',     # Flexible Flow Shop Problem
 ]
 
+# EDA问题（本系统自定义环境）
+EDA_PROBLEMS_INTEGRATED = [
+    'chip_routing',  # Chip Global Routing
+]
+
 # 所有已集成的问题
-ALL_INTEGRATED_PROBLEMS = ROUTING_PROBLEMS_INTEGRATED + SCHEDULING_PROBLEMS_INTEGRATED
+ALL_INTEGRATED_PROBLEMS = (
+    ROUTING_PROBLEMS_INTEGRATED
+    + SCHEDULING_PROBLEMS_INTEGRATED
+    + EDA_PROBLEMS_INTEGRATED
+)
 
 # RL4CO 官方支持但本系统未集成的环境（供将来扩展）
 ROUTING_PROBLEMS_AVAILABLE = [
@@ -67,8 +76,8 @@ POLICY_PROBLEM_COMPATIBILITY = {
     # Attention Model：支持除 ATSP 外的所有路由问题
     # ATSP 仅能使用 MatNet（ATSPEnv 无 locs，AM 的 init_embedding 会报 KeyError）
     # SPCTSP 也只支持 Attention Model（随机性使 POMO 不适用）
-    'attention': _ROUTING_WITHOUT_ATSP,
-    'am': _ROUTING_WITHOUT_ATSP,  # AM 别名
+    'attention': _ROUTING_WITHOUT_ATSP + EDA_PROBLEMS_INTEGRATED,
+    'am': _ROUTING_WITHOUT_ATSP + EDA_PROBLEMS_INTEGRATED,  # AM 别名
 
     # POMO：仅适用对称路由问题（利用旋转对称性），PCTSP 不适用（奖励非对称）。
     # 移除 mtsp：真实 POMO（多起点解码）在 rl4co 0.6.0 的 MTSPEnv 上触发
@@ -108,9 +117,10 @@ POLICY_PROBLEM_COMPATIBILITY = {
 
 # 算法 → 问题兼容性（官方文档：REINFORCE, PPO, A2C 都是通用算法）
 ALGORITHM_PROBLEM_COMPATIBILITY = {
-    'reinforce': ALL_INTEGRATED_PROBLEMS,  # REINFORCE 通用
-    'ppo': ALL_INTEGRATED_PROBLEMS,        # PPO 通用，复杂问题推荐
-    'a2c': ALL_INTEGRATED_PROBLEMS,        # A2C 通用，快速收敛
+    'reinforce': ALL_INTEGRATED_PROBLEMS,
+    # 芯片布线首版使用独立的非可微 A* 评估循环，仅接入 REINFORCE
+    'ppo': ROUTING_PROBLEMS_INTEGRATED + SCHEDULING_PROBLEMS_INTEGRATED,
+    'a2c': ROUTING_PROBLEMS_INTEGRATED + SCHEDULING_PROBLEMS_INTEGRATED,
     'dqn': ['tsp'],                         # 当前接入 TSP 训练链路
     'qlearning': ['tsp'],                   # 当前接入 TSP 训练链路
 }
@@ -525,6 +535,11 @@ RECOMMENDED_COMBINATIONS = {
         'fast': {'policy': 'matnet', 'algorithm': 'reinforce', 'description': '唯一有效算法'},
         'simple': {'policy': 'matnet', 'algorithm': 'reinforce', 'description': '简单易用配置'},
     },
+    'chip_routing': {
+        'best': {'policy': 'attention', 'algorithm': 'reinforce', 'description': 'Attention网络排序 + A*布线'},
+        'fast': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '首版唯一有效组合'},
+        'simple': {'policy': 'attention', 'algorithm': 'reinforce', 'description': '首版唯一有效组合'},
+    },
 }
 
 
@@ -815,6 +830,7 @@ def print_compatibility_matrix():
     print(f"\n📦 已集成的问题类型 ({len(ALL_INTEGRATED_PROBLEMS)}个):")
     print(f"  路由问题: {', '.join(ROUTING_PROBLEMS_INTEGRATED)}")
     print(f"  调度问题: {', '.join(SCHEDULING_PROBLEMS_INTEGRATED)}")
+    print(f"  EDA问题: {', '.join(EDA_PROBLEMS_INTEGRATED)}")
     
     # 打印策略支持
     print(f"\n🧠 策略模型支持:")

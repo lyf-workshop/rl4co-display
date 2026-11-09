@@ -17,6 +17,14 @@ from datetime import datetime
 
 logger = logging.getLogger('rl4co_display')
 
+def format_algorithm_display_name(algorithm_name):
+    """Return the user-facing name without changing the internal algorithm key."""
+    normalized_name = str(algorithm_name or '').strip().lower()
+    if normalized_name == 'a2c':
+        return 'A3C'
+    return normalized_name.upper()
+
+
 # 导入 RL4CO 相关组件
 try:
     from rl4co.utils.trainer import RL4COTrainer
@@ -814,7 +822,10 @@ class BaseTrainer:
                     raise ValueError(error_msg)
                 
                 model = algorithm_wrapper.create_model(env, policy)
-                self.send_message('info', f'✅ RL算法: {algorithm_wrapper.algorithm_name.upper()}')
+                algorithm_display_name = format_algorithm_display_name(
+                    algorithm_wrapper.algorithm_name
+                )
+                self.send_message('info', f'✅ RL算法: {algorithm_display_name}')
                 return model
             except Exception as e:
                 self.send_message('warning', f'使用新算法模块失败，降级到传统模式: {str(e)}')
@@ -967,7 +978,7 @@ class BaseTrainer:
             final_results = {
                 'model': self.model_type,
                 'problem': self.problem_type,
-                'strategy': self.algorithm_name.upper(),
+                'strategy': format_algorithm_display_name(self.algorithm_name),
                 'total_epochs': self.epochs,
                 'final_loss': round(float(final_loss), 4),
                 'final_reward': round(float(final_reward), 4),

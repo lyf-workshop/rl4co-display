@@ -1,0 +1,99 @@
+ M .gitignore
+ M README.md
+ M app_files.py
+ M app_pages.py
+ M app_training.py
+ M modules/compatibility.py
+ M modules/envs/__init__.py
+ M modules/policies/__init__.py
+ M modules/policies/mdam_policy.py
+ M modules/problems/__init__.py
+ M modules/rl_training/__init__.py
+ M modules/rl_training/base_trainer.py
+ M modules/rl_training/cvrp_trainer.py
+ M modules/rl_training/tsp_trainer.py
+ M modules/rl_training/visualizations/__init__.py
+ M modules/rl_training/visualizations/common.py
+ M modules/rl_training/visualizations/cvrp_viz.py
+ M modules/rl_training/visualizations/tsp_viz.py
+ M modules/rl_training/visualizations/vrptw_viz.py
+ M modules/rl_training/vrptw_trainer.py
+ M static/css/base.css
+ M static/css/benchmark.css
+ D static/css/competition-theme.css
+ D static/css/file_manager.css
+ D static/css/index.css
+ D static/css/login.css
+ D static/css/model_info.css
+ D static/css/model_list.css
+ D static/css/navigation.css
+ D static/css/ollama-chat-embedded-enhanced.css
+ M static/css/profile.css
+ D static/css/register.css
+ M static/js/benchmark.js
+ M static/js/index.js
+ D static/js/navigation.js
+ M static/js/ollama-chat-embedded.js
+ M static/js/training-progress.js
+ M templates/base.html
+ M templates/benchmark.html
+ M templates/file_manager.html
+ M templates/includes/navbar.html
+ M templates/index.html
+ M templates/login.html
+ M templates/model_info.html
+ M templates/model_list.html
+ M templates/profile.html
+ M templates/register.html
+ D tests/data/test_dataset_tsplib.tsp
+?? .playwright-cli/
+?? docs/CHIP_ROUTING_MVP.md
+?? docs/frontend-contract.json
+?? docs/frontend-git-diff-stat.txt
+?? docs/frontend-git-status.txt
+?? docs/frontend-migration.md
+?? docs/frontend-verification.md
+?? modules/envs/chip_routing_env.py
+?? modules/policies/chip_routing_policy.py
+?? modules/policies/mdam_runtime.py
+?? modules/policies/mdam_utils.py
+?? modules/problems/chip_routing.py
+?? modules/rl_training/chip_routing_trainer.py
+?? modules/rl_training/visualizations/chip_routing_viz.py
+?? output/
+?? scripts/build_advisor_package.ps1
+?? scripts/frontend_audit.py
+?? scripts/verify_frontend_browser.js
+?? static/css/ai-assistant.css
+?? static/css/auth.css
+?? static/css/components.css
+?? static/css/files.css
+?? static/css/layout.css
+?? static/css/models.css
+?? static/css/responsive.css
+?? static/css/tokens.css
+?? static/css/training.css
+?? static/data/
+?? static/images/studio-icon.svg
+?? static/js/ai-assistant.js
+?? static/js/app-shell.js
+?? static/js/auth.js
+?? static/js/charts.js
+?? static/js/file-manager.js
+?? static/js/model-library.js
+?? static/js/profile.js
+?? static/js/training-monitor.js
+?? static/js/ui.js
+?? static/vendor/
+?? templates/includes/assistant.html
+?? templates/includes/auth-brand.html
+?? templates/includes/icons.html
+?? tests/data/dataset_tsp_10.tsp
+?? tests/unit/test_chip_routing.py
+?? tests/unit/test_chip_routing_frontend.py
+?? tests/unit/test_frontend_api_contract.py
+?? tests/unit/test_mdam_output_selection.py
+?? tests/unit/test_tsp_animation_scaling.py
+?? tests/unit/test_vrp_animation_scaling.py
+?? 测试集说明(1).docx
+?? 测试集说明-已填写-含适用问题类型.docx

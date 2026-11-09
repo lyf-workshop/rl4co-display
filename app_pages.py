@@ -10,8 +10,24 @@ from auth_module import (
     get_current_username
 )
 from model_database import MODEL_DATABASE
+from modules.compatibility import POLICY_PROBLEM_COMPATIBILITY, get_available_algorithms
 
 pages_bp = Blueprint('pages', __name__)
+
+MODEL_POLICY_IDS = {
+    'AM': 'attention', 'POMO': 'pomo', 'SymNCO': 'symnco', 'MDAM': 'mdam',
+    'DeepACO': 'deepaco', 'HAM': 'ham', 'MatNet': 'matnet', 'PtrNet': 'ptrnet',
+    'Pointer': 'ptrnet', 'PointerNet': 'ptrnet',
+}
+
+
+def _model_training_info(model_id):
+    policy = MODEL_POLICY_IDS.get(model_id)
+    problems = POLICY_PROBLEM_COMPATIBILITY.get(policy, [])
+    return {
+        'policy': policy, 'problems': problems,
+        'algorithms': {problem: get_available_algorithms(problem, policy) for problem in problems},
+    }
 
 
 @pages_bp.route('/')
@@ -95,6 +111,7 @@ def model_info_list():
     return render_template('model_list.html', 
                          models=MODEL_DATABASE, 
                          categories=sorted(categories),
+                         training_info={key: _model_training_info(key) for key in MODEL_DATABASE},
                          active_page='model_info')
 
 
@@ -106,6 +123,7 @@ def model_info_detail(model_id):
         return "模型不存在", 404
     
     model_data = MODEL_DATABASE[model_id]
-    return render_template('model_info.html', model_data=model_data, active_page='model_info')
+    return render_template('model_info.html', model_data=model_data, model_id=model_id,
+                           training_info=_model_training_info(model_id), active_page='model_info')
 
 
